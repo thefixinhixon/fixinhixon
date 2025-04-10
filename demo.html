@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Greenery Room - TRIPPY MULTI-SCENE DEMO!</title>
+    <style>
+        /* CSS remains the same as before */
+        body { margin: 0; overflow: hidden; background-color: #000; color: #fff; font-family: 'Courier New', Courier, monospace; }
+        #container { width: 100vw; height: 100vh; display: block; cursor: none; }
+        .scroller { position: absolute; left: 0; width: 100%; overflow: hidden; white-space: nowrap; font-size: 24px; font-weight: bold; text-transform: uppercase; z-index: 10; pointer-events: none; background-color: rgba(0, 0, 0, 0.7); padding: 8px 0; color: #00ff00; border-top: 3px solid #008000; border-bottom: 3px solid #008000; text-shadow: 0 0 6px #00ff00; }
+        #scroller-top { top: 15px; }
+        #scroller-bottom { bottom: 15px; color: #ffff00; text-shadow: 0 0 6px #ffff00; }
+        .scroller span { display: inline-block; padding-left: 100%; animation: scroll-left 25s linear infinite; }
+        .scroller span.clone { padding-left: 0; }
+        @keyframes scroll-left { 0% { transform: translateX(0%); } 100% { transform: translateX(-100%); } }
+        #start-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.95); display: flex; justify-content: center; align-items: center; z-index: 100; cursor: pointer; flex-direction: column; text-align: center; }
+        #start-overlay h1 { color: #00ff00; font-size: 3.5em; text-shadow: 0 0 15px #00ff00; margin-bottom: 25px; animation: pulse 2s infinite; }
+        #start-overlay p { color: #ffff00; font-size: 1.8em; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    </style>
+</head>
+<body>
+    <!-- Start Overlay -->
+    <div id="start-overlay">
+        <h1>THE GREENERY ROOM</h1>
+        <p>~ TRIPPY MULTI-SCENE DEMO ~</p>
+        <p style="margin-top: 60px; font-size: 1.3em; color: #ccc;">[ CLICK ANYWHERE TO LOAD THE EXPERIENCE ]</p>
+    </div>
+
+    <!-- Container -->
+    <div id="container"></div>
+
+    <!-- Audio -->
+    <audio id="demo-audio" loop>
+        <source src="demo.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <!-- Scrollers (content unchanged) -->
+    <div id="scroller-top" class="scroller">
+        <span>+++ CANNABIS FACTS: TERPENES LIKE MYRCENE, LIMONENE, AND PINENE GIVE STRAINS DISTINCT AROMAS AND MAY INFLUENCE EFFECTS (ENTOURAGE EFFECT) +++ THE ENDOCANNABINOID SYSTEM HELPS REGULATE MOOD, SLEEP, APPETITE, MEMORY, AND MORE +++ CANNABIS SATIVA, INDICA, AND HYBRID ARE COMMON CLASSIFICATIONS, THOUGH MODERN SCIENCE FOCUSES MORE ON CHEMICAL PROFILES +++ HEMP-DERIVED CBD IS LEGAL IN MANY PLACES, BUT REGULATIONS VARY +++ EXTRACTION METHODS LIKE CO2, ETHANOL, AND HYDROCARBON ARE USED TO CREATE CONCENTRATES +++ </span>
+        <span class="clone">+++ CANNABIS FACTS: TERPENES LIKE MYRCENE, LIMONENE, AND PINENE GIVE STRAINS DISTINCT AROMAS AND MAY INFLUENCE EFFECTS (ENTOURAGE EFFECT) +++ THE ENDOCANNABINOID SYSTEM HELPS REGULATE MOOD, SLEEP, APPETITE, MEMORY, AND MORE +++ CANNABIS SATIVA, INDICA, AND HYBRID ARE COMMON CLASSIFICATIONS, THOUGH MODERN SCIENCE FOCUSES MORE ON CHEMICAL PROFILES +++ HEMP-DERIVED CBD IS LEGAL IN MANY PLACES, BUT REGULATIONS VARY +++ EXTRACTION METHODS LIKE CO2, ETHANOL, AND HYDROCARBON ARE USED TO CREATE CONCENTRATES +++ </span>
+    </div>
+    <div id="scroller-bottom" class="scroller">
+         <span>*** THE GREENERY ROOM | 2330 SUDDERTH DRIVE | RUIDOSO, NM *** YOUR TRUSTED SOURCE FOR QUALITY CANNABIS PRODUCTS *** KNOWLEDGEABLE BUDTENDERS READY TO ASSIST *** EXPLORE FLOWER, EDIBLES, CONCENTRATES, VAPES & MORE *** RUIDOSO'S FINEST DISPENSARY *** COME VISIT THE GREENERY ROOM TODAY! *** </span>
+         <span class="clone">*** THE GREENERY ROOM | 2330 SUDDERTH DRIVE | RUIDOSO, NM *** YOUR TRUSTED SOURCE FOR QUALITY CANNABIS PRODUCTS *** KNOWLEDGEABLE BUDTENDERS READY TO ASSIST *** EXPLORE FLOWER, EDIBLES, CONCENTRATES, VAPES & MORE *** RUIDOSO'S FINEST DISPENSARY *** COME VISIT THE GREENERY ROOM TODAY! *** </span>
+    </div>
+
+    <!-- Imports -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
+            }
+        }
+    </script>
+
+    <!-- Main Logic -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { FilmPass } from 'three/addons/postprocessing/FilmPass.js';
+        // import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // --- Global Variables ---
+        let scene, camera, renderer, composer;
+        let stars, starGeo, starMaterial;
+        let clock = new THREE.Clock();
+        let audioStarted = false;
+        let container;
+        let leafTexture, dynamicPlasmaTexture, textGridTexture;
+        let plasmaCanvas, plasmaContext, textGridCanvas, textGridContext;
+
+        // --- Scene Management ---
+        const SCENE_DURATION = 15;
+        const SCENES = {
+            WARP_GRID: 0, // <-- New first scene
+            LEAF_PARTICLES: 1,
+            TORUS_KNOT_PLASMA: 2,
+            TEXT_GRID_WAVE: 3,
+        };
+        let currentScene = SCENES.WARP_GRID; // Start with the new scene
+        let sceneStartTime = 0;
+        let sceneObjects = [];
+
+        // --- Helper Functions (createLeafTextureCanvas, updateDynamicPlasmaTexture, updateTextGridTexture remain the same) ---
+        function createLeafTextureCanvas() { /* ... same as before ... */ const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64; const ctx = canvas.getContext('2d'); function drawLeafPart(ctx, cx, cy, angle, length, width) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(angle); ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(length * 0.3, -width / 2, length, 0); ctx.quadraticCurveTo(length * 0.3, width / 2, 0, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); } const centerX = canvas.width / 2; const centerY = canvas.height * 0.9; const mainLength = 28; const mainWidth = 10; const gradient = ctx.createLinearGradient(centerX, 0, centerX, canvas.height); gradient.addColorStop(0, '#00FF00'); gradient.addColorStop(0.7, '#00AA00'); gradient.addColorStop(1, '#006400'); ctx.fillStyle = gradient; ctx.strokeStyle = '#004000'; ctx.lineWidth = 0.5; const angles = [0, Math.PI / 6, -Math.PI / 6, Math.PI / 3, -Math.PI / 3, Math.PI / 2, -Math.PI / 2]; const lengths = [mainLength, mainLength * 0.9, mainLength * 0.9, mainLength * 0.75, mainLength * 0.75, mainLength * 0.6, mainLength * 0.6]; const widths = [mainWidth, mainWidth * 0.9, mainWidth * 0.9, mainWidth * 0.75, mainWidth * 0.75, mainWidth * 0.6, mainWidth * 0.6]; for (let i = 0; i < angles.length; i++) { drawLeafPart(ctx, centerX, centerY, angles[i] - Math.PI / 2, lengths[i], widths[i]); } console.log("Leaf texture canvas created."); return canvas; }
+        function updateDynamicPlasmaTexture(time) { /* ... same as before ... */ if (!plasmaContext) return; const width = plasmaCanvas.width; const height = plasmaCanvas.height; const imageData = plasmaContext.createImageData(width, height); const data = imageData.data; for (let i = 0; i < data.length; i += 4) { const x = (i / 4) % width; const y = Math.floor((i / 4) / width); const val = Math.sin(x * 0.05 + time * 1.5) + Math.sin(y * 0.05 + time * 1.0) + Math.sin((x + y) * 0.03 + time * 2.5) + Math.sin(Math.sqrt(x * x + y * y) * 0.04 + time * 0.8); data[i] = Math.max(0, Math.min(255, Math.floor((Math.sin(val * Math.PI * 1.2) + 1) * 80 + Math.random() * 50))); data[i + 1] = Math.max(0, Math.min(255, Math.floor((Math.cos(val * Math.PI * 0.9 + time) + 1) * 128))); data[i + 2] = Math.max(0, Math.min(255, Math.floor((Math.sin(val * Math.PI * 0.7 - time * 0.6) + 1) * 60))); data[i + 3] = 255; } plasmaContext.putImageData(imageData, 0, 0); if (dynamicPlasmaTexture) dynamicPlasmaTexture.needsUpdate = true; }
+        function updateTextGridTexture(time) { /* ... same as before ... */ if (!textGridContext) return; const width = textGridCanvas.width; const height = textGridCanvas.height; const fontSize = 16; const chars = "GREENERY ROOM RUIDOSO NM 420 THC CBD ******** "; const cols = Math.floor(width / fontSize); const rows = Math.floor(height / fontSize); textGridContext.fillStyle = '#001000'; textGridContext.fillRect(0, 0, width, height); textGridContext.font = `bold ${fontSize}px Courier New, monospace`; textGridContext.fillStyle = '#00ff00'; const timeOffset = Math.floor(time * 5); for (let y = 0; y < rows; y++) { for (let x = 0; x < cols; x++) { const charIndex = (x + y * cols + timeOffset + Math.floor(Math.sin(x * 0.5 + time) * 2) + Math.floor(Math.cos(y*0.3 - time)*2) ) % chars.length; const char = chars.charAt(Math.abs(charIndex)); const flicker = Math.random() > 0.95 ? '#ffff00' : '#00ff00'; textGridContext.fillStyle = flicker; textGridContext.fillText(char, x * fontSize, (y + 1) * fontSize - 4); } } if (textGridTexture) textGridTexture.needsUpdate = true; }
+
+        // --- Scene Setup Logic ---
+
+        function clearSceneSpecificObjects() {
+            // ... (same as before) ...
+             console.log("Clearing scene specific objects:", sceneObjects.length); sceneObjects.forEach(obj => { if (obj) { if (obj.geometry) obj.geometry.dispose(); if (obj.material) { obj.material.dispose(); } scene.remove(obj); } }); sceneObjects = [];
+        }
+
+        function setupScene(sceneId) {
+            clearSceneSpecificObjects();
+            currentScene = sceneId;
+            sceneStartTime = clock.getElapsedTime();
+            console.log(`Setting up Scene ${sceneId} at time ${sceneStartTime.toFixed(2)}`);
+
+             if (!leafTexture || !dynamicPlasmaTexture || !textGridTexture) { console.error("Textures not ready for scene setup!"); return; }
+
+            switch (sceneId) {
+                case SCENES.WARP_GRID: // <-- Setup for the new first scene
+                    const gridSegments = 50;
+                    const gridSize = 20;
+                    const warpGridGeo = new THREE.PlaneGeometry(gridSize, gridSize, gridSegments, gridSegments);
+
+                    // Add vertex colors attribute
+                    const colors = [];
+                    const color = new THREE.Color();
+                    for (let i = 0; i < warpGridGeo.attributes.position.count; i++) {
+                        // Initialize with some base color or pattern if needed
+                        color.setHSL(i / warpGridGeo.attributes.position.count, 1.0, 0.5);
+                        colors.push(color.r, color.g, color.b);
+                    }
+                    warpGridGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+                    const warpGridMat = new THREE.MeshBasicMaterial({
+                        // color: 0xffffff, // Base color if not using vertex colors
+                        vertexColors: true, // Use vertex colors
+                        side: THREE.DoubleSide,
+                        wireframe: false // Set true for a wireframe look
+                    });
+
+                    const warpGridMesh = new THREE.Mesh(warpGridGeo, warpGridMat);
+                    warpGridMesh.rotation.x = -Math.PI / 4; // Angle the grid
+                    warpGridMesh.userData.isSceneObject = true;
+                    scene.add(warpGridMesh);
+                    sceneObjects.push(warpGridMesh);
+
+                    camera.position.set(0, 8, 12); // Adjust camera position
+                    camera.lookAt(0, 0, 0); // Look towards the center of the grid
+                    break;
+
+                case SCENES.LEAF_PARTICLES:
+                    // ... (particle creation code remains the same) ...
+                    const particleCount = 5000; const particlesGeo = new THREE.BufferGeometry(); const posArray = new Float32Array(particleCount * 3); const particleData = []; for (let i = 0; i < particleCount; i++) { const i3 = i * 3; const radius = Math.random() * 15 + 2; const theta = Math.random() * Math.PI * 2; const phi = Math.acos((Math.random() * 2) - 1); posArray[i3] = radius * Math.sin(phi) * Math.cos(theta); posArray[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta); posArray[i3 + 2] = radius * Math.cos(phi); particleData.push({ initialRadius: radius, thetaSpeed: (Math.random() - 0.5) * 0.5, phiSpeed: (Math.random() - 0.5) * 0.5, spinSpeed: (Math.random() - 0.5) * 2.0 }); } particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3)); particlesGeo.userData.particleData = particleData; const particlesMat = new THREE.PointsMaterial({ size: 0.5, map: leafTexture, alphaTest: 0.5, transparent: true, blending: THREE.NormalBlending, sizeAttenuation: true, color: 0x00FF00 }); const leafParticles = new THREE.Points(particlesGeo, particlesMat); leafParticles.userData.isSceneObject = true; scene.add(leafParticles); sceneObjects.push(leafParticles);
+                    camera.position.set(0, 0, 12); camera.lookAt(scene.position);
+                    break;
+
+                case SCENES.TORUS_KNOT_PLASMA:
+                    // ... (torus knot creation code remains the same) ...
+                    const geometry = new THREE.TorusKnotGeometry(2.5, 0.6, 180, 24); const material = new THREE.MeshStandardMaterial({ map: dynamicPlasmaTexture, roughness: 0.3, metalness: 0.6, side: THREE.DoubleSide, emissive: '#003300', emissiveMap: dynamicPlasmaTexture, emissiveIntensity: 0.5 }); const torusKnot = new THREE.Mesh(geometry, material); torusKnot.userData.isSceneObject = true; scene.add(torusKnot); sceneObjects.push(torusKnot); const wireMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true, transparent: true, opacity: 0.1 }); const wireframe = new THREE.Mesh(geometry.clone(), wireMat); wireframe.scale.setScalar(1.001); wireframe.userData.isSceneObject = true; scene.add(wireframe); sceneObjects.push(wireframe);
+                    camera.position.set(0, 0, 9); camera.lookAt(scene.position);
+                    break;
+
+                case SCENES.TEXT_GRID_WAVE:
+                     // ... (text grid creation code remains the same) ...
+                    const gridWidth = 32; const gridHeight = 24; const segmentSize = 0.5; const gridGeo = new THREE.PlaneGeometry(gridWidth * segmentSize, gridHeight * segmentSize, gridWidth, gridHeight); const gridMat = new THREE.MeshBasicMaterial({ map: textGridTexture, side: THREE.DoubleSide }); const textPlane = new THREE.Mesh(gridGeo, gridMat); textPlane.userData.isSceneObject = true; textPlane.rotation.x = -0.2; scene.add(textPlane); sceneObjects.push(textPlane);
+                    camera.position.set(0, 2, 10); camera.lookAt(textPlane.position);
+                    break;
+            }
+        }
+
+        // --- Animation Update Functions ---
+
+        function updateScene(elapsedTime, deltaTime) {
+            const sceneTime = elapsedTime - sceneStartTime;
+
+            // Global Animations
+            stars.rotation.y += 0.0002; // Slightly faster base rotation
+            stars.rotation.x += 0.0001;
+            starMaterial.size = 0.7 + Math.sin(elapsedTime * 1.5) * 0.2;
+            scene.children.forEach(child => { if (child instanceof THREE.PointLight) { child.intensity = 1.5 + Math.sin(elapsedTime * 0.8 + child.position.x) * 0.5; child.color.setHSL((elapsedTime * 0.05 + child.position.y * 0.1) % 1, 0.9, 0.6); } });
+
+            // Scene Specific Animations
+            switch (currentScene) {
+                case SCENES.WARP_GRID: // <-- Animation for the new first scene
+                    const warpGridMesh = sceneObjects.find(obj => obj.geometry instanceof THREE.PlaneGeometry && obj.material.vertexColors);
+                    if (warpGridMesh) {
+                        const geometry = warpGridMesh.geometry;
+                        const positions = geometry.attributes.position;
+                        const colors = geometry.attributes.color; // Get color attribute
+                        const count = positions.count;
+
+                        const time = elapsedTime * 2.0; // Speed control
+                        const freq1 = 0.3;
+                        const freq2 = 0.4;
+                        const amp1 = 1.5;
+                        const amp2 = 1.0;
+                        const colorSpeed = 1.5;
+
+                        for (let i = 0; i < count; i++) {
+                            const x = positions.getX(i);
+                            const y = positions.getY(i);
+
+                            // Calculate Z position warp
+                            const z = Math.sin(x * freq1 + time) * amp1 +
+                                      Math.cos(y * freq2 - time * 0.7) * amp2 +
+                                      Math.sin(Math.sqrt(x*x + y*y) * 0.2 + time * 0.5) * 1.2; // Radial component
+                            positions.setZ(i, z);
+
+                            // Calculate vertex color cycling
+                             const r = (Math.sin(x * 0.2 + time * colorSpeed) + 1) / 2;
+                             const g = (Math.cos(y * 0.3 - time * colorSpeed * 0.8) + 1) / 2;
+                             const b = (Math.sin(Math.sqrt(x*x + y*y) * 0.1 + time * colorSpeed * 1.2) + 1) / 2;
+                             colors.setXYZ(i, r, g, b); // Set RGB color for the vertex
+                        }
+                        positions.needsUpdate = true;
+                        colors.needsUpdate = true; // IMPORTANT: Tell Three.js colors have changed
+
+                        // Optional: Add rotation to the grid
+                         warpGridMesh.rotation.z += deltaTime * 0.1;
+                         // camera.position.y = 8 + Math.sin(elapsedTime * 0.3) * 1; // Gentle up/down camera
+                         // camera.lookAt(0,0,0);
+                    }
+                    break;
+
+                case SCENES.LEAF_PARTICLES:
+                    // ... (particle animation code remains the same) ...
+                    const particles = sceneObjects.find(obj => obj instanceof THREE.Points); if (particles) { const positions = particles.geometry.attributes.position; const pData = particles.geometry.userData.particleData; const count = positions.count; for (let i = 0; i < count; i++) { const i3 = i * 3; const data = pData[i]; const currentRadius = data.initialRadius * (1 + Math.sin(sceneTime * 0.5 + i * 0.1) * 0.3); const currentTheta = sceneTime * data.thetaSpeed + i * 0.01; const currentPhi = (Math.PI / 2) + sceneTime * data.phiSpeed + Math.cos(sceneTime * 0.3 + i*0.05)*0.5; positions.array[i3] = currentRadius * Math.sin(currentPhi) * Math.cos(currentTheta); positions.array[i3 + 1] = currentRadius * Math.sin(currentPhi) * Math.sin(currentTheta); positions.array[i3 + 2] = currentRadius * Math.cos(currentPhi); } positions.needsUpdate = true; particles.rotation.y += deltaTime * 0.1; particles.rotation.x += deltaTime * 0.05; }
+                    break;
+                case SCENES.TORUS_KNOT_PLASMA:
+                    // ... (torus knot animation code remains the same) ...
+                    updateDynamicPlasmaTexture(elapsedTime); sceneObjects.forEach(obj => { if (obj.geometry instanceof THREE.TorusKnotGeometry) { obj.rotation.x += deltaTime * 0.2; obj.rotation.y += deltaTime * 0.3; if (obj.material.wireframe) { obj.rotation.z -= deltaTime * 0.15; } } }); camera.position.x = Math.sin(elapsedTime * 0.4) * 1.5; camera.position.y = Math.cos(elapsedTime * 0.5) * 1.5; camera.lookAt(scene.position);
+                    break;
+                case SCENES.TEXT_GRID_WAVE:
+                    // ... (text grid animation code remains the same) ...
+                    updateTextGridTexture(elapsedTime); const textPlane = sceneObjects.find(obj => obj.geometry instanceof THREE.PlaneGeometry); if (textPlane) { const positions = textPlane.geometry.attributes.position; const count = positions.count; const gridWidthSegments = textPlane.geometry.parameters.widthSegments; const waveSpeed = 2.0; const waveHeight = 0.5; const waveFreq = 0.3; for (let i = 0; i < count; i++) { const x = positions.getX(i); const y = positions.getY(i); const z = Math.sin(x * waveFreq + elapsedTime * waveSpeed) * Math.cos(y * waveFreq * 0.8 + elapsedTime * waveSpeed * 0.7) * waveHeight; positions.setZ(i, z); } positions.needsUpdate = true; textPlane.geometry.computeVertexNormals(); camera.position.z = 10 + Math.sin(elapsedTime * 0.2) * 1.0; camera.position.y = 2 + Math.cos(elapsedTime * 0.3) * 0.5; camera.lookAt(textPlane.position); }
+                    break;
+            }
+        }
+
+        // --- Core Initialization (init, setupThreeJS, onWindowResize remain the same) ---
+        function init() { /* ... same as before ... */ console.log("Init function called."); container = document.getElementById('container'); const startOverlay = document.getElementById('start-overlay'); const demoAudio = document.getElementById('demo-audio'); startOverlay.addEventListener('click', () => { console.log("Start overlay clicked."); startOverlay.style.display = 'none'; demoAudio.play().then(() => { audioStarted = true; console.log("Audio started."); }).catch(e => { console.error("Audio playback failed:", e); audioStarted = false; }); clock.start(); if (!renderer) { try { console.log("Setting up ThreeJS..."); setupThreeJS(); console.log("ThreeJS setup complete."); console.log("Setting up initial scene..."); setupScene(currentScene); console.log("Initial scene setup complete."); console.log("Starting animation loop..."); animate(); } catch (error) { console.error("Error during ThreeJS/Scene setup:", error); container.innerHTML = `<p style="color: red; text-align: center; padding-top: 50px;">Error initializing graphics. Please check console (F12).</p>`; } } else { console.log("Renderer already exists, skipping setup."); if(audioStarted && !clock.running) { clock.start(); animate(); } } }, { once: true }); console.log("Click listener added."); }
+        function setupThreeJS() { /* ... same as before ... */ scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x000000, 0.025); camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); camera.position.z = 5; renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setSize(window.innerWidth, window.innerHeight); renderer.setPixelRatio(window.devicePixelRatio); renderer.setClearColor(0x000000, 1); container.appendChild(renderer.domElement); console.log("Creating textures..."); const leafCanvas = createLeafTextureCanvas(); leafTexture = new THREE.CanvasTexture(leafCanvas); leafTexture.needsUpdate = true; plasmaCanvas = document.createElement('canvas'); plasmaCanvas.width = 128; plasmaCanvas.height = 128; plasmaContext = plasmaCanvas.getContext('2d', { willReadFrequently: true }); dynamicPlasmaTexture = new THREE.CanvasTexture(plasmaCanvas); dynamicPlasmaTexture.magFilter = THREE.NearestFilter; dynamicPlasmaTexture.minFilter = THREE.NearestFilter; textGridCanvas = document.createElement('canvas'); textGridCanvas.width = 512; textGridCanvas.height = 256; textGridContext = textGridCanvas.getContext('2d'); textGridTexture = new THREE.CanvasTexture(textGridCanvas); console.log("Textures created."); starGeo = new THREE.BufferGeometry(); const starVertices = []; const numStars = 10000; for (let i = 0; i < numStars; i++) { starVertices.push( THREE.MathUtils.randFloatSpread(2000), THREE.MathUtils.randFloatSpread(2000), THREE.MathUtils.randFloatSpread(2000) ); } starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); starMaterial = new THREE.PointsMaterial({ color: 0xaaaaaa, size: 0.7, sizeAttenuation: true }); stars = new THREE.Points(starGeo, starMaterial); scene.add(stars); console.log("Stars added."); const ambientLight = new THREE.AmbientLight(0x404040); scene.add(ambientLight); const pointLight1 = new THREE.PointLight(0xff00ff, 1.5, 200); pointLight1.position.set(10, 10, 10); scene.add(pointLight1); const pointLight2 = new THREE.PointLight(0x00ffff, 1.5, 200); pointLight2.position.set(-10, -10, -5); scene.add(pointLight2); const dirLight = new THREE.DirectionalLight(0xffffff, 0.2); dirLight.position.set(0,1,0); scene.add(dirLight); console.log("Lights added."); composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera)); const filmPass = new FilmPass(0.3, 0.05, 648, false); composer.addPass(filmPass); console.log("Effect Composer setup."); window.addEventListener('resize', onWindowResize, false); }
+        function onWindowResize() { /* ... same as before ... */ if (!camera || !renderer || !composer) return; console.log("Window resized."); camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight); }
+
+
+        // --- Animation Loop ---
+        function animate() {
+            // ... (same transition logic as before) ...
+             requestAnimationFrame(animate); const delta = clock.getDelta(); const elapsed = clock.getElapsedTime();
+             if (elapsed > 0 && elapsed - sceneStartTime > SCENE_DURATION) { const nextSceneIndex = (currentScene + 1) % Object.keys(SCENES).length; console.log(`Transitioning from Scene ${currentScene} to ${nextSceneIndex}`); setupScene(nextSceneIndex); }
+             try { updateScene(elapsed, delta); } catch (error) { console.error(`Error during updateScene (Scene ${currentScene}):`, error); }
+             try { composer.render(delta); } catch(error) { console.error("Error during composer.render:", error); }
+        }
+
+        // --- Start ---
+        init();
+
+    </script>
+</body>
+</html>
