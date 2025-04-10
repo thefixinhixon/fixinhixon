@@ -1,1 +1,427 @@
-hi
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Visual Playground - Demoscene FX v6 (Checkerboard + Scroller)</title>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #000000; font-family: 'Consolas', 'Monaco', monospace; color: #fff; }
+        #webgl-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; display: block; }
+        nav { position: fixed; top: 20px; right: 20px; z-index: 10; background-color: rgba(0, 0, 0, 0.4); padding: 10px 15px; border-radius: 5px; font-size: 1em; }
+        nav a { color: #00ffcc; text-decoration: none; margin-left: 15px; transition: color 0.3s ease, text-shadow 0.3s ease; }
+        nav a:first-child { margin-left: 0; }
+        nav a:hover { color: #ffffff; text-shadow: 0 0 8px #00ffcc; }
+        .info-overlay { position: fixed; bottom: 50px; /* Adjusted for scroller */ left: 20px; z-index: 5; background-color: rgba(0, 0, 0, 0.4); padding: 10px 15px; border-radius: 5px; font-size: 0.9em; pointer-events: none; }
+        .info-overlay p { margin: 5px 0; }
+
+        /* Scroller Text Styling */
+        .scroller-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 35px; /* Adjust height as needed */
+            background-color: rgba(0, 0, 0, 0.6);
+            overflow: hidden; /* Hide text outside the container */
+            z-index: 20; /* Ensure it's above other overlays */
+            display: flex;
+            align-items: center;
+        }
+
+        .scroller-text {
+            color: #00ffaa; /* Demo green */
+            font-size: 1.2em;
+            white-space: nowrap; /* Prevent text wrapping */
+            padding-left: 100%; /* Start text off-screen right */
+            animation: scroll-left 25s linear infinite; /* Adjust duration */
+            will-change: transform; /* Optimize animation */
+            text-shadow: 0 0 5px rgba(0, 255, 170, 0.5);
+        }
+
+        @keyframes scroll-left {
+            0% {
+                transform: translateX(0%); /* Start position (relative to padding-left) */
+            }
+            100% {
+                transform: translateX(-100%); /* End position (relative to its own width) */
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- == NAVIGATION SECTION == -->
+    <nav>
+        <a href="demo.html">Demo Project</a>
+        <a href="secret.html">Secret Project</a>
+        <!-- Add more links here -->
+    </nav>
+    <!-- == END NAVIGATION SECTION == -->
+
+    <div class="info-overlay">
+        <p>Effect: <span id="effect-name">Loading...</span></p>
+        <p>Use Left/Right Arrow Keys to switch effects.</p>
+    </div>
+
+    <!-- == SCROLLER TEXT == -->
+    <div class="scroller-container">
+        <p class="scroller-text">
+            +++ The Demoscene: where art meets code +++ Pushing hardware limits since the 8-bit era +++ Cracktros, intros, megademos +++ Real-time graphics, algorithmic music, procedural generation +++ Sizecoding, raytracing, shaders, and pure assembly magic +++ Competitions like Assembly, Revision, Evoke +++ A vibrant subculture celebrating creativity and technical skill +++ This is just a small taste... explore more! +++
+        </p>
+    </div>
+    <!-- == END SCROLLER TEXT == -->
+
+
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Import Three.js -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.163.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.163.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <!-- GLSL Shaders -->
+    <script id="plasmaFragmentShader" type="x-shader/x-fragment">
+        // ... (Plasma shader code remains the same) ...
+        uniform float uTime; uniform vec2 uMouse; uniform vec2 uResolution; varying vec2 vUv; float PI = 3.141592653589793; float random(vec2 st) { return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123); } void main() { vec2 uv = vUv; float t = uTime * 0.5; float mouseFactorX = uMouse.x * 2.0 - 1.0; float mouseFactorY = uMouse.y * 2.0 - 1.0; float val = 0.0; val += sin(uv.x * (8.0 + mouseFactorX * 2.0) + t); val += sin(uv.y * (6.0 + mouseFactorY * 2.0) + t * 0.8); val += sin((uv.x + uv.y) * 5.0 + t * 1.2); val += sin(sqrt(uv.x * uv.x + uv.y * uv.y) * (10.0 + mouseFactorX * 3.0) + t * 1.5); val += sin(atan(uv.y, uv.x) * 8.0 + t * 1.1); val = (val / 5.0 + 1.0) / 2.0; val += random(uv * 50.0 + t * 0.1) * 0.1; vec3 color = vec3( sin(val * PI * (1.5 + mouseFactorY * 0.5)), sin(val * PI * 2.0 + t * 0.5), cos(val * PI * (1.0 + mouseFactorX * 0.5)) ); color = (color + 1.0) / 2.0; gl_FragColor = vec4(color, 1.0); }
+    </script>
+    <script id="metaballFragmentShader" type="x-shader/x-fragment">
+        // ... (Metaball shader code remains the same) ...
+         uniform float uTime; uniform vec2 uMouse; uniform vec2 uResolution; varying vec2 vUv; float metaball(vec2 pos, vec2 center, float strength) { float distSq = dot(pos - center, pos - center); return strength / (distSq + 0.0001); } void main() { vec2 uv = (gl_FragCoord.xy / uResolution.xy); vec2 aspectCorrectedUv = uv * vec2(uResolution.x / uResolution.y, 1.0); float t = uTime * 0.5; vec2 center1 = vec2(0.5 + sin(t * 1.1) * 0.3, 0.5 + cos(t * 0.9) * 0.3); vec2 center2 = vec2(0.5 + cos(t * 1.3 + 2.0) * 0.25, 0.5 + sin(t * 1.0 + 2.0) * 0.25); vec2 center3 = vec2(0.5 + sin(t * 0.7 - 1.0) * 0.35, 0.5 + cos(t * 1.2 - 1.0) * 0.35); vec2 mouseCenter = vec2(uMouse.x * (uResolution.x / uResolution.y), uMouse.y); float influence = 0.0; float strength = 0.02 * min(1.0, uResolution.y / uResolution.x); influence += metaball(aspectCorrectedUv, center1 * vec2(uResolution.x / uResolution.y, 1.0), strength * 1.2); influence += metaball(aspectCorrectedUv, center2 * vec2(uResolution.x / uResolution.y, 1.0), strength * 0.9); influence += metaball(aspectCorrectedUv, center3 * vec2(uResolution.x / uResolution.y, 1.0), strength * 1.1); influence += metaball(aspectCorrectedUv, mouseCenter, strength * 1.5); float threshold = 1.0; vec3 color = vec3(0.0); if (influence > threshold) { float smoothFactor = smoothstep(threshold - 0.1, threshold + 0.1, influence); float intensity = (influence - threshold) * 0.5; color = vec3( smoothFactor * (0.5 + sin(intensity * 5.0 + t) * 0.5), smoothFactor * (0.3 + cos(intensity * 7.0 - t * 1.5) * 0.3), smoothFactor * (0.8 + sin(intensity * 4.0 + t * 2.0) * 0.2) ); } gl_FragColor = vec4(color, 1.0); }
+    </script>
+    <script id="defaultVertexShader" type="x-shader/x-vertex">
+        // Used by Plasma, Metaballs, Checkerboard
+         varying vec2 vUv;
+         void main() {
+            vUv = uv;
+            // Position the quad correctly in clip space
+            gl_Position = vec4(position.xy, 0.0, 1.0);
+         }
+    </script>
+
+    <!-- Checkerboard Shaders (Fragment Only - Vertex uses default) -->
+     <script id="checkerboardFragmentShader" type="x-shader/x-fragment">
+        uniform float uTime;
+        uniform vec2 uResolution;
+        uniform vec2 uMouse; // Mouse coords (0-1), Y flipped
+        uniform vec3 uColor1;
+        uniform vec3 uColor2;
+        uniform mat4 uInverseViewMatrix; // Inverse of camera's view matrix
+        uniform mat4 uInverseProjectionMatrix; // Inverse of camera's projection matrix
+
+        varying vec2 vUv; // UV coords from fullscreen quad (0 to 1)
+
+        const float PI = 3.1415926535;
+
+        // Function to calculate intersection of view ray with ground plane (Y=0)
+        vec3 getGroundPos(vec3 rayOrigin, vec3 rayDir) {
+            // Check if ray is parallel to the ground plane (Y=0)
+            if (abs(rayDir.y) < 0.0001) {
+                return vec3(0.0, 0.0, -10000.0); // Return a point far away if parallel
+            }
+            // Calculate distance 't' to intersection: t = -(origin.y / direction.y)
+            float t = -rayOrigin.y / rayDir.y;
+             // If t is negative, intersection is behind the camera
+             if (t < 0.0) {
+                 return vec3(0.0, 0.0, -10000.0); // Indicate intersection behind
+             }
+            // Calculate intersection point: P = origin + direction * t
+            return rayOrigin + rayDir * t;
+        }
+
+        void main() {
+            // Calculate normalized device coordinates (NDC) from UVs: range -1 to +1
+            vec2 ndc = vUv * 2.0 - 1.0;
+
+            // Unproject NDC to view space near plane
+            vec4 viewNear = uInverseProjectionMatrix * vec4(ndc, -1.0, 1.0);
+            viewNear /= viewNear.w; // Perspective divide
+
+            // Unproject NDC to view space far plane (or just get direction)
+            vec4 viewFar = uInverseProjectionMatrix * vec4(ndc, 1.0, 1.0);
+             viewFar /= viewFar.w;
+
+            // Calculate world space ray origin (camera position)
+            vec3 rayOrigin = (uInverseViewMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+
+            // Calculate world space ray direction
+            vec3 rayDirWorld = normalize((uInverseViewMatrix * vec4(viewNear.xyz, 0.0)).xyz);
+
+
+             // Get the intersection point on the ground plane Y=0
+             vec3 groundPos = getGroundPos(rayOrigin, rayDirWorld);
+
+             // If intersection is behind or parallel, fade to black/fog
+             if (groundPos.z > -0.1) { // Check if it hit behind or was parallel
+                 gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                 return;
+             }
+
+             // --- Checkerboard Pattern ---
+             float scale = 2.0;
+             float scrollSpeedZ = 3.0;
+             float scrollSpeedX = 0.5;
+             float waveAmplitude = 0.5;
+             float waveFrequency = 0.5;
+
+             vec2 uv = groundPos.xz; // Use X and Z from the world intersection point
+             uv.y += uTime * scrollSpeedZ;
+             uv.x += uTime * scrollSpeedX;
+
+             vec2 mouseOffset = (uMouse * 2.0 - 1.0) * 0.5;
+             uv += mouseOffset;
+
+             float dist = length(groundPos.xz - rayOrigin.xz); // Distance on the plane from camera's XZ pos
+             float wave = sin(uv.y * waveFrequency + uTime * 2.0) * waveAmplitude;
+             uv.x += wave * smoothstep(0.0, 30.0, dist);
+
+             uv *= scale;
+
+             float check = mod(floor(uv.x) + floor(uv.y), 2.0);
+             float pattern = step(0.5, check);
+
+             // --- Coloring ---
+             float colorTimeFactor = uTime * 0.5;
+             float distFactor = smoothstep(0.0, 50.0, dist);
+             vec3 colorA = uColor1 * (0.6 + sin(colorTimeFactor + distFactor * PI) * 0.4);
+             vec3 colorB = uColor2 * (0.6 + cos(colorTimeFactor * 1.2 + distFactor * PI * 0.8) * 0.4);
+             vec3 finalColor = mix(colorA, colorB, pattern);
+
+            // --- Fog ---
+            float fogDensity = 0.03;
+            float fogFactor = 1.0 / exp(dist * fogDensity);
+            fogFactor = clamp(fogFactor, 0.0, 1.0);
+            finalColor = mix(vec3(0.0), finalColor, fogFactor);
+
+            gl_FragColor = vec4(finalColor, 1.0);
+        }
+    </script>
+
+
+    <!-- Main Three.js Logic -->
+    <script type="module">
+        import * as THREE from 'three';
+
+        let scene, camera, renderer, clock;
+        let pointLight;
+        const mouse = new THREE.Vector2(-10, -10);
+        const normalizedMouse = new THREE.Vector2();
+        let targetCameraOffset = new THREE.Vector2();
+        const baseCameraPosition = new THREE.Vector3(0, 0.5, 5); // Default camera slightly elevated
+
+        const effects = [];
+        let currentEffectIndex = 0;
+        const effectNames = [ // *** Updated ***
+            "Origin", "Tunnel", "Plasma", "Vector Field", "Metaballs", "Checkerboard"
+        ];
+
+        // Effect-specific variables
+        let originalGroup, tunnelGroup, plasmaPlane, vectorFieldPoints, metaballPlane, checkerboardPlane; // Renamed last one
+        let tunnelTexture;
+        let plasmaMaterial, metaballMaterial, checkerboardMaterial; // Added checkerboardMaterial
+        let vectorFieldVelocities = [];
+        const vectorFieldBounds = { x: 10, y: 10, z: 10 };
+
+        // --- Basic Simplex Noise (Optional) ---
+        // ... (noise functions remain the same) ...
+        const F2=0.5*(Math.sqrt(3.0)-1.0);const G2=(3.0-Math.sqrt(3.0))/6.0;const F3=1.0/3.0;const G3=1.0/6.0;const grad3=[[1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],[1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],[0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]];const p=new Uint8Array(256);for(let i=0;i<256;i++)p[i]=Math.random()*256;const perm=new Uint8Array(512);const permMod12=new Uint8Array(512);for(let i=0;i<512;i++){perm[i]=p[i&255];permMod12[i]=perm[i]%12;} function noise3D(xin,yin,zin){let n0,n1,n2,n3;let s=(xin+yin+zin)*F3;let i=Math.floor(xin+s);let j=Math.floor(yin+s);let k=Math.floor(zin+s);let t=(i+j+k)*G3;let X0=i-t;let Y0=j-t;let Z0=k-t;let x0=xin-X0;let y0=yin-Y0;let z0=zin-Z0;let i1,j1,k1;let i2,j2,k2;if(x0>=y0){if(y0>=z0){i1=1;j1=0;k1=0;i2=1;j2=1;k2=0;}else if(x0>=z0){i1=1;j1=0;k1=0;i2=1;j2=0;k2=1;}else{i1=0;j1=0;k1=1;i2=1;j2=0;k2=1;}}else{if(y0<z0){i1=0;j1=0;k1=1;i2=0;j2=1;k2=1;}else if(x0<z0){i1=0;j1=1;k1=0;i2=0;j2=1;k2=1;}else{i1=0;j1=1;k1=0;i2=1;j2=1;k2=0;}} let x1=x0-i1+G3;let y1=y0-j1+G3;let z1=z0-k1+G3;let x2=x0-i2+2.0*G3;let y2=y0-j2+2.0*G3;let z2=z0-k2+2.0*G3;let x3=x0-1.0+3.0*G3;let y3=y0-1.0+3.0*G3;let z3=z0-1.0+3.0*G3;let ii=i&255;let jj=j&255;let kk=k&255;let gi0=permMod12[ii+perm[jj+perm[kk]]];let gi1=permMod12[ii+i1+perm[jj+j1+perm[kk+k1]]];let gi2=permMod12[ii+i2+perm[jj+j2+perm[kk+k2]]];let gi3=permMod12[ii+1+perm[jj+1+perm[kk+1]]];let t0=0.6-x0*x0-y0*y0-z0*z0;if(t0<0)n0=0.0;else{t0*=t0;n0=t0*t0*dot(grad3[gi0],x0,y0,z0);} let t1=0.6-x1*x1-y1*y1-z1*z1;if(t1<0)n1=0.0;else{t1*=t1;n1=t1*t1*dot(grad3[gi1],x1,y1,z1);} let t2=0.6-x2*x2-y2*y2-z2*z2;if(t2<0)n2=0.0;else{t2*=t2;n2=t2*t2*dot(grad3[gi2],x2,y2,z2);} let t3=0.6-x3*x3-y3*y3-z3*z3;if(t3<0)n3=0.0;else{t3*=t3;n3=t3*t3*dot(grad3[gi3],x3,y3,z3);} return 32.0*(n0+n1+n2+n3);} function dot(g,x,y,z){return g[0]*x+g[1]*y+g[2]*z;}
+
+
+        function init() {
+            clock = new THREE.Clock();
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1100);
+            camera.position.copy(baseCameraPosition);
+            camera.lookAt(0, 0, 0); // Look slightly down initially
+
+            const canvas = document.getElementById('webgl-canvas');
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+            scene.add(ambientLight);
+            pointLight = new THREE.PointLight(0x00ffff, 1.5, 100);
+            pointLight.position.set(0, 0, 3);
+            scene.add(pointLight);
+
+            // --- Setup Effects ---
+            setupEffect0_Original();
+            setupEffect1_Tunnel();
+            setupEffect2_Plasma();
+            setupEffect3_VectorField();
+            setupEffect4_Metaballs();
+            setupEffect5_Checkerboard(); // Setup new effect
+
+             effects.forEach((effectGroup, index) => {
+                scene.add(effectGroup);
+                effectGroup.visible = (index === currentEffectIndex);
+            });
+             updateEffectIndicator();
+
+            window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('mousemove', onMouseMove, false);
+            document.addEventListener('keydown', onKeyDown, false);
+
+            animate();
+        }
+
+        // --- Effect Setup Functions ---
+
+        function setupEffect0_Original() { /* ... (No Change) ... */ originalGroup = new THREE.Group(); effects.push(originalGroup); const geometry = new THREE.TorusKnotGeometry(0.8, 0.25, 150, 20); const material = new THREE.MeshStandardMaterial({ color: 0xff00ff, metalness: 0.6, roughness: 0.3 }); const centralObject = new THREE.Mesh(geometry, material); originalGroup.add(centralObject); originalGroup.userData.centralObject = centralObject; const particleCount = 5000; const positions = new Float32Array(particleCount * 3); const colors = new Float32Array(particleCount * 3); const particleGeometry = new THREE.BufferGeometry(); const color = new THREE.Color(); for (let i = 0; i < particleCount; i++) { const i3 = i * 3; const radius = 10; const theta = Math.random() * Math.PI * 2; const phi = Math.acos((Math.random() * 2) - 1); positions[i3] = radius * Math.sin(phi) * Math.cos(theta); positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta); positions[i3 + 2] = radius * Math.cos(phi); color.setHSL(Math.random(), 0.8, 0.6); colors[i3] = color.r; colors[i3 + 1] = color.g; colors[i3 + 2] = color.b; } particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3)); const particleMaterial = new THREE.PointsMaterial({ size: 0.07, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, sizeAttenuation: true }); const particles = new THREE.Points(particleGeometry, particleMaterial); originalGroup.add(particles); originalGroup.userData.particles = particles; }
+        function setupEffect1_Tunnel() { /* ... (No Change) ... */ tunnelGroup = new THREE.Group(); effects.push(tunnelGroup); const tunnelSegments = 50; const segmentLength = 5; const tunnelRadius = 5; const tubeGeometry = new THREE.CylinderGeometry(tunnelRadius, tunnelRadius, segmentLength * tunnelSegments, 32, tunnelSegments, true); const textureSize = 512; const canvas = document.createElement('canvas'); canvas.width = textureSize; canvas.height = textureSize; const context = canvas.getContext('2d'); const gradient = context.createLinearGradient(0, 0, textureSize, textureSize); gradient.addColorStop(0, '#ff00ff'); gradient.addColorStop(0.5, '#00ffff'); gradient.addColorStop(1, '#ffff00'); context.fillStyle = gradient; context.fillRect(0, 0, textureSize, textureSize); for(let i=0; i<50; i++){ context.strokeStyle = `rgba(0,0,0,${Math.random() * 0.5 + 0.2})`; context.lineWidth = Math.random() * 5 + 1; context.beginPath(); context.moveTo(Math.random() * textureSize, 0); context.lineTo(Math.random() * textureSize, textureSize); context.stroke(); context.beginPath(); context.moveTo(0, Math.random() * textureSize); context.lineTo(textureSize, Math.random() * textureSize); context.stroke(); } tunnelTexture = new THREE.CanvasTexture(canvas); tunnelTexture.wrapS = THREE.RepeatWrapping; tunnelTexture.wrapT = THREE.RepeatWrapping; tunnelTexture.repeat.set(8, tunnelSegments / 4); const tunnelMaterial = new THREE.MeshBasicMaterial({ map: tunnelTexture, side: THREE.BackSide, transparent: true, opacity: 0.9 }); const tunnelMesh = new THREE.Mesh(tubeGeometry, tunnelMaterial); tunnelMesh.rotation.x = Math.PI / 2; tunnelMesh.position.z = -segmentLength * tunnelSegments / 2; tunnelGroup.add(tunnelMesh); tunnelGroup.userData.mesh = tunnelMesh; tunnelGroup.userData.segmentLength = segmentLength; tunnelGroup.userData.totalLength = segmentLength * tunnelSegments; }
+        function setupEffect2_Plasma() { /* ... (No Change) ... */ plasmaPlane = new THREE.Group(); effects.push(plasmaPlane); const geometry = new THREE.PlaneGeometry(2, 2); plasmaMaterial = new THREE.ShaderMaterial({ vertexShader: document.getElementById('defaultVertexShader').textContent, fragmentShader: document.getElementById('plasmaFragmentShader').textContent, uniforms: { uTime: { value: 0.0 }, uMouse: { value: new THREE.Vector2(0.5, 0.5) }, uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) } } }); const mesh = new THREE.Mesh(geometry, plasmaMaterial); plasmaPlane.add(mesh); plasmaPlane.userData.material = plasmaMaterial; }
+        function setupEffect3_VectorField() { /* ... (No Change) ... */ vectorFieldPoints = new THREE.Group(); effects.push(vectorFieldPoints); const particleCount = 5000; const positions = new Float32Array(particleCount * 3); const colors = new Float32Array(particleCount * 3); vectorFieldVelocities = []; const geometry = new THREE.BufferGeometry(); const color = new THREE.Color(); for (let i = 0; i < particleCount; i++) { const i3 = i * 3; positions[i3] = (Math.random() - 0.5) * vectorFieldBounds.x * 2; positions[i3 + 1] = (Math.random() - 0.5) * vectorFieldBounds.y * 2; positions[i3 + 2] = (Math.random() - 0.5) * vectorFieldBounds.z * 2; color.setHSL(0.6 + Math.random() * 0.1, 0.9, 0.6); colors[i3] = color.r; colors[i3 + 1] = color.g; colors[i3 + 2] = color.b; vectorFieldVelocities.push(new THREE.Vector3()); } geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3)); const material = new THREE.PointsMaterial({ size: 0.08, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, sizeAttenuation: true }); const points = new THREE.Points(geometry, material); vectorFieldPoints.add(points); vectorFieldPoints.userData.points = points; }
+        function setupEffect4_Metaballs() { /* ... (No Change) ... */ metaballPlane = new THREE.Group(); effects.push(metaballPlane); const geometry = new THREE.PlaneGeometry(2, 2); metaballMaterial = new THREE.ShaderMaterial({ vertexShader: document.getElementById('defaultVertexShader').textContent, fragmentShader: document.getElementById('metaballFragmentShader').textContent, uniforms: { uTime: { value: 0.0 }, uMouse: { value: new THREE.Vector2(0.5, 0.5) }, uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) } } }); const mesh = new THREE.Mesh(geometry, metaballMaterial); metaballPlane.add(mesh); metaballPlane.userData.material = metaballMaterial; }
+
+        // --- Effect 5: Checkerboard Setup (Fullscreen Shader) ---
+        function setupEffect5_Checkerboard() {
+            checkerboardPlane = new THREE.Group();
+            effects.push(checkerboardPlane);
+
+            // Use a simple PlaneGeometry that covers the screen
+            const planeGeometry = new THREE.PlaneGeometry(2, 2); // Size 2x2 in clip space
+
+            checkerboardMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    uTime: { value: 0.0 },
+                    uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                    uMouse: { value: new THREE.Vector2(0.5, 0.5) }, // Normalized 0-1, Y flipped
+                    uColor1: { value: new THREE.Color(0xff00ff) }, // Magenta
+                    uColor2: { value: new THREE.Color(0x00ffff) },  // Cyan
+                    // We need inverse matrices to unproject screen coords
+                    uInverseViewMatrix: { value: new THREE.Matrix4() },
+                    uInverseProjectionMatrix: { value: new THREE.Matrix4() }
+                },
+                // Use defaultVertexShader for fullscreen quad
+                vertexShader: document.getElementById('defaultVertexShader').textContent,
+                fragmentShader: document.getElementById('checkerboardFragmentShader').textContent,
+                depthWrite: false, // No depth testing needed for fullscreen effect
+                depthTest: false
+            });
+
+            const mesh = new THREE.Mesh(planeGeometry, checkerboardMaterial);
+            checkerboardPlane.add(mesh);
+            checkerboardPlane.userData.material = checkerboardMaterial;
+        }
+
+
+        // --- Event Handlers ---
+        function onWindowResize() {
+             const width = window.innerWidth; const height = window.innerHeight;
+             camera.aspect = width / height; camera.updateProjectionMatrix();
+             renderer.setSize(width, height); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+             if (plasmaMaterial) plasmaMaterial.uniforms.uResolution.value.set(width, height);
+             if (metaballMaterial) metaballMaterial.uniforms.uResolution.value.set(width, height);
+             if (checkerboardMaterial) checkerboardMaterial.uniforms.uResolution.value.set(width, height);
+         }
+        function onMouseMove(event) { /* ... (No Change) ... */ mouse.x = (event.clientX / window.innerWidth) * 2 - 1; mouse.y = - (event.clientY / window.innerHeight) * 2 + 1; normalizedMouse.x = event.clientX / window.innerWidth; normalizedMouse.y = 1.0 - (event.clientY / window.innerHeight); const parallaxStrength = 0.5; targetCameraOffset.x = -mouse.x * parallaxStrength; targetCameraOffset.y = -mouse.y * parallaxStrength; }
+        function onKeyDown(event) { /* ... (No Change) ... */ if (event.key === 'ArrowRight') switchEffect(1); else if (event.key === 'ArrowLeft') switchEffect(-1); }
+
+        // --- Effect Switching Logic ---
+        function switchEffect(direction) {
+            const prevEffectIndex = currentEffectIndex;
+            effects[currentEffectIndex].visible = false;
+            currentEffectIndex = (currentEffectIndex + direction + effects.length) % effects.length;
+            effects[currentEffectIndex].visible = true;
+
+            // Reset camera based on the *new* effect type
+            // *** Treat Checkerboard (5) like other fullscreen shaders (2, 4) ***
+            if (currentEffectIndex === 2 || currentEffectIndex === 4 || currentEffectIndex === 5) {
+                // Camera near origin, looking forward for fullscreen shaders
+                camera.position.set(0, 0, 1); // Position slightly in front of the quad
+                // Still allow slight elevation for checkerboard perspective if desired
+                if (currentEffectIndex === 5) camera.position.y = 0.5;
+                else camera.position.y = 0;
+
+                camera.rotation.set(0, 0, 0);
+                camera.up.set(0, 1, 0);
+                camera.lookAt(0, camera.position.y, 0); // Look slightly down if elevated, else forward
+            } else {
+                // Other effects (Origin, Tunnel, Vector Field) - use parallax & elevated base
+                 camera.position.copy(baseCameraPosition);
+                 camera.rotation.set(0, 0, 0); // Reset rotation
+                 camera.up.set(0, 1, 0);
+                 camera.lookAt(0, 0, 0); // Look towards origin initially
+                 targetCameraOffset.set(0, 0); // Reset parallax offset
+            }
+            updateEffectIndicator();
+        }
+        function updateEffectIndicator() { /* ... (No Change) ... */ document.getElementById('effect-name').textContent = effectNames[currentEffectIndex]; }
+
+        // --- Animation ---
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+            const deltaTime = clock.getDelta();
+
+            // *** Updated Switch Statement ***
+             switch (currentEffectIndex) {
+                case 0: updateEffect0_Original(elapsedTime, deltaTime); break;
+                case 1: updateEffect1_Tunnel(elapsedTime, deltaTime); break;
+                case 2: updateEffect2_Plasma(elapsedTime, deltaTime); break;
+                case 3: updateEffect3_VectorField(elapsedTime, deltaTime); break;
+                case 4: updateEffect4_Metaballs(elapsedTime, deltaTime); break;
+                case 5: updateEffect5_Checkerboard(elapsedTime, deltaTime); break;
+            }
+
+            // Global Camera Updates for Parallax (only for non-shader effects)
+             if (currentEffectIndex !== 2 && currentEffectIndex !== 4 && currentEffectIndex !== 5) {
+                const lerpFactor = 0.05;
+                camera.position.x += (baseCameraPosition.x + targetCameraOffset.x - camera.position.x) * lerpFactor;
+                camera.position.y += (baseCameraPosition.y + targetCameraOffset.y - camera.position.y) * lerpFactor;
+                camera.lookAt(0,0,0); // Look towards origin
+            }
+
+            // Point Light (only for effect 0)
+            pointLight.visible = (currentEffectIndex === 0);
+             if(pointLight.visible) { /* ... (No Change) ... */ pointLight.position.x += (mouse.x * 2 - pointLight.position.x) * 0.05; pointLight.position.y += (mouse.y * 2 - pointLight.position.y) * 0.05; }
+
+            // Update time uniform for shaders that use it
+             if (plasmaMaterial && currentEffectIndex === 2) plasmaMaterial.uniforms.uTime.value = elapsedTime;
+             if (metaballMaterial && currentEffectIndex === 4) metaballMaterial.uniforms.uTime.value = elapsedTime;
+             if (checkerboardMaterial && currentEffectIndex === 5) {
+                 checkerboardMaterial.uniforms.uTime.value = elapsedTime;
+                 // Update inverse matrices needed for checkerboard raycasting
+                 camera.updateMatrixWorld(); // Ensure camera matrices are up-to-date
+                 checkerboardMaterial.uniforms.uInverseViewMatrix.value.copy(camera.matrixWorld); // world matrix IS the inverse view matrix
+                 checkerboardMaterial.uniforms.uInverseProjectionMatrix.value.copy(camera.projectionMatrixInverse);
+             }
+
+            renderer.render(scene, camera);
+        }
+
+        // --- Effect Update Functions ---
+
+        function updateEffect0_Original(elapsedTime, deltaTime) { /* ... (No Change) ... */ const group = effects[0]; group.userData.centralObject.rotation.x += 0.002; group.userData.centralObject.rotation.y += 0.003; group.userData.particles.rotation.y = elapsedTime * 0.1; }
+        function updateEffect1_Tunnel(elapsedTime, deltaTime) { /* ... (No Change) ... */ const group = effects[1]; const mesh = group.userData.mesh; const segmentLength = group.userData.segmentLength; const speed = 15.0; if (tunnelTexture) { tunnelTexture.offset.y -= deltaTime * (speed / segmentLength / 4) ; } mesh.rotation.z += deltaTime * 0.1; }
+        function updateEffect2_Plasma(elapsedTime, deltaTime) { /* ... (No Change) ... */ const group = effects[2]; if (group.userData.material) { group.userData.material.uniforms.uMouse.value.copy(normalizedMouse); } } // uTime updated globally
+        function updateEffect3_VectorField(elapsedTime, deltaTime) { /* ... (No Change) ... */ const group = effects[3]; const points = group.userData.points; const positions = points.geometry.attributes.position.array; const noiseScale = 0.3; const speed = 1.5; const mouseRepelStrength = 15.0; const mouseRepelRadiusSq = 1.5 * 1.5; const mouseWorld = new THREE.Vector3(mouse.x, mouse.y, 0.5); mouseWorld.unproject(camera); const dir = mouseWorld.sub(camera.position).normalize(); const distance = - camera.position.z / dir.z; const mousePos3D = camera.position.clone().add(dir.multiplyScalar(distance)); for (let i = 0; i < positions.length / 3; i++) { const i3 = i * 3; const pos = new THREE.Vector3(positions[i3], positions[i3 + 1], positions[i3 + 2]); const vel = vectorFieldVelocities[i]; let angleXY = Math.atan2(pos.y, pos.x) + deltaTime * 0.5; let forceX = -Math.sin(angleXY) * 0.1 + pos.x * 0.01; let forceY = Math.cos(angleXY) * 0.1 + pos.y * 0.01; let forceZ = Math.sin(pos.y * 0.2 + elapsedTime * 0.3) * 0.1; vel.x += forceX * deltaTime * speed; vel.y += forceY * deltaTime * speed; vel.z += forceZ * deltaTime * speed; const distToMouseSq = pos.distanceToSquared(mousePos3D); if (distToMouseSq < mouseRepelRadiusSq && distToMouseSq > 0.01) { const repelDir = pos.clone().sub(mousePos3D).normalize(); const repelForce = (mouseRepelRadiusSq - distToMouseSq) / mouseRepelRadiusSq; vel.add(repelDir.multiplyScalar(repelForce * mouseRepelStrength * deltaTime)); } vel.multiplyScalar(0.97); pos.add(vel.clone().multiplyScalar(deltaTime)); if (Math.abs(pos.x) > vectorFieldBounds.x) pos.x = -Math.sign(pos.x) * vectorFieldBounds.x; if (Math.abs(pos.y) > vectorFieldBounds.y) pos.y = -Math.sign(pos.y) * vectorFieldBounds.y; if (Math.abs(pos.z) > vectorFieldBounds.z) pos.z = -Math.sign(pos.z) * vectorFieldBounds.z; positions[i3] = pos.x; positions[i3 + 1] = pos.y; positions[i3 + 2] = pos.z; } points.geometry.attributes.position.needsUpdate = true; group.rotation.y += deltaTime * 0.05; }
+        function updateEffect4_Metaballs(elapsedTime, deltaTime) { /* ... (No Change) ... */ const group = effects[4]; if (group.userData.material) { group.userData.material.uniforms.uMouse.value.copy(normalizedMouse); } } // uTime updated globally
+
+        // --- Effect 5: Checkerboard Update (Fullscreen Shader) ---
+        function updateEffect5_Checkerboard(elapsedTime, deltaTime) {
+            const group = effects[5];
+             if (!group || !group.userData.material) return; // Guard clause
+
+             // Update basic uniforms (time updated globally, mouse here)
+            const material = group.userData.material;
+            material.uniforms.uMouse.value.copy(normalizedMouse);
+
+             // Inverse matrices are updated in the main animate loop just before render
+
+             // No camera movement needed for this effect - it's screen-space
+        }
+
+        // --- Initialize ---
+        init();
+
+    </script>
+
+</body>
+</html>
