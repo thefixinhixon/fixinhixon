@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Raccoon Runner</title>
     <style>
-        /* CSS remains the same */
+        /* CSS */
         body { margin: 0; overflow: hidden; background-color: #222; color: white; font-family: 'Arial', sans-serif; }
         #gameContainer { position: relative; width: 100vw; height: 100vh; }
         #gameCanvas { display: block; width: 100%; height: 100%; }
@@ -19,6 +19,7 @@
     </style>
 </head>
 <body>
+    <!-- HTML Structure -->
     <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
         <div id="uiContainer">
@@ -37,6 +38,7 @@
     <!-- Import map -->
     <script type="importmap"> { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } } </script>
 
+    <!-- JavaScript Module -->
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -94,18 +96,22 @@
                 console.log("init: loadAssets() promise resolved successfully.");
                 assetsLoaded = true; gameState = 'waiting';
                 showStartMessage("Press Any Key or Click to Start");
-                window.addEventListener('keydown', startGameOnce); window.addEventListener('mousedown', startGameOnce);
-                console.log("init: Game ready state set.");
+                // Add listeners *after* loading is complete
+                window.addEventListener('keydown', startGameOnce);
+                window.addEventListener('mousedown', startGameOnce);
+                console.log("init: Added start listeners. Game ready state set.");
                 playAnimation('run');
             }).catch(error => {
                 console.error("init: CRITICAL ERROR during asset loading:", error);
                 showStartMessage("Error loading assets. Please refresh.", true); gameState = 'error';
             });
-            window.addEventListener('resize', onWindowResize); document.addEventListener('keydown', onKeyDown); restartButton.addEventListener('click', resetGame);
+            window.addEventListener('resize', onWindowResize);
+            document.addEventListener('keydown', onKeyDown); // General key listener
+            restartButton.addEventListener('click', resetGame);
             console.log("init: Starting animation loop..."); animate(); console.log("init: Function finished.");
         }
 
-        // --- Asset Loading (Simplified Ground + Clipping Adjustment) ---
+        // --- Asset Loading ---
         function loadAssets() {
             console.log("loadAssets: Starting...");
             const runPromise = gltfLoader.loadAsync(PLAYER_RUN_MODEL_PATH);
@@ -116,18 +122,8 @@
                 const initialGroundPath = GROUND_TEXTURE_PATHS[initialGroundIndex];
                 console.log("loadAssets: Loading initial ground:", initialGroundPath);
                 textureLoader.load( initialGroundPath,
-                    (texture) => {
-                        console.log("loadAssets: Initial ground texture loaded:", initialGroundPath);
-                        texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping;
-                        texture.repeat.set(GROUND_TEXTURE_REPEAT, GROUND_TEXTURE_REPEAT * (150/40));
-                        ground.material.map = texture; ground.material.needsUpdate = true;
-                        console.log("loadAssets: Initial ground texture applied.");
-                        resolve();
-                    }, undefined,
-                    (errorEvent) => {
-                        console.error("loadAssets: FAILED loading ground texture:", initialGroundPath, errorEvent);
-                        reject(new Error(`Failed ground texture: ${initialGroundPath}`));
-                    } ); });
+                    (texture) => { console.log("loadAssets: Initial ground texture loaded:", initialGroundPath); texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(GROUND_TEXTURE_REPEAT, GROUND_TEXTURE_REPEAT * (150/40)); ground.material.map = texture; ground.material.needsUpdate = true; console.log("loadAssets: Initial ground texture applied."); resolve(); },
+                    undefined, (errorEvent) => { console.error("loadAssets: FAILED loading ground texture:", initialGroundPath, errorEvent); reject(new Error(`Failed ground texture: ${initialGroundPath}`)); } ); });
             // --- Obstacle loading still commented out ---
             // const trashcanPromise = gltfLoader.loadAsync(TRASHCAN_MODEL_PATH);
             // const cactusPromise = gltfLoader.loadAsync(CACTUS_MODEL_PATH);
@@ -142,7 +138,7 @@
                     console.log("loadAssets: Setting up player model...");
                     player = gltfRun.scene; player.scale.set(PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE); player.rotation.y = Math.PI; player.position.set(PLAYER_START_POS.x, 0, PLAYER_START_POS.z); player.traverse(child => { if (child.isMesh) child.castShadow = true; }); scene.add(player);
                     playerBoundingBox.setFromObject(player, true); const ps = new THREE.Vector3(); playerBoundingBox.getSize(ps); playerHeight = ps.y; const mnY = playerBoundingBox.min.y;
-                    let groundOffset = -mnY + GROUND_CLIP_ADJUSTMENT; // Apply adjustment here
+                    let groundOffset = -mnY + GROUND_CLIP_ADJUSTMENT; // Apply adjustment
                     console.log(`loadAssets: Calculated groundOffset: ${-mnY}, Adjusted to: ${groundOffset}`);
                     player.position.y = groundOffset; player.userData.groundY = groundOffset;
                     playerBoundingBox.setFromObject(player, true);
@@ -165,22 +161,18 @@
         // --- Helper function to play animations ---
         function playAnimation(name) { if (!playerMixer || !assetsLoaded) return; const actionToPlay = name === 'jump' ? jumpAction : runAction; if (!actionToPlay) { console.warn(`Animation action "${name}" not found.`); return; } const currentAction = (jumpAction && jumpAction.isRunning()) ? jumpAction : ((runAction && runAction.isRunning()) ? runAction : null); if (actionToPlay === currentAction) { if (name === 'jump') actionToPlay.reset().play(); return; } actionToPlay.reset(); actionToPlay.enabled = true; if (currentAction) { currentAction.crossFadeTo(actionToPlay, ANIMATION_FADE_TIME, true); } actionToPlay.play(); }
 
-        // --- Game Loop (with state check log) ---
+        // --- Game Loop ---
         function animate() {
-            animationFrameId = requestAnimationFrame(animate);
-            const deltaTime = clock.getDelta();
+            animationFrameId = requestAnimationFrame(animate); const deltaTime = clock.getDelta();
             if (playerMixer) playerMixer.update(deltaTime);
              if (gameState === 'playing') {
                 score += deltaTime; updateScoreDisplay();
                  if (gameSpeed < MAX_GAME_SPEED) gameSpeed += SPEED_INCREASE_RATE * deltaTime;
                 updatePlayerPosition(deltaTime); handleJump(deltaTime);
                 updateObstacles(deltaTime); spawnObstacles(deltaTime); checkCollisions();
-                 // Texture offset logic (re-enable if desired)
                  const textureOffsetY = (clock.elapsedTime * gameSpeed * 0.05) % 1;
                  if (ground.material.map) ground.material.map.offset.y = textureOffsetY;
-            } else {
-                // console.log(`animate: Not playing, gameState: ${gameState}`); // Optional log
-            }
+            } /*else { console.log(`animate: Not playing, gameState: ${gameState}`); }*/
             renderer.render(scene, camera);
         }
 
@@ -191,7 +183,7 @@
         function moveLane(direction) { if (gameState !== 'playing' || !player) return; const targetLane = currentLane + direction; if (targetLane >= 0 && targetLane < LANES.length) currentLane = targetLane; }
 
         // --- Obstacle Logic (Uses geometric fallbacks) ---
-        function createObstacle() { let obstacle = null; let data = null; let obstacleType = 'geometric'; const obstacleOptions = [ { type: 'trashcan', model: cachedTrashcanModel, scale: TRASHCAN_SCALE }, { type: 'cactus', model: cachedCactusModel, scale: CACTUS_SCALE }, { type: 'lizard', geometry: new THREE.BoxGeometry(1.0, 0.3, 0.4), color: 0x90EE90 }, { type: 'dog', geometry: new THREE.CapsuleGeometry(0.6, 1.0, 4, 8), color: 0x8B4513 }, { type: 'cat', geometry: new THREE.CapsuleGeometry(0.4, 0.7, 4, 8), color: 0xFFD700 }, ]; data = obstacleOptions[Math.floor(Math.random() * obstacleOptions.length)]; const laneIndex = Math.floor(Math.random() * LANES.length); if (data.model && data.model) { console.warn("Attempted model obstacle creation, but loading disabled."); return; } else if (data.geometry) { const material = new THREE.MeshStandardMaterial({ color: data.color }); obstacle = new THREE.Mesh(data.geometry, material); obstacleType = data.type; } else { console.error("Invalid obstacle data/model not loaded:", data); return; } obstacle.castShadow = true; obstacle.receiveShadow = true; obstacle.position.x = LANES[laneIndex]; obstacle.position.z = OBSTACLE_SPAWN_Z; scene.add(obstacle); const box = new THREE.Box3().setFromObject(obstacle); const size = new THREE.Vector3(); box.getSize(size); const minY = box.min.y; obstacle.position.y = -minY; scene.add(obstacle); // Re-add after position set? No, already added. obstacle.userData.boundingBox = new THREE.Box3(); obstacle.userData.boundingBox.setFromObject(obstacle); obstacles.push(obstacle); }
+        function createObstacle() { let obstacle = null; let data = null; let obstacleType = 'geometric'; const obstacleOptions = [ { type: 'trashcan', model: cachedTrashcanModel, scale: TRASHCAN_SCALE }, { type: 'cactus', model: cachedCactusModel, scale: CACTUS_SCALE }, { type: 'lizard', geometry: new THREE.BoxGeometry(1.0, 0.3, 0.4), color: 0x90EE90 }, { type: 'dog', geometry: new THREE.CapsuleGeometry(0.6, 1.0, 4, 8), color: 0x8B4513 }, { type: 'cat', geometry: new THREE.CapsuleGeometry(0.4, 0.7, 4, 8), color: 0xFFD700 }, ]; data = obstacleOptions[Math.floor(Math.random() * obstacleOptions.length)]; const laneIndex = Math.floor(Math.random() * LANES.length); if (data.model && data.model /* Check if model loaded */) { console.warn("Attempted model obstacle creation, but loading disabled."); return; } else if (data.geometry) { const material = new THREE.MeshStandardMaterial({ color: data.color }); obstacle = new THREE.Mesh(data.geometry, material); obstacleType = data.type; } else { console.error("Invalid obstacle data or model not loaded:", data); return; } obstacle.castShadow = true; obstacle.receiveShadow = true; obstacle.position.x = LANES[laneIndex]; obstacle.position.z = OBSTACLE_SPAWN_Z; scene.add(obstacle); const box = new THREE.Box3().setFromObject(obstacle); const size = new THREE.Vector3(); box.getSize(size); const minY = box.min.y; obstacle.position.y = -minY; scene.add(obstacle); obstacle.userData.boundingBox = new THREE.Box3(); obstacle.userData.boundingBox.setFromObject(obstacle); obstacles.push(obstacle); }
         function updateObstacles(deltaTime) { for (let i = obstacles.length - 1; i >= 0; i--) { const obstacle = obstacles[i]; obstacle.position.z += gameSpeed * deltaTime; obstacle.userData.boundingBox.setFromObject(obstacle); if (obstacle.position.z > OBSTACLE_DESPAWN_Z) { scene.remove(obstacle); obstacle.geometry.dispose(); if(obstacle.material) obstacle.material.dispose(); else obstacle.traverse(c => {if(c.material) c.material.dispose()}); obstacles.splice(i, 1); } } }
         function spawnObstacles(deltaTime) { timeSinceLastSpawn += deltaTime; if (timeSinceLastSpawn > nextSpawnInterval) { createObstacle(); timeSinceLastSpawn = 0; nextSpawnInterval = calculateNextSpawnInterval(); } }
         function calculateNextSpawnInterval() { const speedFactor = Math.max(0.5, 1 - (gameSpeed / (MAX_GAME_SPEED * 1.5))); const min = OBSTACLE_SPAWN_INTERVAL_MIN * speedFactor; const max = OBSTACLE_SPAWN_INTERVAL_MAX * speedFactor; return Math.random() * (max - min) + min; }
@@ -219,7 +211,8 @@
             obstacles.forEach(obstacle => { scene.remove(obstacle); obstacle.geometry.dispose(); if(obstacle.material) obstacle.material.dispose(); else obstacle.traverse(c => {if(c.material) c.material.dispose()}); }); obstacles = [];
             player.position.copy(PLAYER_START_POS); player.position.y = player.userData.groundY; playerBoundingBox.setFromObject(player, true); currentLane = 1; isJumping = false; playerVelocityY = 0;
             score = 0; gameSpeed = INITIAL_GAME_SPEED; timeSinceLastSpawn = 0; nextSpawnInterval = calculateNextSpawnInterval();
-            updateScoreDisplay(); gameOverScreen.style.display = 'none'; gameState = 'waiting'; gameStartedOnce = false; showStartMessage("Press Any Key or Click to Start");
+            updateScoreDisplay(); gameOverScreen.style.display = 'none'; gameState = 'waiting'; gameStartedOnce = false; // Ensure this is reset
+            showStartMessage("Press Any Key or Click to Start");
             if (playerMixer) { if(jumpAction && jumpAction.isRunning()) jumpAction.stop(); if(runAction) runAction.reset().play(); }
             if (clock.running === false) clock.start();
         }
@@ -234,28 +227,36 @@
         function saveHighScore() { if (Math.floor(score) > highScore) { highScore = Math.floor(score); try { localStorage.setItem(HIGH_SCORE_KEY, highScore.toString()); } catch (e) { console.error("Could not save high score:", e); } } }
         function loadHighScore() { try { const storedHighScore = localStorage.getItem(HIGH_SCORE_KEY); if (storedHighScore !== null) highScore = parseInt(storedHighScore, 10) || 0; } catch (e) { console.error("Could not load high score:", e); highScore = 0; } }
 
-        // --- Event Handlers (with Logging) ---
+        // --- Event Handlers (with Simplified onKeyDown) ---
         function onWindowResize() { const newWidth = gameContainer.clientWidth; const newHeight = gameContainer.clientHeight; camera.aspect = newWidth / newHeight; camera.updateProjectionMatrix(); renderer.setSize(newWidth, newHeight); }
         function startGameOnce() {
              console.log(`startGameOnce: Called. gameStartedOnce: ${gameStartedOnce}, assetsLoaded: ${assetsLoaded}, gameState: ${gameState}`); // DEBUG LOG
+             // Make sure it only runs ONCE and conditions are met
              if (!gameStartedOnce && assetsLoaded && gameState === 'waiting') {
-                 gameStartedOnce = true;
+                 gameStartedOnce = true; // Set flag immediately
                  console.log("startGameOnce: Conditions met, calling startGame()."); // DEBUG LOG
                  startGame();
             } else { console.log("startGameOnce: Conditions not met or already started."); } // DEBUG LOG
          }
         function onKeyDown(event) {
-            console.log(`onKeyDown: Key '${event.code}' pressed. Current state: ${gameState}, assetsLoaded: ${assetsLoaded}, gameStartedOnce: ${gameStartedOnce}`); // DEBUG LOG
+            // console.log(`onKeyDown: Key '${event.code}' pressed. State: ${gameState}, StartedOnce: ${gameStartedOnce}`); // Keep log for debugging
+
+            // Let the listeners attached in init handle the FIRST start trigger
             if (!gameStartedOnce && assetsLoaded && gameState === 'waiting') {
-                console.log("onKeyDown: Triggering startGameOnce from keydown."); // DEBUG LOG
-                startGameOnce();
-                if (gameState === 'playing') { console.log("onKeyDown: Game started by this keypress, returning."); return; } // DEBUG LOG
-            }
-             if (gameState !== 'playing') { console.log("onKeyDown: Not in 'playing' state, ignoring movement."); return; } // DEBUG LOG
+                 console.log("onKeyDown: First keypress detected, waiting for startGameOnce listener.");
+                 return; // Don't process movement keys before game starts
+             }
+
+             // Process movement/jump only when playing
+             if (gameState !== 'playing') {
+                 // console.log("onKeyDown: Not in 'playing' state, ignoring movement.");
+                 return;
+             }
+
             switch (event.code) {
-                case 'ArrowLeft': case 'KeyA': console.log("onKeyDown: Moving left."); moveLane(-1); break; // DEBUG LOG
-                case 'ArrowRight': case 'KeyD': console.log("onKeyDown: Moving right."); moveLane(1); break; // DEBUG LOG
-                case 'Space': case 'ArrowUp': case 'KeyW': console.log("onKeyDown: Jumping."); jump(); break; // DEBUG LOG
+                case 'ArrowLeft': case 'KeyA': console.log("onKeyDown: Moving left."); moveLane(-1); break;
+                case 'ArrowRight': case 'KeyD': console.log("onKeyDown: Moving right."); moveLane(1); break;
+                case 'Space': case 'ArrowUp': case 'KeyW': console.log("onKeyDown: Jumping."); jump(); break;
             }
         }
 
