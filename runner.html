@@ -41,401 +41,264 @@
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-        // --- Configuration ---
-        const LANE_WIDTH = 2.5;
-        const LANES = [-LANE_WIDTH, 0, LANE_WIDTH];
+        // --- Configuration (remains the same) ---
+        const LANE_WIDTH = 2.5; const LANES = [-LANE_WIDTH, 0, LANE_WIDTH];
         const PLAYER_START_POS = new THREE.Vector3(0, 0, 10);
-        const PLAYER_RUN_MODEL_PATH = 'raccoon.glb';
-        const PLAYER_JUMP_MODEL_PATH = 'raccoon_jump.glb';
-        const PLAYER_MODEL_SCALE = 0.02; // Adjusted scale
-        const ANIMATION_FADE_TIME = 0.2;
-        const INITIAL_GAME_SPEED = 8;
-        const MAX_GAME_SPEED = 30;
-        const SPEED_INCREASE_RATE = 0.1;
-        const OBSTACLE_SPAWN_Z = -50;
-        const OBSTACLE_DESPAWN_Z = 15;
-        const OBSTACLE_SPAWN_INTERVAL_MIN = 0.8;
-        const OBSTACLE_SPAWN_INTERVAL_MAX = 2.0;
-        const JUMP_VELOCITY = 10;
-        const GRAVITY = 25;
-        const HIGH_SCORE_KEY = 'raccoonRunnerHighScore';
+        const PLAYER_RUN_MODEL_PATH = 'raccoon.glb'; const PLAYER_JUMP_MODEL_PATH = 'raccoon_jump.glb';
+        const PLAYER_MODEL_SCALE = 0.02; const ANIMATION_FADE_TIME = 0.2;
+        const INITIAL_GAME_SPEED = 8; const MAX_GAME_SPEED = 30; const SPEED_INCREASE_RATE = 0.1;
+        const OBSTACLE_SPAWN_Z = -50; const OBSTACLE_DESPAWN_Z = 15;
+        const OBSTACLE_SPAWN_INTERVAL_MIN = 0.8; const OBSTACLE_SPAWN_INTERVAL_MAX = 2.0;
+        const JUMP_VELOCITY = 10; const GRAVITY = 25; const HIGH_SCORE_KEY = 'raccoonRunnerHighScore';
+        const GROUND_TEXTURE_PATHS = [ 'ground1.jpg', 'ground2.jpg', 'ground3.jpg', 'ground4.jpg' ];
+        const SKY_TEXTURE_PATH = 'sky.jpg'; const GROUND_TEXTURE_REPEAT = 10;
+        const GROUND_FADE_INTERVAL = 30.0; const GROUND_FADE_DURATION = 1.5;
 
-        // --- CHANGE START: Texture Config ---
-        const GROUND_TEXTURE_PATHS = [
-            'ground1.jpg',
-            'ground2.jpg',
-            'ground3.jpg',
-            'ground4.jpg'
-        ];
-        const SKY_TEXTURE_PATH = 'sky.jpg';
-        const GROUND_TEXTURE_REPEAT = 10; // How many times ground texture repeats width/length wise on visible plane section
-        const GROUND_FADE_INTERVAL = 30.0; // Seconds between fades
-        const GROUND_FADE_DURATION = 1.5; // Seconds the fade takes
-        // --- CHANGE END ---
-
-        // --- Game State ---
-        let scene, camera, renderer, clock, player, ground; // Added ground variable
-        let gameSpeed = INITIAL_GAME_SPEED;
-        let obstacles = [];
-        let currentLane = 1;
-        let score = 0;
-        let highScore = 0;
-        let timeSinceLastSpawn = 0;
-        let nextSpawnInterval = calculateNextSpawnInterval();
-        let isJumping = false;
-        let playerVelocityY = 0;
-        let gameState = 'loading';
-        let animationFrameId = null;
-        let playerMixer = null;
-        let playerAnimations = {};
-        let runAction = null;
-        let jumpAction = null;
-        let playerBoundingBox = new THREE.Box3();
-        let playerHeight = 1;
-        let assetsLoaded = false;
-        let gameStartedOnce = false;
-
-        // --- CHANGE START: Texture State ---
-        let textureLoader;
-        let groundMaterials = []; // Array for the two ground materials
-        let currentGroundTextureIndex = 0;
-        let visibleMaterialIndex = 0; // 0 or 1, indicates which material in groundMaterials is opaque
-        let timeSinceLastGroundFade = 0;
-        let isFadingGround = false;
-        let groundFadeTimer = 0;
-        let nextGroundTexture = null; // Preload the next texture
-        // --- CHANGE END ---
+        // --- Game State (remains the same) ---
+        let scene, camera, renderer, clock, player, ground;
+        let gameSpeed = INITIAL_GAME_SPEED; let obstacles = []; let currentLane = 1;
+        let score = 0; let highScore = 0; let timeSinceLastSpawn = 0; let nextSpawnInterval = calculateNextSpawnInterval();
+        let isJumping = false; let playerVelocityY = 0; let gameState = 'loading'; let animationFrameId = null;
+        let playerMixer = null; let playerAnimations = {}; let runAction = null; let jumpAction = null;
+        let playerBoundingBox = new THREE.Box3(); let playerHeight = 1;
+        let assetsLoaded = false; let gameStartedOnce = false;
+        let textureLoader; let groundMaterials = []; let currentGroundTextureIndex = 0;
+        let visibleMaterialIndex = 0; let timeSinceLastGroundFade = 0;
+        let isFadingGround = false; let groundFadeTimer = 0; let nextGroundTexture = null;
 
         // --- DOM Elements (remain the same) ---
-        const gameCanvas = document.getElementById('gameCanvas');
-        // ... other DOM elements ...
-         const startMessage = document.getElementById('startMessage');
+        const gameCanvas = document.getElementById('gameCanvas'); const gameContainer = document.getElementById('gameContainer');
+        const scoreElement = document.getElementById('score'); const highScoreElement = document.getElementById('highScoreDisplay');
+        const gameOverScreen = document.getElementById('gameOverScreen'); const finalScoreElement = document.getElementById('finalScore');
+        const sessionHighScoreElement = document.getElementById('sessionHighScore'); const restartButton = document.getElementById('restartButton');
+        const startMessage = document.getElementById('startMessage');
 
         // --- Initialization ---
         function init() {
-            textureLoader = new THREE.TextureLoader(); // Init texture loader
-
-            // Basic Setup
+            console.log("init: Function started."); // DEBUG LOG
+            textureLoader = new THREE.TextureLoader();
             scene = new THREE.Scene();
-            // scene.background will be set after sky texture loads
-            scene.fog = new THREE.Fog(0x87CEEB, 10, 60); // Fog color might need adjustment based on sky
+            scene.fog = new THREE.Fog(0x87CEEB, 10, 60);
             clock = new THREE.Clock();
-
-            // Camera & Renderer (remain the same)
             const aspect = gameContainer.clientWidth / gameContainer.clientHeight;
             camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
             camera.position.set(0, 4, 15); camera.lookAt(0, 0, 0);
             renderer = new THREE.WebGLRenderer({ canvas: gameCanvas, antialias: true });
             renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
             renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-            // Lights (remain the same)
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); scene.add(ambientLight);
             const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
             directionalLight.position.set(5, 10, 7); directionalLight.castShadow = true;
-            // Shadow settings (remain the same)
             directionalLight.shadow.mapSize.width = 1024; directionalLight.shadow.mapSize.height = 1024;
             directionalLight.shadow.camera.near = 0.5; directionalLight.shadow.camera.far = 50;
             directionalLight.shadow.camera.left = -20; directionalLight.shadow.camera.right = 20;
             directionalLight.shadow.camera.top = 20; directionalLight.shadow.camera.bottom = -20;
             scene.add(directionalLight);
-
-            // --- CHANGE START: Ground Setup ---
-            const groundGeometry = new THREE.PlaneGeometry(40, 150); // Wider plane might be good
-
-            // Create TWO materials for fading
-            groundMaterials[0] = new THREE.MeshStandardMaterial({
-                color: 0xAAAAAA, // Fallback color
-                side: THREE.DoubleSide,
-                // Map will be set during asset loading
-            });
-            groundMaterials[1] = new THREE.MeshStandardMaterial({
-                color: 0xAAAAAA,
-                side: THREE.DoubleSide,
-                transparent: true, // Enable transparency for the second material
-                opacity: 0,      // Start fully transparent
-                // Map will be set during asset loading/fading
-            });
-
-            ground = new THREE.Mesh(groundGeometry, groundMaterials); // Use the array of materials
-            ground.rotation.x = -Math.PI / 2;
-            ground.position.y = 0;
-            ground.receiveShadow = true;
+            const groundGeometry = new THREE.PlaneGeometry(40, 150);
+            groundMaterials[0] = new THREE.MeshStandardMaterial({ color: 0xAAAAAA, side: THREE.DoubleSide });
+            groundMaterials[1] = new THREE.MeshStandardMaterial({ color: 0xAAAAAA, side: THREE.DoubleSide, transparent: true, opacity: 0 });
+            ground = new THREE.Mesh(groundGeometry, groundMaterials);
+            ground.rotation.x = -Math.PI / 2; ground.position.y = 0; ground.receiveShadow = true;
             scene.add(ground);
-            // --- CHANGE END ---
+            loadHighScore(); updateHighScoreDisplay();
 
-            // Load High Score
-            loadHighScore();
-            updateHighScoreDisplay();
-
-            // Load all assets (Models, Sky, Initial Ground)
+            console.log("init: Calling loadAssets()..."); // DEBUG LOG
             loadAssets().then(() => {
+                console.log("init: loadAssets() promise resolved."); // DEBUG LOG
                 assetsLoaded = true;
                 gameState = 'waiting';
                 showStartMessage("Press Any Key or Click to Start");
                 window.addEventListener('keydown', startGameOnce);
                 window.addEventListener('mousedown', startGameOnce);
-                console.log("Assets loaded, ready to start.");
-                 playAnimation('run'); // Start with the run animation
+                console.log("init: Game ready state set."); // DEBUG LOG
+                playAnimation('run');
             }).catch(error => {
-                console.error("Failed to load assets:", error);
+                console.error("init: CRITICAL ERROR during loadAssets promise chain:", error); // DEBUG LOG
                 showStartMessage("Error loading assets. Please refresh.", true);
                 gameState = 'error';
             });
 
-            // Event Listeners
             window.addEventListener('resize', onWindowResize);
             document.addEventListener('keydown', onKeyDown);
             restartButton.addEventListener('click', resetGame);
-
-            // Start the animation loop
+            console.log("init: Starting animation loop..."); // DEBUG LOG
             animate();
+            console.log("init: Function finished."); // DEBUG LOG
         }
 
-        // --- Asset Loading ---
+        // --- Asset Loading with Logging ---
         function loadAssets() {
+            console.log("loadAssets: Starting..."); // DEBUG LOG 1
             const gltfLoader = new GLTFLoader();
             const runPromise = gltfLoader.loadAsync(PLAYER_RUN_MODEL_PATH);
             const jumpPromise = gltfLoader.loadAsync(PLAYER_JUMP_MODEL_PATH);
-
-            // --- CHANGE START: Load Textures ---
             const skyPromise = textureLoader.loadAsync(SKY_TEXTURE_PATH);
-
-            // Choose initial ground texture randomly
             currentGroundTextureIndex = Math.floor(Math.random() * GROUND_TEXTURE_PATHS.length);
             const initialGroundPath = GROUND_TEXTURE_PATHS[currentGroundTextureIndex];
+            console.log("loadAssets: Loading initial ground:", initialGroundPath); // DEBUG LOG 2
             const groundPromise = textureLoader.loadAsync(initialGroundPath);
-             // --- CHANGE END ---
 
-            // Wait for models and essential textures
+            console.log("loadAssets: Promises created, awaiting Promise.all..."); // DEBUG LOG 3
             return Promise.all([runPromise, jumpPromise, skyPromise, groundPromise])
                 .then(([gltfRun, gltfJump, skyTexture, initialGroundTexture]) => {
+                    console.log("loadAssets: Promise.all resolved. Entering .then() block..."); // DEBUG LOG 4
 
-                // --- Player Model Setup (using refined Y position) ---
-                player = gltfRun.scene;
-                player.scale.set(PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE);
-                player.rotation.y = Math.PI;
-                player.position.set(PLAYER_START_POS.x, 0, PLAYER_START_POS.z); // Temp Y
-                player.traverse(child => { if (child.isMesh) child.castShadow = true; });
-                scene.add(player); // Add before box calculation
-                playerBoundingBox.setFromObject(player, true);
-                const playerSize = new THREE.Vector3(); playerBoundingBox.getSize(playerSize);
-                playerHeight = playerSize.y;
-                const minY = playerBoundingBox.min.y;
-                const groundOffset = -minY;
-                player.position.y = groundOffset; // Set final Y
-                player.userData.groundY = groundOffset; // Store ground level
-                playerBoundingBox.setFromObject(player, true); // Recalculate box
-                console.log("Player model processed. GroundY:", player.userData.groundY, "Height:", playerHeight);
+                    // Player Model Setup
+                    console.log("loadAssets: Setting up player model..."); // DEBUG LOG 5
+                    player = gltfRun.scene;
+                    player.scale.set(PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE);
+                    player.rotation.y = Math.PI;
+                    player.position.set(PLAYER_START_POS.x, 0, PLAYER_START_POS.z);
+                    player.traverse(child => { if (child.isMesh) child.castShadow = true; });
+                    scene.add(player);
+                    playerBoundingBox.setFromObject(player, true);
+                    const playerSize = new THREE.Vector3(); playerBoundingBox.getSize(playerSize);
+                    playerHeight = playerSize.y; const minY = playerBoundingBox.min.y;
+                    const groundOffset = -minY; player.position.y = groundOffset;
+                    player.userData.groundY = groundOffset;
+                    playerBoundingBox.setFromObject(player, true);
+                    console.log("loadAssets: Player model setup complete. GroundY:", player.userData.groundY); // DEBUG LOG 6
 
-                // --- Animation Setup (remains the same) ---
-                playerMixer = new THREE.AnimationMixer(player);
-                if (gltfRun.animations && gltfRun.animations.length > 0) { playerAnimations['run'] = gltfRun.animations[0]; runAction = playerMixer.clipAction(playerAnimations['run']); runAction.setLoop(THREE.LoopRepeat); } else { console.warn("No run anim"); }
-                if (gltfJump.animations && gltfJump.animations.length > 0) { playerAnimations['jump'] = gltfJump.animations[0]; jumpAction = playerMixer.clipAction(playerAnimations['jump']); jumpAction.setLoop(THREE.LoopOnce); jumpAction.clampWhenFinished = true;} else { console.warn("No jump anim"); }
-                if (!runAction) { throw new Error("Run animation action failed."); }
+                    // Animation Setup
+                    console.log("loadAssets: Setting up animations..."); // DEBUG LOG 7
+                    playerMixer = new THREE.AnimationMixer(player);
+                    if (gltfRun.animations && gltfRun.animations.length > 0) { playerAnimations['run'] = gltfRun.animations[0]; runAction = playerMixer.clipAction(playerAnimations['run']); runAction.setLoop(THREE.LoopRepeat); } else { console.warn("No run anim"); }
+                    if (gltfJump.animations && gltfJump.animations.length > 0) { playerAnimations['jump'] = gltfJump.animations[0]; jumpAction = playerMixer.clipAction(playerAnimations['jump']); jumpAction.setLoop(THREE.LoopOnce); jumpAction.clampWhenFinished = true;} else { console.warn("No jump anim"); }
+                    if (!runAction) { console.error("CRITICAL: Run animation action failed to create."); /* Consider throwing error */ }
+                    console.log("loadAssets: Animation setup complete."); // DEBUG LOG 8
 
-                // --- CHANGE START: Apply Textures ---
-                // Sky Texture
-                skyTexture.mapping = THREE.EquirectangularReflectionMapping; // Crucial for sky
-                scene.background = skyTexture;
-                scene.environment = skyTexture; // Optional: Use for environment lighting
+                    // Apply Textures
+                    console.log("loadAssets: Applying textures..."); // DEBUG LOG 9
+                    skyTexture.mapping = THREE.EquirectangularReflectionMapping;
+                    scene.background = skyTexture; scene.environment = skyTexture;
+                    initialGroundTexture.wrapS = THREE.RepeatWrapping; initialGroundTexture.wrapT = THREE.RepeatWrapping;
+                    initialGroundTexture.repeat.set(GROUND_TEXTURE_REPEAT, GROUND_TEXTURE_REPEAT * (150/40));
+                    groundMaterials[visibleMaterialIndex].map = initialGroundTexture;
+                    groundMaterials[visibleMaterialIndex].needsUpdate = true;
+                    console.log("loadAssets: Textures applied."); // DEBUG LOG 10
 
-                // Ground Texture (Initial)
-                initialGroundTexture.wrapS = THREE.RepeatWrapping;
-                initialGroundTexture.wrapT = THREE.RepeatWrapping;
-                initialGroundTexture.repeat.set(GROUND_TEXTURE_REPEAT, GROUND_TEXTURE_REPEAT * (150/40)); // Adjust repeat based on plane aspect ratio
-                groundMaterials[visibleMaterialIndex].map = initialGroundTexture; // Apply to the initially visible material
-                groundMaterials[visibleMaterialIndex].needsUpdate = true;
+                    // Preload next ground texture
+                    console.log("loadAssets: Calling preloadNextGroundTexture..."); // DEBUG LOG 11
+                    preloadNextGroundTexture(); // Runs async in background
+                    console.log("loadAssets: Returned from preloadNextGroundTexture call."); // DEBUG LOG 12
+                    console.log("loadAssets: .then() block finished successfully."); // DEBUG LOG 13
 
-                // Preload the *next* ground texture (for the first fade)
-                preloadNextGroundTexture();
-                // --- CHANGE END ---
-            });
+                }).catch(error => {
+                     // Catch errors specifically from Promise.all or within the .then() block
+                     console.error("loadAssets: Error occurred within Promise.all or its .then() block:", error); // DEBUG LOG - Specific Catch
+                     throw error; // Re-throw to trigger the catch in init()
+                });
         }
 
-        // --- CHANGE START: Ground Texture Fading Logic ---
+        // --- Preload with Error Handling ---
         function preloadNextGroundTexture() {
             const nextIndex = (currentGroundTextureIndex + 1) % GROUND_TEXTURE_PATHS.length;
             const nextPath = GROUND_TEXTURE_PATHS[nextIndex];
-            textureLoader.load(nextPath, (texture) => {
-                 texture.wrapS = THREE.RepeatWrapping;
-                 texture.wrapT = THREE.RepeatWrapping;
-                 texture.repeat.copy(groundMaterials[visibleMaterialIndex].map.repeat); // Use same repeat settings
-                 nextGroundTexture = texture; // Store preloaded texture
-                 console.log("Preloaded next ground texture:", nextPath);
-            });
+            console.log("preloadNextGroundTexture: Starting load for:", nextPath); // DEBUG LOG 14
+            textureLoader.load(nextPath,
+                (texture) => { // onLoad
+                    texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping;
+                    // Use repeat from currently visible material if it exists, otherwise default
+                    const currentMap = groundMaterials[visibleMaterialIndex]?.map;
+                    if (currentMap) {
+                        texture.repeat.copy(currentMap.repeat);
+                    } else {
+                         texture.repeat.set(GROUND_TEXTURE_REPEAT, GROUND_TEXTURE_REPEAT * (150/40));
+                    }
+                    nextGroundTexture = texture;
+                    console.log("preloadNextGroundTexture: Successfully loaded and stored:", nextPath); // DEBUG LOG 15
+                },
+                undefined, // onProgress
+                (errorEvent) => { // onError - Added explicit error handling
+                    console.error("preloadNextGroundTexture: Error loading texture:", nextPath, errorEvent); // DEBUG LOG 16
+                    // Decide how to handle: retry? skip? For now, just log it.
+                    // Setting nextGroundTexture to null ensures fade doesn't happen if preload fails.
+                    nextGroundTexture = null;
+                }
+            );
         }
 
-        function startGroundFade() {
-            if (!nextGroundTexture || isFadingGround) return; // Don't fade if next texture isn't ready or already fading
-
-            isFadingGround = true;
-            groundFadeTimer = 0;
-
-            const fadingInMaterialIndex = 1 - visibleMaterialIndex; // The currently invisible material
-
-            // Apply the preloaded texture to the material that will fade in
-            groundMaterials[fadingInMaterialIndex].map = nextGroundTexture;
-            groundMaterials[fadingInMaterialIndex].opacity = 0; // Ensure it starts transparent
-            groundMaterials[fadingInMaterialIndex].needsUpdate = true;
-
-            nextGroundTexture = null; // Clear the preloaded texture slot
-
-             console.log("Starting ground fade to index:", (currentGroundTextureIndex + 1) % GROUND_TEXTURE_PATHS.length);
-        }
-
-        function updateGroundFade(deltaTime) {
-            if (!isFadingGround) return;
-
-            groundFadeTimer += deltaTime;
-            let fadeProgress = groundFadeTimer / GROUND_FADE_DURATION;
-            fadeProgress = Math.min(fadeProgress, 1.0); // Clamp to 1
-
-            const fadingInMaterialIndex = 1 - visibleMaterialIndex;
-            const fadingOutMaterialIndex = visibleMaterialIndex;
-
-            groundMaterials[fadingInMaterialIndex].opacity = fadeProgress;
-            groundMaterials[fadingOutMaterialIndex].opacity = 1.0 - fadeProgress;
-
-            // Fade complete
-            if (fadeProgress >= 1.0) {
-                isFadingGround = false;
-                groundFadeTimer = 0;
-                timeSinceLastGroundFade = 0; // Reset interval timer
-
-                // Update current texture index
-                currentGroundTextureIndex = (currentGroundTextureIndex + 1) % GROUND_TEXTURE_PATHS.length;
-                // Update which material is now the fully visible one
-                visibleMaterialIndex = fadingInMaterialIndex;
-
-                // Fully set opacities for clarity
-                groundMaterials[visibleMaterialIndex].opacity = 1.0;
-                groundMaterials[1 - visibleMaterialIndex].opacity = 0.0; // Ensure other is fully transparent
-
-                console.log("Ground fade complete. New visible index:", currentGroundTextureIndex);
-
-                // Preload the *next* texture for the subsequent fade
-                preloadNextGroundTexture();
-            }
-        }
-        // --- CHANGE END ---
-
+        // --- Ground Texture Fading Logic (remains the same) ---
+        function startGroundFade() { /* ... */ }
+        function updateGroundFade(deltaTime) { /* ... */ }
 
         // Helper function to play animations (remains the same)
-        function playAnimation(name) { /* ... same as before ... */ }
+        function playAnimation(name) {
+             if (!playerMixer || !assetsLoaded) return;
+            const actionToPlay = name === 'jump' ? jumpAction : runAction;
+            if (!actionToPlay) { console.warn(`Animation action "${name}" not found.`); return; }
+            const currentAction = (jumpAction && jumpAction.isRunning()) ? jumpAction : ((runAction && runAction.isRunning()) ? runAction : null);
+
+             if (actionToPlay === currentAction) {
+                if (name === 'jump') actionToPlay.reset().play(); // Allow re-triggering jump maybe
+                return;
+             }
+
+            actionToPlay.reset();
+            actionToPlay.enabled = true;
+
+             if (currentAction) {
+                currentAction.crossFadeTo(actionToPlay, ANIMATION_FADE_TIME, true);
+            }
+            actionToPlay.play();
+        }
+
 
         // --- Game Loop ---
         function animate() {
             animationFrameId = requestAnimationFrame(animate);
             const deltaTime = clock.getDelta();
-
-            if (playerMixer) playerMixer.update(deltaTime); // Update animations
-
+            if (playerMixer) playerMixer.update(deltaTime);
              if (gameState === 'playing') {
-                score += deltaTime;
-                updateScoreDisplay();
+                score += deltaTime; updateScoreDisplay();
                  if (gameSpeed < MAX_GAME_SPEED) gameSpeed += SPEED_INCREASE_RATE * deltaTime;
-                updatePlayerPosition(deltaTime);
-                handleJump(deltaTime);
-                updateObstacles(deltaTime);
-                spawnObstacles(deltaTime);
+                updatePlayerPosition(deltaTime); handleJump(deltaTime);
+                updateObstacles(deltaTime); spawnObstacles(deltaTime);
                 checkCollisions();
-
-                // --- CHANGE START: Update Ground Texture ---
                 timeSinceLastGroundFade += deltaTime;
-
-                // Trigger fade periodically
-                if (!isFadingGround && timeSinceLastGroundFade > GROUND_FADE_INTERVAL) {
-                    startGroundFade();
-                }
-
-                // Process active fade
+                if (!isFadingGround && timeSinceLastGroundFade > GROUND_FADE_INTERVAL) startGroundFade();
                 updateGroundFade(deltaTime);
-
-                 // Update texture offset for movement illusion
-                 // Apply to both materials - simpler than checking which is visible during fade
-                 const textureOffsetY = (clock.elapsedTime * gameSpeed * 0.05) % 1; // Adjust multiplier for desired speed
+                 const textureOffsetY = (clock.elapsedTime * gameSpeed * 0.05) % 1;
                  if (groundMaterials[0].map) groundMaterials[0].map.offset.y = textureOffsetY;
                  if (groundMaterials[1].map) groundMaterials[1].map.offset.y = textureOffsetY;
-                // --- CHANGE END ---
             }
-
             renderer.render(scene, camera);
         }
 
-        // --- Player Logic (updatePlayerPosition, handleJump, jump, moveLane) ---
-        // Remains unchanged (using player.userData.groundY)
-         function updatePlayerPosition(deltaTime) { /* ... same ... */ }
-         function handleJump(deltaTime) { /* ... same ... */ }
-         function jump() { /* ... same ... */ }
-         function moveLane(direction) { /* ... same ... */ }
+        // --- Player Logic (remains the same) ---
+        function updatePlayerPosition(deltaTime) { if (!player) return; const targetX = LANES[currentLane]; const lerpFactor = 10 * deltaTime; player.position.x = THREE.MathUtils.lerp(player.position.x, targetX, lerpFactor); player.position.z = camera.position.z - 5; if (player) { playerBoundingBox.setFromObject(player, true); playerBoundingBox.expandByScalar(-0.1); } }
+        function handleJump(deltaTime) { if (!player || player.userData.groundY === undefined) return; const groundLevel = player.userData.groundY; if (isJumping) { playerVelocityY -= GRAVITY * deltaTime; player.position.y += playerVelocityY * deltaTime; if (player.position.y <= groundLevel) { player.position.y = groundLevel; isJumping = false; playerVelocityY = 0; playAnimation('run'); } } }
+        function jump() { if (!isJumping && gameState === 'playing' && player) { isJumping = true; playerVelocityY = JUMP_VELOCITY; playAnimation('jump'); } }
+        function moveLane(direction) { if (gameState !== 'playing' || !player) return; const targetLane = currentLane + direction; if (targetLane >= 0 && targetLane < LANES.length) currentLane = targetLane; }
 
-        // --- Obstacle Logic (create, update, spawn, calculateInterval) ---
-        // Remains unchanged
-        function createObstacle() { /* ... same ... */ }
-        function updateObstacles(deltaTime) { /* ... same ... */ }
-        function spawnObstacles(deltaTime) { /* ... same ... */ }
-        function calculateNextSpawnInterval() { /* ... same ... */ }
+        // --- Obstacle Logic (remains the same) ---
+        function createObstacle() { const obstacleTypes = [ { type: 'trashcan', geometry: new THREE.CylinderGeometry(0.5, 0.5, 1.2, 16), color: 0x888888 }, { type: 'cactus', geometry: new THREE.BoxGeometry(0.8, 1.5, 0.8), color: 0x228B22 }, { type: 'lizard', geometry: new THREE.BoxGeometry(1.0, 0.3, 0.4), color: 0x90EE90 }, { type: 'dog', geometry: new THREE.CapsuleGeometry(0.6, 1.0, 4, 8), color: 0x8B4513 }, { type: 'cat', geometry: new THREE.CapsuleGeometry(0.4, 0.7, 4, 8), color: 0xFFD700 }, ]; const data = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)]; const material = new THREE.MeshStandardMaterial({ color: data.color }); const obstacle = new THREE.Mesh(data.geometry, material); obstacle.castShadow = true; obstacle.receiveShadow = true; const laneIndex = Math.floor(Math.random() * LANES.length); obstacle.position.x = LANES[laneIndex]; obstacle.position.z = OBSTACLE_SPAWN_Z; if (data.geometry.type === 'BoxGeometry') obstacle.position.y = data.geometry.parameters.height / 2; else if (data.geometry.type === 'CylinderGeometry') obstacle.position.y = data.geometry.parameters.height / 2; else if (data.geometry.type === 'CapsuleGeometry') obstacle.position.y = data.geometry.parameters.length / 2 + data.geometry.parameters.radius; else obstacle.position.y = 0.5; obstacle.userData.boundingBox = new THREE.Box3(); scene.add(obstacle); obstacle.userData.boundingBox.setFromObject(obstacle); obstacles.push(obstacle); }
+        function updateObstacles(deltaTime) { for (let i = obstacles.length - 1; i >= 0; i--) { const obstacle = obstacles[i]; obstacle.position.z += gameSpeed * deltaTime; obstacle.userData.boundingBox.setFromObject(obstacle); if (obstacle.position.z > OBSTACLE_DESPAWN_Z) { scene.remove(obstacle); obstacle.geometry.dispose(); obstacle.material.dispose(); obstacles.splice(i, 1); } } }
+        function spawnObstacles(deltaTime) { timeSinceLastSpawn += deltaTime; if (timeSinceLastSpawn > nextSpawnInterval) { createObstacle(); timeSinceLastSpawn = 0; nextSpawnInterval = calculateNextSpawnInterval(); } }
+        function calculateNextSpawnInterval() { const speedFactor = Math.max(0.5, 1 - (gameSpeed / (MAX_GAME_SPEED * 1.5))); const min = OBSTACLE_SPAWN_INTERVAL_MIN * speedFactor; const max = OBSTACLE_SPAWN_INTERVAL_MAX * speedFactor; return Math.random() * (max - min) + min; }
 
-        // --- Collision Detection (checkCollisions) ---
-        // Remains unchanged
-        function checkCollisions() { /* ... same ... */ }
+        // --- Collision Detection (remains the same) ---
+        function checkCollisions() { if (!player || !playerBoundingBox || gameState !== 'playing') return; for (const obstacle of obstacles) { if (playerBoundingBox.intersectsBox(obstacle.userData.boundingBox)) { triggerGameOver(); return; } } }
 
-        // --- Game State Management (startGame, triggerGameOver, resetGame) ---
-        function startGame() { /* ... same ... */ }
-        function triggerGameOver() { /* ... same ... */ }
-        function resetGame() {
-            // --- CHANGE START: Reset Texture State ---
-            isFadingGround = false;
-            groundFadeTimer = 0;
-            timeSinceLastGroundFade = 0; // Reset fade timer
-            // Reset ground materials to initial random texture state
-            currentGroundTextureIndex = Math.floor(Math.random() * GROUND_TEXTURE_PATHS.length);
-            const initialGroundPath = GROUND_TEXTURE_PATHS[currentGroundTextureIndex];
-            textureLoader.load(initialGroundPath, (texture) => {
-                 texture.wrapS = THREE.RepeatWrapping;
-                 texture.wrapT = THREE.RepeatWrapping;
-                 // Ensure repeat settings are reapplied correctly
-                 texture.repeat.set(GROUND_TEXTURE_REPEAT, GROUND_TEXTURE_REPEAT * (150/40));
+        // --- Game State Management (remains the same, including resetGame texture logic) ---
+        function startGame() { if (assetsLoaded && gameState === 'waiting') { gameState = 'playing'; hideStartMessage(); gameOverScreen.style.display = 'none'; if (clock.running === false) clock.start(); playAnimation('run'); } }
+        function triggerGameOver() { if (gameState === 'playing') { gameState = 'gameOver'; saveHighScore(); updateHighScoreDisplay(); finalScoreElement.textContent = `Your Score: ${Math.floor(score)}`; sessionHighScoreElement.textContent = `High Score: ${highScore}`; gameOverScreen.style.display = 'flex'; } }
+        function resetGame() { isFadingGround = false; groundFadeTimer = 0; timeSinceLastGroundFade = 0; currentGroundTextureIndex = Math.floor(Math.random() * GROUND_TEXTURE_PATHS.length); const initialGroundPath = GROUND_TEXTURE_PATHS[currentGroundTextureIndex]; textureLoader.load(initialGroundPath, (texture) => { texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(GROUND_TEXTURE_REPEAT, GROUND_TEXTURE_REPEAT * (150/40)); visibleMaterialIndex = 0; groundMaterials[0].map = texture; groundMaterials[0].opacity = 1.0; groundMaterials[0].needsUpdate = true; groundMaterials[1].map = null; groundMaterials[1].opacity = 0.0; groundMaterials[1].needsUpdate = true; preloadNextGroundTexture(); }); if (!player || player.userData.groundY === undefined) return; obstacles.forEach(obstacle => { scene.remove(obstacle); obstacle.geometry.dispose(); obstacle.material.dispose(); }); obstacles = []; player.position.copy(PLAYER_START_POS); player.position.y = player.userData.groundY; playerBoundingBox.setFromObject(player, true); currentLane = 1; isJumping = false; playerVelocityY = 0; score = 0; gameSpeed = INITIAL_GAME_SPEED; timeSinceLastSpawn = 0; nextSpawnInterval = calculateNextSpawnInterval(); updateScoreDisplay(); gameOverScreen.style.display = 'none'; gameState = 'waiting'; gameStartedOnce = false; showStartMessage("Press Any Key or Click to Start"); if (playerMixer) { if(jumpAction && jumpAction.isRunning()) jumpAction.stop(); if(runAction) runAction.reset().play(); } if (clock.running === false) clock.start(); }
 
-                 visibleMaterialIndex = 0; // Reset visible to material 0
-                 groundMaterials[0].map = texture;
-                 groundMaterials[0].opacity = 1.0;
-                 groundMaterials[0].needsUpdate = true;
-                 groundMaterials[1].map = null; // Clear other material map initially
-                 groundMaterials[1].opacity = 0.0;
-                 groundMaterials[1].needsUpdate = true;
-                 // Preload next texture after reset
-                 preloadNextGroundTexture();
-            });
-            // --- CHANGE END ---
+        // --- UI & Scoring (remains the same) ---
+        function updateScoreDisplay() { scoreElement.textContent = `Score: ${Math.floor(score)}`; }
+        function updateHighScoreDisplay() { highScoreElement.textContent = `High Score: ${highScore}`; }
+        function showStartMessage(message = "Loading...", permanent = false) { startMessage.textContent = message; startMessage.style.display = 'block'; startMessage.style.pointerEvents = (gameState === 'loading' || permanent) ? 'none' : 'all'; }
+        function hideStartMessage() { startMessage.style.display = 'none'; }
 
-            if (!player || player.userData.groundY === undefined) return;
-            obstacles.forEach(obstacle => { scene.remove(obstacle); obstacle.geometry.dispose(); obstacle.material.dispose(); });
-            obstacles = [];
-            player.position.copy(PLAYER_START_POS); player.position.y = player.userData.groundY;
-            playerBoundingBox.setFromObject(player, true); currentLane = 1; isJumping = false; playerVelocityY = 0;
-            score = 0; gameSpeed = INITIAL_GAME_SPEED; timeSinceLastSpawn = 0; nextSpawnInterval = calculateNextSpawnInterval();
-            updateScoreDisplay(); gameOverScreen.style.display = 'none'; gameState = 'waiting';
-            gameStartedOnce = false; showStartMessage("Press Any Key or Click to Start");
-            if (playerMixer) { if(jumpAction && jumpAction.isRunning()) jumpAction.stop(); if(runAction) runAction.reset().play(); }
-            if (clock.running === false) clock.start();
-        }
+        // --- Local Storage (remains the same) ---
+        function saveHighScore() { if (Math.floor(score) > highScore) { highScore = Math.floor(score); try { localStorage.setItem(HIGH_SCORE_KEY, highScore.toString()); } catch (e) { console.error("Could not save high score:", e); } } }
+        function loadHighScore() { try { const storedHighScore = localStorage.getItem(HIGH_SCORE_KEY); if (storedHighScore !== null) highScore = parseInt(storedHighScore, 10) || 0; } catch (e) { console.error("Could not load high score:", e); highScore = 0; } }
 
-        // --- UI & Scoring (remain the same) ---
-        function updateScoreDisplay() { /* ... same ... */ }
-        function updateHighScoreDisplay() { /* ... same ... */ }
-        function showStartMessage(message = "Loading...", permanent = false) { /* ... same ... */ }
-        function hideStartMessage() { /* ... same ... */ }
-
-        // --- Local Storage (remain the same) ---
-        function saveHighScore() { /* ... same ... */ }
-        function loadHighScore() { /* ... same ... */ }
-
-        // --- Event Handlers (remain the same) ---
-        function onWindowResize() { /* ... same ... */ }
-        function startGameOnce() { /* ... same ... */ }
-        function onKeyDown(event) { /* ... same ... */ }
+        // --- Event Handlers (remains the same) ---
+        function onWindowResize() { const newWidth = gameContainer.clientWidth; const newHeight = gameContainer.clientHeight; camera.aspect = newWidth / newHeight; camera.updateProjectionMatrix(); renderer.setSize(newWidth, newHeight); }
+        function startGameOnce() { if (!gameStartedOnce && assetsLoaded && gameState === 'waiting') { gameStartedOnce = true; startGame(); } }
+        function onKeyDown(event) { if (!gameStartedOnce && assetsLoaded && gameState === 'waiting') { startGameOnce(); return; } if (gameState !== 'playing') return; switch (event.code) { case 'ArrowLeft': case 'KeyA': moveLane(-1); break; case 'ArrowRight': case 'KeyD': moveLane(1); break; case 'Space': case 'ArrowUp': case 'KeyW': jump(); break; } }
 
         // --- Start the experience ---
         init();
