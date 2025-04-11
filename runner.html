@@ -5,28 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Raccoon Runner</title>
     <style>
-        /* CSS remains the same */
+        /* --- Updated CSS for Full Screen --- */
         body {
             margin: 0;
-            overflow: hidden;
+            overflow: hidden; /* Keep this to prevent scrollbars */
             background-color: #222;
             color: white;
             font-family: 'Arial', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            flex-direction: column; /* Stack canvas and UI */
+            /* Removed flex centering */
         }
         #gameContainer {
-            position: relative; /* Needed for absolute positioning of UI */
-            width: 80vw; /* Responsive width */
-            max-width: 800px; /* Max width */
-            aspect-ratio: 16 / 9; /* Maintain aspect ratio */
-            border: 1px solid #555;
+            position: relative; /* Keep for absolute positioning of UI */
+            width: 100vw; /* Fill viewport width */
+            height: 100vh; /* Fill viewport height */
+            /* border: none; Removed */
         }
+        /* --- End Updated CSS --- */
+
         #gameCanvas {
-            display: block; /* Remove extra space below canvas */
+            display: block;
             width: 100%;
             height: 100%;
         }
@@ -37,7 +34,7 @@
             right: 10px;
             display: flex;
             justify-content: space-between;
-            pointer-events: none; /* Allow clicks to pass through to canvas if needed */
+            pointer-events: none;
             font-size: 24px;
             text-shadow: 1px 1px 2px black;
         }
@@ -52,20 +49,16 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0.7);
             color: white;
-            display: none; /* Hidden by default */
+            display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             text-align: center;
             font-size: 28px;
-            pointer-events: all; /* Capture clicks */
+            pointer-events: all;
         }
-        #gameOverScreen h2 {
-            margin-bottom: 15px;
-        }
-        #finalScore, #sessionHighScore {
-            margin-bottom: 20px;
-        }
+        #gameOverScreen h2 { margin-bottom: 15px; }
+        #finalScore, #sessionHighScore { margin-bottom: 20px; }
         #restartButton {
             padding: 15px 30px;
             font-size: 20px;
@@ -76,9 +69,7 @@
             border-radius: 5px;
             transition: background-color 0.3s ease;
         }
-        #restartButton:hover {
-            background-color: #45a049;
-        }
+        #restartButton:hover { background-color: #45a049; }
         #startMessage {
             position: absolute;
             top: 50%;
@@ -106,7 +97,7 @@
             <div id="sessionHighScore">High Score: 0</div>
             <button id="restartButton">Restart Game</button>
         </div>
-         <div id="startMessage">Loading Assets...</div> <!-- Changed initial message -->
+         <div id="startMessage">Loading Assets...</div>
     </div>
 
     <!-- Import map for Three.js -->
@@ -121,19 +112,17 @@
 
     <script type="module">
         import * as THREE from 'three';
-        // --- CHANGE START ---
-        // Import GLTFLoader
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-        // --- CHANGE END ---
 
         // --- Configuration ---
         const LANE_WIDTH = 2.5;
-        const LANES = [-LANE_WIDTH, 0, LANE_WIDTH]; // X-coordinates of the lanes
-        // --- CHANGE START ---
-        // Player start Y position will be calculated after model load based on its height
+        const LANES = [-LANE_WIDTH, 0, LANE_WIDTH];
         const PLAYER_START_POS = new THREE.Vector3(0, 0, 10);
-        const PLAYER_MODEL_PATH = 'raccoon.glb'; // Path to your model
-        const PLAYER_MODEL_SCALE = 0.5; // Adjust this scale based on your model size!
+        // --- CHANGE START ---
+        const PLAYER_RUN_MODEL_PATH = 'raccoon.glb';   // Path for running model/animation
+        const PLAYER_JUMP_MODEL_PATH = 'raccoon_jump.glb'; // Path for jumping animation model
+        const PLAYER_MODEL_SCALE = 0.1; // <<< ADJUST THIS SCALE based on your model size!
+        const ANIMATION_FADE_TIME = 0.2; // Seconds for animation crossfade
         // --- CHANGE END ---
         const INITIAL_GAME_SPEED = 8;
         const MAX_GAME_SPEED = 30;
@@ -157,14 +146,18 @@
         let nextSpawnInterval = calculateNextSpawnInterval();
         let isJumping = false;
         let playerVelocityY = 0;
-        let gameState = 'loading'; // 'loading', 'waiting', 'playing', 'gameOver'
+        let gameState = 'loading'; // 'loading', 'waiting', 'playing', 'gameOver', 'error'
         let animationFrameId = null;
         // --- CHANGE START ---
-        let playerMixer = null; // For animations
-        let playerBoundingBox = new THREE.Box3(); // Separate bounding box variable
-        let playerHeight = 1; // Default height, will be updated
-        let assetsLoaded = false;
+        let playerMixer = null;
+        let playerAnimations = {}; // Store animations by name (e.g., 'run', 'jump')
+        let runAction = null;
+        let jumpAction = null;
         // --- CHANGE END ---
+        let playerBoundingBox = new THREE.Box3();
+        let playerHeight = 1;
+        let assetsLoaded = false;
+        let gameStartedOnce = false; // Flag for initial start interaction reset fix
 
         // --- DOM Elements ---
         const gameCanvas = document.getElementById('gameCanvas');
@@ -183,7 +176,6 @@
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87CEEB);
             scene.fog = new THREE.Fog(0x87CEEB, 10, 60);
-
             clock = new THREE.Clock();
 
             // Camera
@@ -198,12 +190,13 @@
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-            // Lights (same as before)
+            // Lights
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambientLight);
             const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
             directionalLight.position.set(5, 10, 7);
             directionalLight.castShadow = true;
+            // Shadow settings (same as before)
             directionalLight.shadow.mapSize.width = 1024;
             directionalLight.shadow.mapSize.height = 1024;
             directionalLight.shadow.camera.near = 0.5;
@@ -214,7 +207,7 @@
             directionalLight.shadow.camera.bottom = -20;
             scene.add(directionalLight);
 
-            // Ground (same as before)
+            // Ground
             const groundGeometry = new THREE.PlaneGeometry(20, 150);
             const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x556B2F, side: THREE.DoubleSide });
             const ground = new THREE.Mesh(groundGeometry, groundMaterial);
@@ -223,100 +216,136 @@
             ground.receiveShadow = true;
             scene.add(ground);
 
-             // Load High Score
+            // Load High Score
             loadHighScore();
             updateHighScoreDisplay();
 
             // --- CHANGE START ---
-            // Load Player Model
-            loadPlayerModel(() => {
-                // This callback runs when the model is loaded successfully
+            // Load all assets concurrently
+            loadAssets().then(() => {
+                // This runs when both models are loaded successfully
                 assetsLoaded = true;
-                gameState = 'waiting'; // Move to waiting state
-                showStartMessage("Press Any Key or Click to Start"); // Update message
-                // Add event listeners *after* assets are loaded
+                gameState = 'waiting';
+                showStartMessage("Press Any Key or Click to Start");
+                // Add start listeners *after* assets are loaded
                 window.addEventListener('keydown', startGameOnce);
                 window.addEventListener('mousedown', startGameOnce);
+                console.log("Assets loaded, ready to start.");
+                 playAnimation('run'); // Start with the run animation
+            }).catch(error => {
+                console.error("Failed to load assets:", error);
+                showStartMessage("Error loading assets. Please refresh.", true);
+                gameState = 'error';
             });
             // --- CHANGE END ---
 
-
-            // Event Listeners (moved some to load callback)
+            // Event Listeners
             window.addEventListener('resize', onWindowResize);
-            document.addEventListener('keydown', onKeyDown); // Keep general keydown for movement/jump
+            document.addEventListener('keydown', onKeyDown);
             restartButton.addEventListener('click', resetGame);
 
-            // Start the animation loop immediately for loading screen/potential idle animations
+            // Start the animation loop
             animate();
         }
 
         // --- CHANGE START ---
-        // Function to load the GLB model
-        function loadPlayerModel(onLoadCallback) {
+        // Function to load all GLB assets using Promises
+        function loadAssets() {
             const loader = new GLTFLoader();
-            loader.load(
-                PLAYER_MODEL_PATH,
-                // onLoad: Success callback
-                (gltf) => {
-                    player = gltf.scene; // The loaded model group
+            const runPromise = loader.loadAsync(PLAYER_RUN_MODEL_PATH); // Use loadAsync for promises
+            const jumpPromise = loader.loadAsync(PLAYER_JUMP_MODEL_PATH);
 
-                    // Configure the loaded model
-                    player.scale.set(PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE);
-                    player.rotation.y = Math.PI; // Rotate 180 degrees to face down the track
-                    player.position.copy(PLAYER_START_POS);
+            return Promise.all([runPromise, jumpPromise]).then(([gltfRun, gltfJump]) => {
+                // --- Player Model Setup (using the run model's scene) ---
+                player = gltfRun.scene;
+                player.scale.set(PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE);
+                player.rotation.y = Math.PI;
+                player.position.copy(PLAYER_START_POS);
 
-                    // Enable shadows for all meshes within the model
-                    player.traverse(child => {
-                        if (child.isMesh) {
-                            child.castShadow = true;
-                            // Optional: child.receiveShadow = true; // If parts of raccoon should receive shadows
-                        }
-                    });
-
-                    // Calculate bounding box AFTER scaling and adding to scene (pre-add)
-                    // We need a temporary add to calculate box based on world matrix
-                    scene.add(player);
-                    playerBoundingBox.setFromObject(player, true); // true for precise check
-                    const playerSize = new THREE.Vector3();
-                    playerBoundingBox.getSize(playerSize);
-                    playerHeight = playerSize.y;
-
-                    // Set correct initial Y position based on calculated height
-                    player.position.y = playerHeight / 2; // Assumes model origin is at its base
-
-                    // Recalculate bounding box AFTER final positioning
-                    playerBoundingBox.setFromObject(player, true);
-
-                    console.log("Player model loaded. Height:", playerHeight);
-
-                    // Setup Animation Mixer (if animations exist)
-                    if (gltf.animations && gltf.animations.length) {
-                        playerMixer = new THREE.AnimationMixer(player);
-                        // Play the first animation clip found (you might want to find one by name)
-                        const action = playerMixer.clipAction(gltf.animations[0]); // Or find by name: gltf.animations.find(clip => clip.name === 'Run')
-                        action.play();
-                        console.log("Playing animation:", gltf.animations[0].name);
-                    } else {
-                        console.log("No animations found in the model.");
+                player.traverse(child => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
                     }
+                });
 
-                    // Call the callback function provided to signal loading is complete
-                    if (onLoadCallback) {
-                        onLoadCallback();
-                    }
-                },
-                // onProgress: Optional progress callback
-                (xhr) => {
-                    // console.log((xhr.loaded / xhr.total * 100) + '% loaded');
-                },
-                // onError: Error callback
-                (error) => {
-                    console.error('Error loading player model:', error);
-                    // Maybe fall back to the capsule or show an error message
-                    showStartMessage("Error loading model. Please refresh.", true); // Show permanent error
-                    gameState = 'error'; // Prevent starting
+                // Calculate bounding box and height (same as before)
+                scene.add(player); // Temporarily add to calculate world box
+                playerBoundingBox.setFromObject(player, true);
+                const playerSize = new THREE.Vector3();
+                playerBoundingBox.getSize(playerSize);
+                playerHeight = playerSize.y;
+                player.position.y = playerHeight / 2;
+                playerBoundingBox.setFromObject(player, true); // Recalculate after positioning
+
+                console.log("Player model processed. Height:", playerHeight);
+
+                // --- Animation Setup ---
+                playerMixer = new THREE.AnimationMixer(player);
+
+                // Extract and store run animation (assume first animation is run)
+                if (gltfRun.animations && gltfRun.animations.length > 0) {
+                    playerAnimations['run'] = gltfRun.animations[0];
+                    runAction = playerMixer.clipAction(playerAnimations['run']);
+                    runAction.setLoop(THREE.LoopRepeat); // Make sure run loops
+                    console.log("Run animation loaded:", playerAnimations['run'].name);
+                } else {
+                    console.warn("No animations found in run model:", PLAYER_RUN_MODEL_PATH);
                 }
-            );
+
+                // Extract and store jump animation (assume first animation is jump)
+                if (gltfJump.animations && gltfJump.animations.length > 0) {
+                    // IMPORTANT: Use the *player* object (from run model) for the mixer,
+                    // but the *animation clip* from the jump model.
+                    playerAnimations['jump'] = gltfJump.animations[0];
+                    jumpAction = playerMixer.clipAction(playerAnimations['jump']);
+                    jumpAction.setLoop(THREE.LoopOnce); // Jump plays only once
+                    jumpAction.clampWhenFinished = true; // Stay on the last frame when done
+                    console.log("Jump animation loaded:", playerAnimations['jump'].name);
+                } else {
+                    console.warn("No animations found in jump model:", PLAYER_JUMP_MODEL_PATH);
+                }
+
+                // Basic check
+                if (!runAction) {
+                    throw new Error("Run animation action could not be created.");
+                }
+
+            }); // No need for separate .catch here, the main one in init() handles it
+        }
+
+        // Helper function to play animations with crossfade
+        function playAnimation(name) {
+            if (!playerMixer || !assetsLoaded) return;
+
+            const actionToPlay = name === 'jump' ? jumpAction : runAction;
+            const currentAction = (jumpAction && jumpAction.isRunning()) ? jumpAction : runAction;
+
+            if (!actionToPlay) {
+                console.warn(`Animation action "${name}" not found.`);
+                return;
+            }
+
+            // Avoid fading from/to the same animation or if target is already playing
+            if (actionToPlay === currentAction && actionToPlay.isRunning()) {
+                 // If trying to play jump again while it's running, maybe reset and play?
+                 if(name === 'jump') {
+                      actionToPlay.reset().play();
+                 }
+                return;
+            }
+
+
+            if (currentAction && currentAction.isRunning()) {
+                 // Ensure the new action is reset before playing
+                 actionToPlay.reset();
+                 // Fade from current to new action
+                 actionToPlay.enabled = true; // Make sure it's enabled if previously disabled
+                 currentAction.crossFadeTo(actionToPlay, ANIMATION_FADE_TIME, true); // true = warp
+                 actionToPlay.play();
+            } else {
+                 // If no action is currently playing, just play the target
+                actionToPlay.reset().play();
+            }
         }
         // --- CHANGE END ---
 
@@ -326,31 +355,22 @@
             animationFrameId = requestAnimationFrame(animate);
             const deltaTime = clock.getDelta();
 
-            // --- CHANGE START ---
-            // Update player animation mixer regardless of game state if it exists
+            // Update animation mixer regardless of game state
             if (playerMixer) {
                 playerMixer.update(deltaTime);
             }
-            // --- CHANGE END ---
 
              if (gameState === 'playing') {
-                // Update Score
                 score += deltaTime;
                 updateScoreDisplay();
-
-                 // Increase game speed gradually
                  if (gameSpeed < MAX_GAME_SPEED) {
                      gameSpeed += SPEED_INCREASE_RATE * deltaTime;
                  }
-
-                 // Handle Player Movement & Physics
                 updatePlayerPosition(deltaTime);
-                handleJump(deltaTime);
-
-                // Handle Obstacles
+                handleJump(deltaTime); // Checks for landing
                 updateObstacles(deltaTime);
                 spawnObstacles(deltaTime);
-                checkCollisions(); // Uses the updated playerBoundingBox
+                checkCollisions();
             }
 
             renderer.render(scene, camera);
@@ -358,37 +378,22 @@
 
         // --- Player Logic ---
          function updatePlayerPosition(deltaTime) {
-            if (!player) return; // Don't update if player model isn't loaded yet
-
-            // Smooth lane transition
+            if (!player) return;
             const targetX = LANES[currentLane];
             const lerpFactor = 10 * deltaTime;
             player.position.x = THREE.MathUtils.lerp(player.position.x, targetX, lerpFactor);
-
-            // Keep player Z position relatively constant relative to camera
             player.position.z = camera.position.z - 5;
 
-            // --- CHANGE START ---
-            // Update player bounding box based on the model's current world position/rotation/scale
-            // playerBoundingBox.setFromObject(player, true); // Update each frame - can be slightly expensive
-            // Optimization: If scale/rotation don't change, just copy position:
-             playerBoundingBox.copy(player.userData.originalBox || playerBoundingBox); // Assumes an initial calculation
-             playerBoundingBox.translate(player.position); // More efficient if model doesn't rotate/scale during gameplay
-
-             // More robust: Recalculate fully if needed, less frequently if possible
+            // Update bounding box (same as before)
              if (player) {
-                 playerBoundingBox.setFromObject(player, true); // Calculate based on current state
-                 // Optional: Shrink the box slightly for more forgiving collisions
-                 playerBoundingBox.expandByScalar(-0.1);
+                 playerBoundingBox.setFromObject(player, true);
+                 playerBoundingBox.expandByScalar(-0.1); // Optional adjustment
              }
-            // --- CHANGE END ---
         }
 
         function handleJump(deltaTime) {
              if (!player) return;
-             // --- CHANGE START ---
-             const groundLevel = playerHeight / 2; // Use calculated height
-             // --- CHANGE END ---
+             const groundLevel = playerHeight / 2;
 
              if (isJumping) {
                 playerVelocityY -= GRAVITY * deltaTime;
@@ -398,77 +403,67 @@
                     player.position.y = groundLevel;
                     isJumping = false;
                     playerVelocityY = 0;
+                    // --- CHANGE START ---
+                    // Play run animation when landing
+                    playAnimation('run');
+                    // --- CHANGE END ---
                 }
             }
         }
 
          function jump() {
-             // --- CHANGE START ---
-            // Allow jump only when playing and player exists
+            // Allow jump only when playing, player exists, and not already jumping
             if (!isJumping && gameState === 'playing' && player) {
-            // --- CHANGE END ---
                 isJumping = true;
                 playerVelocityY = JUMP_VELOCITY;
+                // --- CHANGE START ---
+                // Play jump animation
+                playAnimation('jump');
+                // --- CHANGE END ---
             }
         }
 
-         function moveLane(direction) { // direction is -1 for left, 1 for right
-            if (gameState !== 'playing' || !player) return; // Check player exists
+         function moveLane(direction) {
+            if (gameState !== 'playing' || !player) return;
             const targetLane = currentLane + direction;
             if (targetLane >= 0 && targetLane < LANES.length) {
                 currentLane = targetLane;
             }
         }
 
-        // --- Obstacle Logic ---
-        // createObstacle, updateObstacles, spawnObstacles, calculateNextSpawnInterval remain the same
-        // But they create their own bounding boxes: obstacle.userData.boundingBox = new THREE.Box3(); obstacle.userData.boundingBox.setFromObject(obstacle);
-
+        // --- Obstacle Logic (createObstacle, updateObstacles, spawnObstacles, calculateNextSpawnInterval) ---
+        // Remains unchanged from the previous version
         function createObstacle() {
             const obstacleTypes = [
-                { type: 'trashcan', geometry: new THREE.CylinderGeometry(0.5, 0.5, 1.2, 16), color: 0x888888 }, // Grey
-                { type: 'cactus', geometry: new THREE.BoxGeometry(0.8, 1.5, 0.8), color: 0x228B22 }, // Forest Green
-                { type: 'lizard', geometry: new THREE.BoxGeometry(1.0, 0.3, 0.4), color: 0x90EE90 }, // Light Green
-                { type: 'dog', geometry: new THREE.CapsuleGeometry(0.6, 1.0, 4, 8), color: 0x8B4513 }, // Saddle Brown
-                { type: 'cat', geometry: new THREE.CapsuleGeometry(0.4, 0.7, 4, 8), color: 0xFFD700 }, // Gold
+                { type: 'trashcan', geometry: new THREE.CylinderGeometry(0.5, 0.5, 1.2, 16), color: 0x888888 },
+                { type: 'cactus', geometry: new THREE.BoxGeometry(0.8, 1.5, 0.8), color: 0x228B22 },
+                { type: 'lizard', geometry: new THREE.BoxGeometry(1.0, 0.3, 0.4), color: 0x90EE90 },
+                { type: 'dog', geometry: new THREE.CapsuleGeometry(0.6, 1.0, 4, 8), color: 0x8B4513 },
+                { type: 'cat', geometry: new THREE.CapsuleGeometry(0.4, 0.7, 4, 8), color: 0xFFD700 },
             ];
-
              const data = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
             const material = new THREE.MeshStandardMaterial({ color: data.color });
             const obstacle = new THREE.Mesh(data.geometry, material);
-
              obstacle.castShadow = true;
             obstacle.receiveShadow = true;
-
             const laneIndex = Math.floor(Math.random() * LANES.length);
             obstacle.position.x = LANES[laneIndex];
             obstacle.position.z = OBSTACLE_SPAWN_Z;
-
-             // Adjust Y position based on geometry center (same as before)
-            if (data.geometry.type === 'BoxGeometry') {
-                obstacle.position.y = data.geometry.parameters.height / 2;
-            } else if (data.geometry.type === 'CylinderGeometry') {
-                obstacle.position.y = data.geometry.parameters.height / 2;
-            } else if (data.geometry.type === 'CapsuleGeometry') {
-                 obstacle.position.y = data.geometry.parameters.length / 2 + data.geometry.parameters.radius;
-             } else {
-                 obstacle.position.y = 0.5; // Default
-             }
-
-            obstacle.userData.boundingBox = new THREE.Box3(); // Create bounding box
+            // Adjust Y position based on geometry center
+            if (data.geometry.type === 'BoxGeometry') obstacle.position.y = data.geometry.parameters.height / 2;
+            else if (data.geometry.type === 'CylinderGeometry') obstacle.position.y = data.geometry.parameters.height / 2;
+            else if (data.geometry.type === 'CapsuleGeometry') obstacle.position.y = data.geometry.parameters.length / 2 + data.geometry.parameters.radius;
+            else obstacle.position.y = 0.5;
+            obstacle.userData.boundingBox = new THREE.Box3();
             scene.add(obstacle);
-            obstacle.userData.boundingBox.setFromObject(obstacle); // Calculate AFTER adding to scene
+            obstacle.userData.boundingBox.setFromObject(obstacle); // Calculate AFTER adding
             obstacles.push(obstacle);
         }
-
         function updateObstacles(deltaTime) {
             for (let i = obstacles.length - 1; i >= 0; i--) {
                 const obstacle = obstacles[i];
                 obstacle.position.z += gameSpeed * deltaTime;
-
-                // Update bounding box position simply by translating
-                obstacle.userData.boundingBox.setFromObject(obstacle); // Recalculate if needed, simple translation might drift if obstacle rotates/scales
-
+                obstacle.userData.boundingBox.setFromObject(obstacle); // Update box
                 if (obstacle.position.z > OBSTACLE_DESPAWN_Z) {
                     scene.remove(obstacle);
                     obstacle.geometry.dispose();
@@ -485,7 +480,6 @@
                 nextSpawnInterval = calculateNextSpawnInterval();
             }
         }
-
          function calculateNextSpawnInterval() {
             const speedFactor = Math.max(0.5, 1 - (gameSpeed / (MAX_GAME_SPEED * 1.5)));
             const min = OBSTACLE_SPAWN_INTERVAL_MIN * speedFactor;
@@ -495,8 +489,7 @@
 
         // --- Collision Detection ---
         function checkCollisions() {
-             if (!player || !playerBoundingBox) return; // Don't check if player isn't ready
-
+             if (!player || !playerBoundingBox || gameState !== 'playing') return;
             for (const obstacle of obstacles) {
                  if (playerBoundingBox.intersectsBox(obstacle.userData.boundingBox)) {
                     triggerGameOver();
@@ -505,43 +498,37 @@
             }
         }
 
-
         // --- Game State Management ---
         function startGame() {
-            // --- CHANGE START ---
-            // Only start if assets are loaded and we are in waiting state
             if (assetsLoaded && gameState === 'waiting') {
                  gameState = 'playing';
                  hideStartMessage();
                  gameOverScreen.style.display = 'none';
-                 // Animation loop is already running
-                 if (clock.running === false) clock.start(); // Resume clock if paused
+                 if (clock.running === false) clock.start();
+                 // --- CHANGE START ---
+                 // Ensure run animation is playing when game starts
+                 playAnimation('run');
+                 // --- CHANGE END ---
             }
-            // --- CHANGE END ---
         }
 
         function triggerGameOver() {
             if (gameState === 'playing') {
                 gameState = 'gameOver';
-                 // Keep animation loop running for game over screen background
-                 // Optional: Stop clock if score shouldn't increment further?
-                 // clock.stop();
-
-                 saveHighScore();
-                 updateHighScoreDisplay();
-
-                 finalScoreElement.textContent = `Your Score: ${Math.floor(score)}`;
+                saveHighScore();
+                updateHighScoreDisplay();
+                finalScoreElement.textContent = `Your Score: ${Math.floor(score)}`;
                 sessionHighScoreElement.textContent = `High Score: ${highScore}`;
                 gameOverScreen.style.display = 'flex';
+                 // Optional: Could stop the animation mixer or play a death animation here
+                 // if (playerMixer) playerMixer.stopAllAction();
             }
         }
 
         function resetGame() {
              if (!player) return; // Cannot reset if player never loaded
 
-             // Stop the current animation loop? No, keep it running for UI/background.
-
-            // Clear obstacles
+            // Clear obstacles (same as before)
             obstacles.forEach(obstacle => {
                 scene.remove(obstacle);
                 obstacle.geometry.dispose();
@@ -549,145 +536,94 @@
             });
             obstacles = [];
 
-            // Reset player
+            // Reset player position/state (same as before)
             player.position.copy(PLAYER_START_POS);
-            // --- CHANGE START ---
-            player.position.y = playerHeight / 2; // Use calculated height
-            // Recalculate bounding box after position reset
+            player.position.y = playerHeight / 2;
             playerBoundingBox.setFromObject(player, true);
-            // --- CHANGE END ---
             currentLane = 1;
             isJumping = false;
             playerVelocityY = 0;
 
-            // --- CHANGE START ---
-            // Reset animation? Optional, might depend on desired effect
-            // if (playerMixer) {
-            //    playerMixer.setTime(0); // Reset animation time
-            //    // Ensure the correct animation is playing if needed
-            // }
-            // --- CHANGE END ---
-
-            // Reset game variables
+            // Reset game variables (same as before)
             score = 0;
             gameSpeed = INITIAL_GAME_SPEED;
             timeSinceLastSpawn = 0;
             nextSpawnInterval = calculateNextSpawnInterval();
             updateScoreDisplay();
 
-            // Hide game over screen
+            // UI updates (same as before)
             gameOverScreen.style.display = 'none';
-
-             // Set state to waiting and show start message
-             // --- CHANGE START ---
-            gameState = 'waiting'; // Go back to waiting state
+            gameState = 'waiting';
+            gameStartedOnce = false; // <<< FIX: Reset the start flag
             showStartMessage("Press Any Key or Click to Start");
+
+            // --- CHANGE START ---
+            // Reset and play the run animation for the waiting state
+            if (playerMixer) {
+                 if(jumpAction && jumpAction.isRunning()) jumpAction.stop(); // Stop jump if it was somehow running
+                 if(runAction) runAction.reset().play(); // Ensure run is playing
+            }
             // --- CHANGE END ---
 
-             if (clock.running === false) clock.start(); // Ensure clock is running
-             // animate() is already running
+             if (clock.running === false) clock.start();
         }
-
 
         // --- UI & Scoring ---
-        function updateScoreDisplay() {
-            scoreElement.textContent = `Score: ${Math.floor(score)}`;
-        }
-
-        function updateHighScoreDisplay() {
-            highScoreElement.textContent = `High Score: ${highScore}`;
-        }
-
-        // --- CHANGE START ---
+        function updateScoreDisplay() { scoreElement.textContent = `Score: ${Math.floor(score)}`; }
+        function updateHighScoreDisplay() { highScoreElement.textContent = `High Score: ${highScore}`; }
         function showStartMessage(message = "Loading...", permanent = false) {
             startMessage.textContent = message;
             startMessage.style.display = 'block';
-             // Allow interaction only if not loading or permanent error
             startMessage.style.pointerEvents = (gameState === 'loading' || permanent) ? 'none' : 'all';
         }
-        // --- CHANGE END ---
-        function hideStartMessage() {
-            startMessage.style.display = 'none';
-        }
+        function hideStartMessage() { startMessage.style.display = 'none'; }
 
-        // --- Local Storage (same as before) ---
+        // --- Local Storage ---
         function saveHighScore() {
             if (Math.floor(score) > highScore) {
                 highScore = Math.floor(score);
-                try {
-                    localStorage.setItem(HIGH_SCORE_KEY, highScore.toString());
-                } catch (e) {
-                    console.error("Could not save high score to local storage:", e);
-                }
+                try { localStorage.setItem(HIGH_SCORE_KEY, highScore.toString()); }
+                catch (e) { console.error("Could not save high score:", e); }
             }
         }
-
         function loadHighScore() {
             try {
                 const storedHighScore = localStorage.getItem(HIGH_SCORE_KEY);
-                if (storedHighScore !== null) {
-                    highScore = parseInt(storedHighScore, 10) || 0;
-                }
-            } catch (e) {
-                console.error("Could not load high score from local storage:", e);
-                highScore = 0;
-            }
+                if (storedHighScore !== null) highScore = parseInt(storedHighScore, 10) || 0;
+            } catch (e) { console.error("Could not load high score:", e); highScore = 0; }
         }
 
         // --- Event Handlers ---
         function onWindowResize() {
             const newWidth = gameContainer.clientWidth;
             const newHeight = gameContainer.clientHeight;
-
             camera.aspect = newWidth / newHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(newWidth, newHeight);
         }
 
-        let gameStartedOnce = false; // This flag is still useful
         function startGameOnce() {
-             // --- CHANGE START ---
-             // Only allow starting if assets are loaded and we are in the waiting state
              if (!gameStartedOnce && assetsLoaded && gameState === 'waiting') {
-                 gameStartedOnce = true; // Set flag even if startGame doesn't run immediately
+                 gameStartedOnce = true;
                  startGame();
-                 // Remove listeners only if game actually started
-                 // window.removeEventListener('keydown', startGameOnce); // Keep keydown for movement
-                 // window.removeEventListener('mousedown', startGameOnce); // Keep mousedown potentially?
             }
-             // --- CHANGE END ---
          }
 
-
         function onKeyDown(event) {
-            // Allow starting the game with any key IF assets are loaded and waiting
             if (!gameStartedOnce && assetsLoaded && gameState === 'waiting') {
                 startGameOnce();
-                return; // Don't process movement on the first start key press
+                return;
             }
-
-             // Process movement/jump only when playing
              if (gameState !== 'playing') return;
-
             switch (event.code) {
-                case 'ArrowLeft':
-                case 'KeyA':
-                    moveLane(-1);
-                    break;
-                case 'ArrowRight':
-                case 'KeyD':
-                    moveLane(1);
-                    break;
-                case 'Space':
-                case 'ArrowUp':
-                case 'KeyW':
-                    jump();
-                    break;
+                case 'ArrowLeft': case 'KeyA': moveLane(-1); break;
+                case 'ArrowRight': case 'KeyD': moveLane(1); break;
+                case 'Space': case 'ArrowUp': case 'KeyW': jump(); break;
             }
         }
 
         // --- Start the experience ---
-        init(); // Call init to start loading etc.
+        init();
 
     </script>
 </body>
