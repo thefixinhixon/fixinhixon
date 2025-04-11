@@ -55,8 +55,10 @@
         const GROUND_TEXTURE_PATHS = [ 'ground1.jpg', 'ground2.jpg', 'ground3.jpg', 'ground4.jpg' ];
         const SKY_TEXTURE_PATH = 'sky.jpg'; const GROUND_TEXTURE_REPEAT = 10;
         const TRASHCAN_MODEL_PATH = 'trashcan.glb'; const CACTUS_MODEL_PATH = 'cactus.glb';
-        const TRASHCAN_SCALE = 0.8; // Adjust if needed
-        const CACTUS_SCALE = 0.7;   // Adjust if needed
+        // --- MODIFIED SCALES ---
+        const TRASHCAN_SCALE = 0.015; // Drastically reduced to be jumpable
+        const CACTUS_SCALE = 0.035;   // Drastically reduced, but taller than trashcan (dodge)
+        // --- END MODIFIED SCALES ---
         const GROUND_CLIP_ADJUSTMENT = 0.1; // << INCREASED VALUE for clipping
 
         // --- Game State ---
@@ -65,7 +67,7 @@
         let score = 0; let highScore = 0; let timeSinceLastSpawn = 0; let nextSpawnInterval = calculateNextSpawnInterval();
         let isJumping = false; let playerVelocityY = 0; let gameState = 'loading'; let animationFrameId = null;
         let playerMixer = null; let playerAnimations = {}; let runAction = null; let jumpAction = null;
-        let playerBoundingBox = new THREE.Box3(); let playerHeight = 1;
+        let playerBoundingBox = new THREE.Box3(); let playerHeight = 1; // playerHeight is calculated later
         let assetsLoaded = false; let gameStartedOnce = false;
         let textureLoader; let gltfLoader;
         let cachedTrashcanModel = null; // Variables to hold loaded models
@@ -148,12 +150,13 @@
                     // Player Model Setup + Clipping Adjustment
                     console.log("loadAssets: Setting up player model...");
                     player = gltfRun.scene; player.scale.set(PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE); player.rotation.y = Math.PI; player.position.set(PLAYER_START_POS.x, 0, PLAYER_START_POS.z); player.traverse(child => { if (child.isMesh) child.castShadow = true; }); scene.add(player);
-                    playerBoundingBox.setFromObject(player, true); const ps = new THREE.Vector3(); playerBoundingBox.getSize(ps); playerHeight = ps.y; const mnY = playerBoundingBox.min.y;
+                    playerBoundingBox.setFromObject(player, true); const ps = new THREE.Vector3(); playerBoundingBox.getSize(ps); playerHeight = ps.y; // Set player height here based on scaled model
+                    const mnY = playerBoundingBox.min.y;
                     let groundOffset = -mnY + GROUND_CLIP_ADJUSTMENT; // Apply increased adjustment
                     console.log(`loadAssets: Calculated groundOffset: ${-mnY}, Adjusted to: ${groundOffset}`);
                     player.position.y = groundOffset; player.userData.groundY = groundOffset;
-                    playerBoundingBox.setFromObject(player, true);
-                    console.log("loadAssets: Player model setup complete. GroundY:", player.userData.groundY);
+                    playerBoundingBox.setFromObject(player, true); // Recalculate box after position adjust
+                    console.log("loadAssets: Player model setup complete. GroundY:", player.userData.groundY, "Player Scaled Height:", playerHeight);
 
                     // Animation Setup
                     console.log("loadAssets: Setting up animations...");
@@ -173,89 +176,147 @@
         function playAnimation(name) { if (!playerMixer || !assetsLoaded) return; const actionToPlay = name === 'jump' ? jumpAction : runAction; if (!actionToPlay) { console.warn(`Animation action "${name}" not found.`); return; } const currentAction = (jumpAction && jumpAction.isRunning()) ? jumpAction : ((runAction && runAction.isRunning()) ? runAction : null); if (actionToPlay === currentAction) { if (name === 'jump') actionToPlay.reset().play(); return; } actionToPlay.reset(); actionToPlay.enabled = true; if (currentAction) { currentAction.crossFadeTo(actionToPlay, ANIMATION_FADE_TIME, true); } actionToPlay.play(); }
 
         // --- Game Loop ---
-        function animate() { animationFrameId = requestAnimationFrame(animate); const deltaTime = clock.getDelta(); if (playerMixer) playerMixer.update(deltaTime); if (gameState === 'playing') { score += deltaTime; updateScoreDisplay(); if (gameSpeed < MAX_GAME_SPEED) gameSpeed += SPEED_INCREASE_RATE * deltaTime; updatePlayerPosition(deltaTime); handleJump(deltaTime); updateObstacles(deltaTime); spawnObstacles(deltaTime); checkCollisions(); const textureOffsetY = (clock.elapsedTime * gameSpeed * 0.05) % 1; if (ground.material.map) ground.material.map.offset.y = textureOffsetY; } renderer.render(scene, camera); }
+        function animate() { animationFrameId = requestAnimationFrame(animate); const deltaTime = clock.getDelta(); if (playerMixer) playerMixer.update(deltaTime); if (gameState === 'playing') { score += deltaTime * 10; // Score increases faster updateScoreDisplay(); if (gameSpeed < MAX_GAME_SPEED) gameSpeed += SPEED_INCREASE_RATE * deltaTime; updatePlayerPosition(deltaTime); handleJump(deltaTime); updateObstacles(deltaTime); spawnObstacles(deltaTime); checkCollisions(); const textureOffsetY = (clock.elapsedTime * gameSpeed * 0.05) % 1; if (ground.material.map) ground.material.map.offset.y = textureOffsetY; } renderer.render(scene, camera); }
 
         // --- Player Logic ---
-        function updatePlayerPosition(deltaTime) { if (!player) return; const targetX = LANES[currentLane]; const lerpFactor = 10 * deltaTime; player.position.x = THREE.MathUtils.lerp(player.position.x, targetX, lerpFactor); player.position.z = camera.position.z - 5; if (player) { playerBoundingBox.setFromObject(player, true); playerBoundingBox.expandByScalar(-0.1); } }
+        function updatePlayerPosition(deltaTime) { if (!player) return; const targetX = LANES[currentLane]; const lerpFactor = 10 * deltaTime; player.position.x = THREE.MathUtils.lerp(player.position.x, targetX, lerpFactor); player.position.z = camera.position.z - 5; if (player) { playerBoundingBox.setFromObject(player, true); // Constantly update bounding box playerBoundingBox.expandByScalar(-0.1); } } // Shrink slightly for forgiveness
         function handleJump(deltaTime) { if (!player || player.userData.groundY === undefined) return; const groundLevel = player.userData.groundY; if (isJumping) { playerVelocityY -= GRAVITY * deltaTime; player.position.y += playerVelocityY * deltaTime; if (player.position.y <= groundLevel) { player.position.y = groundLevel; isJumping = false; playerVelocityY = 0; playAnimation('run'); } } }
         function jump() { if (!isJumping && gameState === 'playing' && player) { isJumping = true; playerVelocityY = JUMP_VELOCITY; playAnimation('jump'); } }
         function moveLane(direction) { if (gameState !== 'playing' || !player) return; const targetLane = currentLane + direction; if (targetLane >= 0 && targetLane < LANES.length) currentLane = targetLane; }
 
-        // --- Obstacle Logic (Now uses loaded models if available) ---
+        // --- Obstacle Logic (Now uses loaded models if available with corrected scales) ---
         function createObstacle() {
             let obstacle = null; let data = null; let obstacleType = 'geometric';
             const obstacleOptions = [
-                { type: 'trashcan', model: cachedTrashcanModel, scale: TRASHCAN_SCALE },
-                { type: 'cactus', model: cachedCactusModel, scale: CACTUS_SCALE },
-                { type: 'lizard', geometry: new THREE.BoxGeometry(1.0, 0.3, 0.4), color: 0x90EE90 },
-                { type: 'dog', geometry: new THREE.CapsuleGeometry(0.6, 1.0, 4, 8), color: 0x8B4513 },
-                { type: 'cat', geometry: new THREE.CapsuleGeometry(0.4, 0.7, 4, 8), color: 0xFFD700 }, ];
+                // Prioritize models if loaded
+                { type: 'trashcan', model: cachedTrashcanModel, scale: TRASHCAN_SCALE, requiresDodge: false },
+                { type: 'cactus', model: cachedCactusModel, scale: CACTUS_SCALE, requiresDodge: true },
+                // Fallbacks (keep proportions somewhat reasonable relative to player scale 0.02)
+                { type: 'lizard', geometry: new THREE.BoxGeometry(0.6, 0.2, 0.3), color: 0x90EE90, requiresDodge: false }, // Low profile
+                { type: 'dog', geometry: new THREE.CapsuleGeometry(0.4, 0.6, 4, 8), color: 0x8B4513, requiresDodge: false }, // Jumpable maybe?
+                { type: 'cat', geometry: new THREE.CapsuleGeometry(0.3, 0.4, 4, 8), color: 0xFFD700, requiresDodge: false }, // Jumpable
+            ];
             data = obstacleOptions[Math.floor(Math.random() * obstacleOptions.length)];
             const laneIndex = Math.floor(Math.random() * LANES.length);
 
-            if (data.model && data.model /* Check cache is populated */) {
-                obstacle = data.model.clone(true); // CLONE the model
-                obstacle.scale.set(data.scale, data.scale, data.scale);
-                obstacleType = data.type;
-                // Ensure shadows on children
-                 obstacle.traverse(child => {
-                     if (child.isMesh) {
-                         child.castShadow = true;
-                         child.receiveShadow = true; // Models often look better receiving too
-                     }
-                 });
-            } else if (data.geometry) { // Geometric fallback
+            if (data.model && cachedTrashcanModel && cachedCactusModel /* Check caches are populated */) { // Check specific caches
+                // Only use the model option if it corresponds to a loaded cache
+                if ((data.type === 'trashcan' && cachedTrashcanModel) || (data.type === 'cactus' && cachedCactusModel)) {
+                    obstacle = data.model.clone(true); // CLONE the model
+                    obstacle.scale.set(data.scale, data.scale, data.scale);
+                    obstacleType = data.type;
+                    obstacle.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+                } else {
+                    // Fallback if the intended model isn't cached (shouldn't happen with current structure, but safe)
+                    console.warn(`createObstacle: Model type ${data.type} selected but cache invalid, using fallback.`);
+                    data = obstacleOptions.find(opt => opt.geometry && opt.type === 'lizard') || obstacleOptions[2]; // Find a default fallback
+                    obstacle = new THREE.Mesh(data.geometry, new THREE.MeshStandardMaterial({ color: data.color }));
+                    obstacleType = data.type;
+                }
+            } else if (data.geometry) { // Geometric fallback if model not chosen or not loaded
                 const material = new THREE.MeshStandardMaterial({ color: data.color });
                 obstacle = new THREE.Mesh(data.geometry, material);
                 obstacleType = data.type;
-                // Log if a model was intended but not loaded (or loading disabled)
-                if(data.model && !data.model) {
-                     console.warn(`createObstacle: ${data.type} model not loaded, using fallback geometry.`);
+                if(data.model) { // Log if a model was intended but cache failed
+                     console.warn(`createObstacle: ${data.type} model not loaded or selected incorrectly, using fallback geometry.`);
                  }
             } else { console.error("Invalid obstacle data or model not loaded:", data); return; }
 
-            obstacle.castShadow = true; obstacle.receiveShadow = true; // Set on parent too
+            obstacle.castShadow = true; obstacle.receiveShadow = true;
             obstacle.position.x = LANES[laneIndex]; obstacle.position.z = OBSTACLE_SPAWN_Z;
 
             // Calculate Y position based on bounding box (crucial for models)
             const tempBox = new THREE.Box3();
-             // We need to temporarily add to scene to get world bounding box if transformations applied
-            scene.add(obstacle); // Temporarily add for bounding box calc
-            tempBox.setFromObject(obstacle, true); // Precise world box
+            // Ensure world matrix is updated before bounding box calculation AFTER scaling
+            obstacle.updateMatrixWorld(true);
+            tempBox.setFromObject(obstacle, true); // Precise world box of the scaled object
+
+            const obstacleSize = new THREE.Vector3();
+            tempBox.getSize(obstacleSize);
             const minY = tempBox.min.y;
-            obstacle.position.y = -minY; // Position bottom at y=0
-            scene.remove(obstacle); // Remove temporary add
+            obstacle.position.y = -minY; // Position bottom at y=0 relative to its own origin
+
+            // Store obstacle height for potential jump logic later
+            obstacle.userData.height = obstacleSize.y;
+            obstacle.userData.requiresDodge = data.requiresDodge; // Store if it's meant to be dodged
 
             // Add final object to scene
             scene.add(obstacle);
 
             obstacle.userData.boundingBox = new THREE.Box3();
-            obstacle.userData.boundingBox.setFromObject(obstacle); // Final box calculation
+            // Calculate final bounding box AFTER adding to scene and setting position
+            obstacle.userData.boundingBox.setFromObject(obstacle, true);
 
             obstacles.push(obstacle);
-            // console.log("Created obstacle:", obstacleType); // Optional log
+            // console.log(`Created ${obstacleType} h: ${obstacle.userData.height.toFixed(2)} dodge: ${data.requiresDodge}`); // Optional log
         }
-        function updateObstacles(deltaTime) { for (let i = obstacles.length - 1; i >= 0; i--) { const obstacle = obstacles[i]; obstacle.position.z += gameSpeed * deltaTime; obstacle.userData.boundingBox.setFromObject(obstacle); if (obstacle.position.z > OBSTACLE_DESPAWN_Z) { scene.remove(obstacle); obstacle.geometry.dispose(); if(obstacle.material) obstacle.material.dispose(); else obstacle.traverse(c => {if(c.isMesh && c.material) c.material.dispose()}); /* Dispose materials in traverse */ obstacles.splice(i, 1); } } }
+        function updateObstacles(deltaTime) { for (let i = obstacles.length - 1; i >= 0; i--) { const obstacle = obstacles[i]; obstacle.position.z += gameSpeed * deltaTime; // Update bounding box position with the mesh obstacle.userData.boundingBox.setFromObject(obstacle, true); if (obstacle.position.z > OBSTACLE_DESPAWN_Z) { scene.remove(obstacle); // Proper disposal for GLTF models and simple meshes if (obstacle.isMesh) { obstacle.geometry.dispose(); obstacle.material.dispose(); } else { obstacle.traverse(child => { if (child.isMesh) { child.geometry.dispose(); if(child.material) { // Materials can be shared, check before disposing // Safest might be to not dispose materials aggressively unless memory is a proven issue child.material.dispose(); } } }); } obstacles.splice(i, 1); } } }
         function spawnObstacles(deltaTime) { timeSinceLastSpawn += deltaTime; if (timeSinceLastSpawn > nextSpawnInterval) { createObstacle(); timeSinceLastSpawn = 0; nextSpawnInterval = calculateNextSpawnInterval(); } }
         function calculateNextSpawnInterval() { const speedFactor = Math.max(0.5, 1 - (gameSpeed / (MAX_GAME_SPEED * 1.5))); const min = OBSTACLE_SPAWN_INTERVAL_MIN * speedFactor; const max = OBSTACLE_SPAWN_INTERVAL_MAX * speedFactor; return Math.random() * (max - min) + min; }
 
         // --- Collision Detection ---
-        function checkCollisions() { if (!player || !playerBoundingBox || gameState !== 'playing') return; for (const obstacle of obstacles) { if (playerBoundingBox.intersectsBox(obstacle.userData.boundingBox)) { triggerGameOver(); return; } } }
+        function checkCollisions() { if (!player || !playerBoundingBox || gameState !== 'playing') return;
+            // OPTIONAL: Visualize bounding boxes for debugging
+            // removeOldBoxes(); // Helper to clear previous boxes
+            // drawBoundingBox(playerBoundingBox, 0xff0000); // Red for player
+
+            for (const obstacle of obstacles) {
+                 // drawBoundingBox(obstacle.userData.boundingBox, 0x00ff00); // Green for obstacles
+                if (playerBoundingBox.intersectsBox(obstacle.userData.boundingBox)) {
+                    triggerGameOver(); return;
+                 }
+            }
+        }
+         // --- Optional Bounding Box Visualization Helpers ---
+         /*
+         let debugBoxes = [];
+         function drawBoundingBox(box, color) {
+             const helper = new THREE.Box3Helper(box, color);
+             scene.add(helper);
+             debugBoxes.push(helper);
+         }
+         function removeOldBoxes() {
+             debugBoxes.forEach(box => scene.remove(box));
+             debugBoxes = [];
+         }
+         */
+        // --- End Optional Helpers ---
+
 
         // --- Game State Management ---
         function startGame() { console.log(`startGame: Called. Current state: ${gameState}, assetsLoaded: ${assetsLoaded}`); if (assetsLoaded && gameState === 'waiting') { gameState = 'playing'; console.log("startGame: State changed to 'playing'"); hideStartMessage(); gameOverScreen.style.display = 'none'; if (clock.running === false) { console.log("startGame: Starting clock."); clock.start(); } playAnimation('run'); console.log("startGame: Function finished."); } else { console.warn(`startGame: Conditions not met! State: ${gameState}, assetsLoaded: ${assetsLoaded}`); } }
-        function triggerGameOver() { if (gameState === 'playing') { gameState = 'gameOver'; saveHighScore(); updateHighScoreDisplay(); finalScoreElement.textContent = `Your Score: ${Math.floor(score)}`; sessionHighScoreElement.textContent = `High Score: ${highScore}`; gameOverScreen.style.display = 'flex'; } }
+        function triggerGameOver() { if (gameState === 'playing') { gameState = 'gameOver'; saveHighScore(); updateHighScoreDisplay(); finalScoreElement.textContent = `Your Score: ${Math.floor(score)}`; sessionHighScoreElement.textContent = `High Score: ${highScore}`; gameOverScreen.style.display = 'flex'; if (runAction) runAction.stop(); if (jumpAction) jumpAction.stop(); // Stop animations immediately clock.stop(); // Stop the clock } }
         function resetGame() {
             const newGroundIndex = Math.floor(Math.random() * GROUND_TEXTURE_PATHS.length); const newGroundPath = GROUND_TEXTURE_PATHS[newGroundIndex]; console.log("resetGame: Loading new ground texture:", newGroundPath);
             textureLoader.load(newGroundPath, (texture) => { texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(GROUND_TEXTURE_REPEAT, GROUND_TEXTURE_REPEAT * (150/40)); ground.material.map = texture; ground.material.needsUpdate = true; console.log("resetGame: Ground texture updated."); }, undefined, (err) => { console.error("resetGame: Failed loading ground texture:", newGroundPath, err); ground.material.map = null; ground.material.needsUpdate = true; } );
-            if (!player || player.userData.groundY === undefined) return;
-            obstacles.forEach(obstacle => { scene.remove(obstacle); obstacle.geometry.dispose(); if(obstacle.material) obstacle.material.dispose(); else obstacle.traverse(c => {if(c.isMesh && c.material) c.material.dispose()}); }); obstacles = [];
+            if (!player || player.userData.groundY === undefined) { console.error("Reset failed: Player or groundY undefined."); return; }
+             // Clear obstacles properly
+            obstacles.forEach(obstacle => {
+                scene.remove(obstacle);
+                // Dispose geometry/materials
+                if (obstacle.isMesh) {
+                     obstacle.geometry.dispose();
+                     obstacle.material.dispose();
+                 } else { // Handle GLTF groups
+                     obstacle.traverse(child => {
+                         if (child.isMesh) {
+                             child.geometry.dispose();
+                             // Consider material disposal strategy - if materials are reused, don't dispose here.
+                             // If they are unique per clone, dispose. For now, let's assume unique.
+                             if(child.material) child.material.dispose();
+                         }
+                     });
+                 }
+            });
+            obstacles = [];
+
             player.position.copy(PLAYER_START_POS); player.position.y = player.userData.groundY; playerBoundingBox.setFromObject(player, true); currentLane = 1; isJumping = false; playerVelocityY = 0;
             score = 0; gameSpeed = INITIAL_GAME_SPEED; timeSinceLastSpawn = 0; nextSpawnInterval = calculateNextSpawnInterval();
             updateScoreDisplay(); gameOverScreen.style.display = 'none'; gameState = 'waiting'; gameStartedOnce = false; // Reset flag
             showStartMessage("Press Any Key or Click to Start");
             if (playerMixer) { if(jumpAction && jumpAction.isRunning()) jumpAction.stop(); if(runAction) runAction.reset().play(); }
-            if (clock.running === false) clock.start();
+            clock.start(); // Restart the clock
+            // removeOldBoxes(); // Clear debug boxes if using
         }
 
         // --- UI & Scoring ---
