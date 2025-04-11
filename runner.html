@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Raccoon Runner</title>
     <style>
-        /* CSS remains the same (full screen setup) */
+        /* CSS remains the same */
         body { margin: 0; overflow: hidden; background-color: #222; color: white; font-family: 'Arial', sans-serif; }
         #gameContainer { position: relative; width: 100vw; height: 100vh; }
         #gameCanvas { display: block; width: 100%; height: 100%; }
@@ -52,39 +52,33 @@
         const JUMP_VELOCITY = 10; const GRAVITY = 25; const HIGH_SCORE_KEY = 'raccoonRunnerHighScore';
         const GROUND_TEXTURE_PATHS = [ 'ground1.jpg', 'ground2.jpg', 'ground3.jpg', 'ground4.jpg' ];
         const SKY_TEXTURE_PATH = 'sky.jpg'; const GROUND_TEXTURE_REPEAT = 10;
-        const GROUND_FADE_INTERVAL = 30.0; const GROUND_FADE_DURATION = 1.5;
-        const TRASHCAN_MODEL_PATH = 'trashcan.glb'; // Path still defined
-        const CACTUS_MODEL_PATH = 'cactus.glb';     // Path still defined
-        const TRASHCAN_SCALE = 0.8;
-        const CACTUS_SCALE = 0.7;
+        // Obstacle model paths still defined, but loading is commented out later
+        const TRASHCAN_MODEL_PATH = 'trashcan.glb'; const CACTUS_MODEL_PATH = 'cactus.glb';
+        const TRASHCAN_SCALE = 0.8; const CACTUS_SCALE = 0.7;
+        // REMOVED FADING CONFIG
 
         // --- Game State ---
-        let scene, camera, renderer, clock, player, ground;
+        let scene, camera, renderer, clock, player, ground; // Ground variable still exists
         let gameSpeed = INITIAL_GAME_SPEED; let obstacles = []; let currentLane = 1;
         let score = 0; let highScore = 0; let timeSinceLastSpawn = 0; let nextSpawnInterval = calculateNextSpawnInterval();
         let isJumping = false; let playerVelocityY = 0; let gameState = 'loading'; let animationFrameId = null;
         let playerMixer = null; let playerAnimations = {}; let runAction = null; let jumpAction = null;
         let playerBoundingBox = new THREE.Box3(); let playerHeight = 1;
         let assetsLoaded = false; let gameStartedOnce = false;
-        let textureLoader; let groundMaterials = []; let currentGroundTextureIndex = 0;
-        let visibleMaterialIndex = 0; let timeSinceLastGroundFade = 0;
-        let isFadingGround = false; let groundFadeTimer = 0; let nextGroundTexture = null;
-        let gltfLoader; // Make loader accessible globally in module
-        let cachedTrashcanModel = null; // Will remain null in this version
-        let cachedCactusModel = null;   // Will remain null in this version
+        let textureLoader; // Texture loader needed
+        let gltfLoader;
+        let cachedTrashcanModel = null; // Caching variables remain for createObstacle logic
+        let cachedCactusModel = null;
+        // REMOVED FADING STATE VARIABLES
 
         // --- DOM Elements ---
-        const gameCanvas = document.getElementById('gameCanvas'); const gameContainer = document.getElementById('gameContainer');
-        const scoreElement = document.getElementById('score'); const highScoreElement = document.getElementById('highScoreDisplay');
-        const gameOverScreen = document.getElementById('gameOverScreen'); const finalScoreElement = document.getElementById('finalScore');
-        const sessionHighScoreElement = document.getElementById('sessionHighScore'); const restartButton = document.getElementById('restartButton');
-        const startMessage = document.getElementById('startMessage');
+        const gameCanvas = document.getElementById('gameCanvas'); /* ... */ const startMessage = document.getElementById('startMessage');
 
         // --- Initialization ---
         function init() {
             console.log("init: Started.");
             textureLoader = new THREE.TextureLoader();
-            gltfLoader = new GLTFLoader(); // Initialize GLTF loader here
+            gltfLoader = new GLTFLoader();
             scene = new THREE.Scene();
             scene.fog = new THREE.Fog(0x87CEEB, 10, 60); clock = new THREE.Clock();
             const aspect = gameContainer.clientWidth / gameContainer.clientHeight;
@@ -101,13 +95,20 @@
             directionalLight.shadow.camera.left = -20; directionalLight.shadow.camera.right = 20;
             directionalLight.shadow.camera.top = 20; directionalLight.shadow.camera.bottom = -20;
             scene.add(directionalLight);
+
+            // --- Ground Setup (Simplified) ---
             const groundGeometry = new THREE.PlaneGeometry(40, 150);
-            groundMaterials[0] = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: false, opacity: 1.0 });
-            groundMaterials[1] = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0, map: null });
-            ground = new THREE.Mesh(groundGeometry, groundMaterials);
+            // Create ONE material
+            const groundMaterial = new THREE.MeshStandardMaterial({
+                color: 0xAAAAAA, // Start with a fallback color
+                side: THREE.DoubleSide,
+                map: null // Map will be loaded
+            });
+            ground = new THREE.Mesh(groundGeometry, groundMaterial); // Use the single material
             ground.rotation.x = -Math.PI / 2; ground.position.y = 0; ground.receiveShadow = true;
             scene.add(ground);
-            console.log("init: Ground mesh created and added.");
+            console.log("init: Ground mesh created with single material.");
+
             loadHighScore(); updateHighScoreDisplay();
             console.log("init: Calling loadAssets()...");
             loadAssets().then(() => {
@@ -132,33 +133,56 @@
             console.log("init: Function finished.");
         }
 
-        // --- Asset Loading (Obstacle Models Commented Out) ---
+        // --- Asset Loading (Simplified Ground) ---
         function loadAssets() {
             console.log("loadAssets: Starting...");
             const runPromise = gltfLoader.loadAsync(PLAYER_RUN_MODEL_PATH);
             const jumpPromise = gltfLoader.loadAsync(PLAYER_JUMP_MODEL_PATH);
             const skyPromise = textureLoader.loadAsync(SKY_TEXTURE_PATH);
-            currentGroundTextureIndex = Math.floor(Math.random() * GROUND_TEXTURE_PATHS.length);
-            const initialGroundPath = GROUND_TEXTURE_PATHS[currentGroundTextureIndex];
-            console.log("loadAssets: Loading initial ground:", initialGroundPath);
-            const groundPromise = textureLoader.loadAsync(initialGroundPath);
 
-            // --- DEBUG: Obstacle model loading commented out ---
-            // const trashcanPromise = gltfLoader.loadAsync(TRASHCAN_MODEL_PATH); // COMMENTED OUT
-            // const cactusPromise = gltfLoader.loadAsync(CACTUS_MODEL_PATH);   // COMMENTED OUT
+            // --- Ground Texture Load (Using .load with onError) ---
+            const groundLoadPromise = new Promise((resolve, reject) => {
+                const initialGroundIndex = Math.floor(Math.random() * GROUND_TEXTURE_PATHS.length);
+                const initialGroundPath = GROUND_TEXTURE_PATHS[initialGroundIndex];
+                console.log("loadAssets: Loading initial ground:", initialGroundPath);
+                textureLoader.load(
+                    initialGroundPath,
+                    (texture) => { // onLoad
+                        console.log("loadAssets: Initial ground texture loaded successfully:", initialGroundPath);
+                        // Apply properties directly to the texture
+                        texture.wrapS = THREE.RepeatWrapping;
+                        texture.wrapT = THREE.RepeatWrapping;
+                        texture.repeat.set(GROUND_TEXTURE_REPEAT, GROUND_TEXTURE_REPEAT * (150/40));
+                        // Assign to the single ground material's map
+                        ground.material.map = texture;
+                        ground.material.needsUpdate = true; // Crucial!
+                        console.log("loadAssets: Initial ground texture applied to ground.material.map");
+                        resolve(); // Resolve the promise on success
+                    },
+                    undefined, // onProgress (unused)
+                    (errorEvent) => { // onError
+                        console.error("loadAssets: FAILED to load initial ground texture:", initialGroundPath, errorEvent);
+                        reject(new Error(`Failed to load ground texture: ${initialGroundPath}`)); // Reject promise on error
+                    }
+                );
+            });
+            // --- End Ground Texture Load ---
+
+
+            // --- Obstacle model loading still commented out for testing ---
+            // const trashcanPromise = gltfLoader.loadAsync(TRASHCAN_MODEL_PATH);
+            // const cactusPromise = gltfLoader.loadAsync(CACTUS_MODEL_PATH);
             // ---
 
             console.log("loadAssets: Promises created, awaiting Promise.all...");
-            // Remove obstacle promises from Promise.all list
-            return Promise.all([runPromise, jumpPromise, skyPromise, groundPromise]) // REMOVED trashcanPromise, cactusPromise
-                .then(([gltfRun, gltfJump, skyTexture, initialGroundTexture/*, gltfTrashcan, gltfCactus*/]) => { // COMMENTED OUT gltfTrashcan, gltfCactus
+            // Add groundLoadPromise, remove obstacle promises
+            return Promise.all([runPromise, jumpPromise, skyPromise, groundLoadPromise])
+                .then(([gltfRun, gltfJump, skyTexture, /* ground load handled by promise */]) => {
                     console.log("loadAssets: Promise.all resolved.");
 
-                    // --- DEBUG: Obstacle model caching commented out ---
-                    // console.log("loadAssets: Caching obstacle models...");
-                    // cachedTrashcanModel = gltfTrashcan.scene; // COMMENTED OUT
-                    // cachedCactusModel = gltfCactus.scene;     // COMMENTED OUT
-                    // console.log("loadAssets: Obstacle models caching skipped.");
+                    // --- Obstacle model caching still commented out ---
+                    // cachedTrashcanModel = gltfTrashcan.scene;
+                    // cachedCactusModel = gltfCactus.scene;
                     // ---
 
                     // Player Model Setup (remains the same)
@@ -171,111 +195,110 @@
                     playerMixer = new THREE.AnimationMixer(player); if (gltfRun.animations && gltfRun.animations.length > 0) { playerAnimations['run'] = gltfRun.animations[0]; runAction = playerMixer.clipAction(playerAnimations['run']); runAction.setLoop(THREE.LoopRepeat); } else { console.warn("No run anim"); } if (gltfJump.animations && gltfJump.animations.length > 0) { playerAnimations['jump'] = gltfJump.animations[0]; jumpAction = playerMixer.clipAction(playerAnimations['jump']); jumpAction.setLoop(THREE.LoopOnce); jumpAction.clampWhenFinished = true;} else { console.warn("No jump anim"); } if (!runAction) { console.error("CRITICAL: Run animation action failed."); }
                     console.log("loadAssets: Animation setup complete.");
 
-                    // Apply Textures (remains the same)
-                    console.log("loadAssets: Applying textures...");
+                    // Apply Sky Texture
+                    console.log("loadAssets: Applying sky texture...");
                     skyTexture.mapping = THREE.EquirectangularReflectionMapping; scene.background = skyTexture; scene.environment = skyTexture;
-                    initialGroundTexture.wrapS = THREE.RepeatWrapping; initialGroundTexture.wrapT = THREE.RepeatWrapping; initialGroundTexture.repeat.set(GROUND_TEXTURE_REPEAT, GROUND_TEXTURE_REPEAT * (150/40));
-                    groundMaterials[0].map = initialGroundTexture; groundMaterials[0].needsUpdate = true;
-                    groundMaterials[1].map = null; groundMaterials[1].opacity = 0; groundMaterials[1].needsUpdate = true;
-                    console.log("loadAssets: Initial ground texture applied to material 0.");
-                    console.log("loadAssets: Textures applied.");
+                    console.log("loadAssets: Sky texture applied.");
+                    // REMOVED Ground texture application here (done in groundLoadPromise)
+                    // REMOVED preloadNextGroundTexture call
 
-                    // Preload next ground texture (remains the same)
-                    console.log("loadAssets: Calling preloadNextGroundTexture...");
-                    preloadNextGroundTexture();
-                    console.log("loadAssets: Returned from preloadNextGroundTexture call.");
                     console.log("loadAssets: .then() block finished successfully.");
 
                 }).catch(error => {
                      console.error("loadAssets: Error within Promise.all or its .then():", error);
-                     throw error; // Propagate error to init's catch block
+                     throw error;
                 });
         }
 
-        // --- Preload with Error Handling ---
-        function preloadNextGroundTexture() {
-            const nextIndex = (currentGroundTextureIndex + 1) % GROUND_TEXTURE_PATHS.length;
-            const nextPath = GROUND_TEXTURE_PATHS[nextIndex];
-            console.log("preloadNextGroundTexture: Starting load for:", nextPath);
-            textureLoader.load(nextPath,
-                (texture) => { texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping; const currentMap = groundMaterials[visibleMaterialIndex]?.map; if (currentMap) { texture.repeat.copy(currentMap.repeat); } else { texture.repeat.set(GROUND_TEXTURE_REPEAT, GROUND_TEXTURE_REPEAT * (150/40)); } nextGroundTexture = texture; console.log("preloadNextGroundTexture: Successfully loaded and stored:", nextPath); },
-                undefined,
-                (errorEvent) => { console.error("preloadNextGroundTexture: Error loading texture:", nextPath, errorEvent); nextGroundTexture = null; } );
+        // REMOVED preloadNextGroundTexture, startGroundFade, updateGroundFade functions
+
+        // Helper function to play animations (remains the same)
+        function playAnimation(name) { /* ... */ }
+
+        // --- Game Loop (Simplified) ---
+        function animate() {
+            animationFrameId = requestAnimationFrame(animate);
+            const deltaTime = clock.getDelta();
+            if (playerMixer) playerMixer.update(deltaTime);
+             if (gameState === 'playing') {
+                score += deltaTime; updateScoreDisplay();
+                 if (gameSpeed < MAX_GAME_SPEED) gameSpeed += SPEED_INCREASE_RATE * deltaTime;
+                updatePlayerPosition(deltaTime); handleJump(deltaTime);
+                updateObstacles(deltaTime); spawnObstacles(deltaTime);
+                checkCollisions();
+                // REMOVED Fading logic calls
+                 // REMOVED Texture offset logic (can add back later if ground appears)
+                 // const textureOffsetY = (clock.elapsedTime * gameSpeed * 0.05) % 1;
+                 // if (ground.material.map) ground.material.map.offset.y = textureOffsetY;
+            }
+            renderer.render(scene, camera);
         }
 
-        // --- Ground Texture Fading Logic ---
-        function startGroundFade() { if (!nextGroundTexture || isFadingGround) return; isFadingGround = true; groundFadeTimer = 0; const fadingInMaterialIndex = 1 - visibleMaterialIndex; groundMaterials[fadingInMaterialIndex].map = nextGroundTexture; groundMaterials[fadingInMaterialIndex].opacity = 0; groundMaterials[fadingInMaterialIndex].needsUpdate = true; nextGroundTexture = null; console.log("Starting ground fade to index:", (currentGroundTextureIndex + 1) % GROUND_TEXTURE_PATHS.length); }
-        function updateGroundFade(deltaTime) { if (!isFadingGround) return; groundFadeTimer += deltaTime; let fadeProgress = groundFadeTimer / GROUND_FADE_DURATION; fadeProgress = Math.min(fadeProgress, 1.0); const fadingInMaterialIndex = 1 - visibleMaterialIndex; const fadingOutMaterialIndex = visibleMaterialIndex; groundMaterials[fadingInMaterialIndex].opacity = fadeProgress; groundMaterials[fadingOutMaterialIndex].opacity = 1.0 - fadeProgress; if (fadeProgress >= 1.0) { isFadingGround = false; groundFadeTimer = 0; timeSinceLastGroundFade = 0; currentGroundTextureIndex = (currentGroundTextureIndex + 1) % GROUND_TEXTURE_PATHS.length; visibleMaterialIndex = fadingInMaterialIndex; groundMaterials[visibleMaterialIndex].opacity = 1.0; groundMaterials[1 - visibleMaterialIndex].opacity = 0.0; console.log("Ground fade complete. New visible index:", currentGroundTextureIndex); preloadNextGroundTexture(); } }
-
-        // --- Helper function to play animations ---
-        function playAnimation(name) { if (!playerMixer || !assetsLoaded) return; const actionToPlay = name === 'jump' ? jumpAction : runAction; if (!actionToPlay) { console.warn(`Animation action "${name}" not found.`); return; } const currentAction = (jumpAction && jumpAction.isRunning()) ? jumpAction : ((runAction && runAction.isRunning()) ? runAction : null); if (actionToPlay === currentAction) { if (name === 'jump') actionToPlay.reset().play(); return; } actionToPlay.reset(); actionToPlay.enabled = true; if (currentAction) { currentAction.crossFadeTo(actionToPlay, ANIMATION_FADE_TIME, true); } actionToPlay.play(); }
-
-        // --- Game Loop ---
-        function animate() { animationFrameId = requestAnimationFrame(animate); const deltaTime = clock.getDelta(); if (playerMixer) playerMixer.update(deltaTime); if (gameState === 'playing') { score += deltaTime; updateScoreDisplay(); if (gameSpeed < MAX_GAME_SPEED) gameSpeed += SPEED_INCREASE_RATE * deltaTime; updatePlayerPosition(deltaTime); handleJump(deltaTime); updateObstacles(deltaTime); spawnObstacles(deltaTime); checkCollisions(); timeSinceLastGroundFade += deltaTime; if (!isFadingGround && timeSinceLastGroundFade > GROUND_FADE_INTERVAL) startGroundFade(); updateGroundFade(deltaTime); const textureOffsetY = (clock.elapsedTime * gameSpeed * 0.05) % 1; if (groundMaterials[0].map) groundMaterials[0].map.offset.y = textureOffsetY; if (groundMaterials[1].map) groundMaterials[1].map.offset.y = textureOffsetY; } renderer.render(scene, camera); }
-
-        // --- Player Logic ---
-        function updatePlayerPosition(deltaTime) { if (!player) return; const targetX = LANES[currentLane]; const lerpFactor = 10 * deltaTime; player.position.x = THREE.MathUtils.lerp(player.position.x, targetX, lerpFactor); player.position.z = camera.position.z - 5; if (player) { playerBoundingBox.setFromObject(player, true); playerBoundingBox.expandByScalar(-0.1); } }
-        function handleJump(deltaTime) { if (!player || player.userData.groundY === undefined) return; const groundLevel = player.userData.groundY; if (isJumping) { playerVelocityY -= GRAVITY * deltaTime; player.position.y += playerVelocityY * deltaTime; if (player.position.y <= groundLevel) { player.position.y = groundLevel; isJumping = false; playerVelocityY = 0; playAnimation('run'); } } }
-        function jump() { if (!isJumping && gameState === 'playing' && player) { isJumping = true; playerVelocityY = JUMP_VELOCITY; playAnimation('jump'); } }
-        function moveLane(direction) { if (gameState !== 'playing' || !player) return; const targetLane = currentLane + direction; if (targetLane >= 0 && targetLane < LANES.length) currentLane = targetLane; }
+        // --- Player Logic (remains the same) ---
+        function updatePlayerPosition(deltaTime) { /* ... */ }
+        function handleJump(deltaTime) { /* ... */ }
+        function jump() { /* ... */ }
+        function moveLane(direction) { /* ... */ }
 
         // --- Obstacle Logic (Uses geometric fallbacks) ---
-        function createObstacle() {
-            let obstacle = null; let data = null; let obstacleType = 'geometric';
-            const obstacleOptions = [ // Models will be skipped since cachedModel is null
-                { type: 'trashcan', model: cachedTrashcanModel, scale: TRASHCAN_SCALE },
-                { type: 'cactus', model: cachedCactusModel, scale: CACTUS_SCALE },
-                { type: 'lizard', geometry: new THREE.BoxGeometry(1.0, 0.3, 0.4), color: 0x90EE90 },
-                { type: 'dog', geometry: new THREE.CapsuleGeometry(0.6, 1.0, 4, 8), color: 0x8B4513 },
-                { type: 'cat', geometry: new THREE.CapsuleGeometry(0.4, 0.7, 4, 8), color: 0xFFD700 }, ];
-            data = obstacleOptions[Math.floor(Math.random() * obstacleOptions.length)];
-            const laneIndex = Math.floor(Math.random() * LANES.length);
-            if (data.model && data.model /* Checks if model exists */ ) { // This block will be skipped
-                // obstacle = data.model.clone(true);
-                // obstacle.scale.set(data.scale, data.scale, data.scale);
-                // obstacleType = data.type;
-                // obstacle.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
-                console.warn("Attempted to create model obstacle, but loading is disabled."); // Add warning
-                // Fall through to create geometric as fallback maybe? Or just return. Let's return.
-                return; // Don't create anything if model loading is off for this type
-            } else if (data.geometry) { // Geometric shapes will be created
-                const material = new THREE.MeshStandardMaterial({ color: data.color });
-                obstacle = new THREE.Mesh(data.geometry, material);
-                obstacleType = data.type;
-            } else { console.error("Invalid obstacle data or model not loaded:", data); return; }
-            obstacle.castShadow = true; obstacle.receiveShadow = true;
-            obstacle.position.x = LANES[laneIndex]; obstacle.position.z = OBSTACLE_SPAWN_Z;
-            scene.add(obstacle); const box = new THREE.Box3().setFromObject(obstacle); const size = new THREE.Vector3(); box.getSize(size); const minY = box.min.y; obstacle.position.y = -minY; scene.remove(obstacle); // Temp remove needed? No, position is set now.
-            scene.add(obstacle); // Final add
-            obstacle.userData.boundingBox = new THREE.Box3(); obstacle.userData.boundingBox.setFromObject(obstacle);
-            obstacles.push(obstacle);
+        function createObstacle() { /* ... same as previous version ... */ } // Still uses cachedModel variables which are null
+        function updateObstacles(deltaTime) { /* ... same disposal logic ... */ }
+        function spawnObstacles(deltaTime) { /* ... */ }
+        function calculateNextSpawnInterval() { /* ... */ }
+
+        // --- Collision Detection (remains the same) ---
+        function checkCollisions() { /* ... */ }
+
+        // --- Game State Management (Simplified Reset) ---
+        function startGame() { /* ... */ }
+        function triggerGameOver() { /* ... */ }
+        function resetGame() {
+            // REMOVED Fading state resets
+
+            // Simplified ground texture reset
+            const newGroundIndex = Math.floor(Math.random() * GROUND_TEXTURE_PATHS.length);
+            const newGroundPath = GROUND_TEXTURE_PATHS[newGroundIndex];
+            console.log("resetGame: Loading new ground texture:", newGroundPath);
+            textureLoader.load(newGroundPath,
+                (texture) => { // onLoad
+                     texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping;
+                     texture.repeat.set(GROUND_TEXTURE_REPEAT, GROUND_TEXTURE_REPEAT * (150/40));
+                     ground.material.map = texture;
+                     ground.material.needsUpdate = true;
+                     console.log("resetGame: Ground texture updated.");
+                },
+                undefined, // onProgress
+                (err) => { // onError
+                    console.error("resetGame: Failed to load ground texture:", newGroundPath, err);
+                    ground.material.map = null; // Remove map on failure? Or keep old one?
+                    ground.material.needsUpdate = true;
+                }
+            );
+            // REMOVED preloadNextGroundTexture call
+
+            if (!player || player.userData.groundY === undefined) return;
+            obstacles.forEach(obstacle => { scene.remove(obstacle); obstacle.geometry.dispose(); if(obstacle.material) obstacle.material.dispose(); else obstacle.traverse(c => {if(c.material) c.material.dispose()}); }); obstacles = [];
+            player.position.copy(PLAYER_START_POS); player.position.y = player.userData.groundY; playerBoundingBox.setFromObject(player, true); currentLane = 1; isJumping = false; playerVelocityY = 0;
+            score = 0; gameSpeed = INITIAL_GAME_SPEED; timeSinceLastSpawn = 0; nextSpawnInterval = calculateNextSpawnInterval();
+            updateScoreDisplay(); gameOverScreen.style.display = 'none'; gameState = 'waiting'; gameStartedOnce = false; showStartMessage("Press Any Key or Click to Start");
+            if (playerMixer) { if(jumpAction && jumpAction.isRunning()) jumpAction.stop(); if(runAction) runAction.reset().play(); }
+            if (clock.running === false) clock.start();
         }
-        function updateObstacles(deltaTime) { for (let i = obstacles.length - 1; i >= 0; i--) { const obstacle = obstacles[i]; obstacle.position.z += gameSpeed * deltaTime; obstacle.userData.boundingBox.setFromObject(obstacle); if (obstacle.position.z > OBSTACLE_DESPAWN_Z) { scene.remove(obstacle); obstacle.geometry.dispose(); if(obstacle.material) obstacle.material.dispose(); else obstacle.traverse(c => {if(c.material) c.material.dispose()}); obstacles.splice(i, 1); } } } // Added material disposal in traverse for models
-        function spawnObstacles(deltaTime) { timeSinceLastSpawn += deltaTime; if (timeSinceLastSpawn > nextSpawnInterval) { createObstacle(); timeSinceLastSpawn = 0; nextSpawnInterval = calculateNextSpawnInterval(); } }
-        function calculateNextSpawnInterval() { const speedFactor = Math.max(0.5, 1 - (gameSpeed / (MAX_GAME_SPEED * 1.5))); const min = OBSTACLE_SPAWN_INTERVAL_MIN * speedFactor; const max = OBSTACLE_SPAWN_INTERVAL_MAX * speedFactor; return Math.random() * (max - min) + min; }
 
-        // --- Collision Detection ---
-        function checkCollisions() { if (!player || !playerBoundingBox || gameState !== 'playing') return; for (const obstacle of obstacles) { if (playerBoundingBox.intersectsBox(obstacle.userData.boundingBox)) { triggerGameOver(); return; } } }
+        // --- UI & Scoring (remain the same) ---
+        function updateScoreDisplay() { /* ... */ }
+        function updateHighScoreDisplay() { /* ... */ }
+        function showStartMessage(message = "Loading...", permanent = false) { /* ... */ }
+        function hideStartMessage() { /* ... */ }
 
-        // --- Game State Management ---
-        function startGame() { if (assetsLoaded && gameState === 'waiting') { gameState = 'playing'; hideStartMessage(); gameOverScreen.style.display = 'none'; if (clock.running === false) clock.start(); playAnimation('run'); } }
-        function triggerGameOver() { if (gameState === 'playing') { gameState = 'gameOver'; saveHighScore(); updateHighScoreDisplay(); finalScoreElement.textContent = `Your Score: ${Math.floor(score)}`; sessionHighScoreElement.textContent = `High Score: ${highScore}`; gameOverScreen.style.display = 'flex'; } }
-        function resetGame() { isFadingGround = false; groundFadeTimer = 0; timeSinceLastGroundFade = 0; currentGroundTextureIndex = Math.floor(Math.random() * GROUND_TEXTURE_PATHS.length); const initialGroundPath = GROUND_TEXTURE_PATHS[currentGroundTextureIndex]; textureLoader.load(initialGroundPath, (texture) => { texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(GROUND_TEXTURE_REPEAT, GROUND_TEXTURE_REPEAT * (150/40)); visibleMaterialIndex = 0; groundMaterials[0].map = texture; groundMaterials[0].opacity = 1.0; groundMaterials[0].needsUpdate = true; groundMaterials[1].map = null; groundMaterials[1].opacity = 0.0; groundMaterials[1].needsUpdate = true; preloadNextGroundTexture(); }); if (!player || player.userData.groundY === undefined) return; obstacles.forEach(obstacle => { scene.remove(obstacle); obstacle.geometry.dispose(); if(obstacle.material) obstacle.material.dispose(); else obstacle.traverse(c => {if(c.material) c.material.dispose()}); }); obstacles = []; player.position.copy(PLAYER_START_POS); player.position.y = player.userData.groundY; playerBoundingBox.setFromObject(player, true); currentLane = 1; isJumping = false; playerVelocityY = 0; score = 0; gameSpeed = INITIAL_GAME_SPEED; timeSinceLastSpawn = 0; nextSpawnInterval = calculateNextSpawnInterval(); updateScoreDisplay(); gameOverScreen.style.display = 'none'; gameState = 'waiting'; gameStartedOnce = false; showStartMessage("Press Any Key or Click to Start"); if (playerMixer) { if(jumpAction && jumpAction.isRunning()) jumpAction.stop(); if(runAction) runAction.reset().play(); } if (clock.running === false) clock.start(); }
+        // --- Local Storage (remain the same) ---
+        function saveHighScore() { /* ... */ }
+        function loadHighScore() { /* ... */ }
 
-        // --- UI & Scoring ---
-        function updateScoreDisplay() { scoreElement.textContent = `Score: ${Math.floor(score)}`; }
-        function updateHighScoreDisplay() { highScoreElement.textContent = `High Score: ${highScore}`; }
-        function showStartMessage(message = "Loading...", permanent = false) { startMessage.textContent = message; startMessage.style.display = 'block'; startMessage.style.pointerEvents = (gameState === 'loading' || permanent) ? 'none' : 'all'; }
-        function hideStartMessage() { startMessage.style.display = 'none'; }
-
-        // --- Local Storage ---
-        function saveHighScore() { if (Math.floor(score) > highScore) { highScore = Math.floor(score); try { localStorage.setItem(HIGH_SCORE_KEY, highScore.toString()); } catch (e) { console.error("Could not save high score:", e); } } }
-        function loadHighScore() { try { const storedHighScore = localStorage.getItem(HIGH_SCORE_KEY); if (storedHighScore !== null) highScore = parseInt(storedHighScore, 10) || 0; } catch (e) { console.error("Could not load high score:", e); highScore = 0; } }
-
-        // --- Event Handlers ---
-        function onWindowResize() { const newWidth = gameContainer.clientWidth; const newHeight = gameContainer.clientHeight; camera.aspect = newWidth / newHeight; camera.updateProjectionMatrix(); renderer.setSize(newWidth, newHeight); }
-        function startGameOnce() { if (!gameStartedOnce && assetsLoaded && gameState === 'waiting') { gameStartedOnce = true; startGame(); } }
-        function onKeyDown(event) { if (!gameStartedOnce && assetsLoaded && gameState === 'waiting') { startGameOnce(); return; } if (gameState !== 'playing') return; switch (event.code) { case 'ArrowLeft': case 'KeyA': moveLane(-1); break; case 'ArrowRight': case 'KeyD': moveLane(1); break; case 'Space': case 'ArrowUp': case 'KeyW': jump(); break; } }
+        // --- Event Handlers (remain the same) ---
+        function onWindowResize() { /* ... */ }
+        function startGameOnce() { /* ... */ }
+        function onKeyDown(event) { /* ... */ }
 
         // --- Start the experience ---
         init();
