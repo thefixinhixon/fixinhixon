@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple IPTV Player</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            color: #333;
+        }
+
+        #app-container {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden; /* Prevent overall page scroll */
+        }
+
+        #sidebar {
+            width: 250px;
+            background-color: #e0e0e0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #ccc;
+            overflow-y: auto; /* Allow sidebar scroll if needed */
+        }
+
+        #main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+        }
+
+        #input-area label,
+        #input-area input {
+            display: block;
+            margin-bottom: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+         #input-area input {
+             padding: 8px;
+             border: 1px solid #ccc;
+             border-radius: 4px;
+         }
+
+        #input-area button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+        #input-area button:hover {
+            background-color: #0056b3;
+        }
+         #input-area button:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+         }
+
+        #channel-list-container {
+            margin-top: 20px;
+            flex-grow: 1; /* Allow channel list to fill sidebar */
+            overflow-y: auto; /* Make channel list scrollable */
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+
+        #channel-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #channel-list li {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+             display: flex; /* Use flexbox for layout */
+             align-items: center; /* Vertically center items */
+        }
+         #channel-list li img.logo {
+             width: 32px; /* Adjust size as needed */
+             height: auto; /* Maintain aspect ratio */
+             margin-right: 10px;
+             flex-shrink: 0; /* Prevent logo from shrinking */
+             vertical-align: middle; /* Better alignment if not using flex */
+             background-color: #ddd; /* Placeholder background */
+             border-radius: 3px;
+         }
+
+        #channel-list li:hover {
+            background-color: #d0d0d0;
+        }
+         #channel-list li.selected {
+             background-color: #007bff;
+             color: white;
+             font-weight: bold;
+         }
+
+        #video-player-container {
+            background-color: #000;
+            position: relative;
+            width: 100%;
+            /* Aspect ratio padding trick for common 16:9 */
+            padding-top: 56.25%; /* 9 / 16 * 100% */
+             flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        #video-player {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none; /* Remove default border */
+        }
+
+        #epg-container {
+            flex-grow: 1; /* EPG takes remaining space */
+            padding: 15px;
+            overflow: auto; /* Scrollable EPG area */
+            background-color: #f8f9fa;
+            border-top: 1px solid #ccc;
+        }
+
+        #epg-placeholder {
+            color: #888;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+         .loader {
+             border: 4px solid #f3f3f3; /* Light grey */
+             border-top: 4px solid #3498db; /* Blue */
+             border-radius: 50%;
+             width: 20px;
+             height: 20px;
+             animation: spin 1s linear infinite;
+             display: none; /* Hidden by default */
+             margin: 5px auto 0 auto; /* Center below button */
+         }
+
+        @keyframes spin {
+             0% { transform: rotate(0deg); }
+             100% { transform: rotate(360deg); }
+         }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div id="sidebar">
+            <h2>Settings</h2>
+            <div id="input-area">
+                <label for="m3u-url">M3U URL:</label>
+                <input type="text" id="m3u-url" placeholder="Enter M3U Playlist URL">
+
+                <label for="epg-url">EPG XML URL:</label>
+                <input type="text" id="epg-url" placeholder="Enter EPG XML URL">
+
+                <button id="load-button">Load Playlist & EPG</button>
+                 <div id="loader" class="loader"></div>
+                 <p id="status-message" style="font-size: 0.9em; color: red; margin-top: 10px;"></p>
+            </div>
+
+            <h2 style="margin-top: 20px;">Channels</h2>
+            <div id="channel-list-container">
+                <ul id="channel-list">
+                    <!-- Channel items will be added here -->
+                </ul>
+            </div>
+        </div>
+
+        <div id="main-content">
+            <div id="video-player-container">
+                <video id="video-player" controls autoplay>
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            <div id="epg-container">
+                 <h2>Electronic Program Guide (EPG)</h2>
+                <div id="epg-placeholder">EPG data will appear here after loading.</div>
+                <!-- EPG Grid will be built here later -->
+            </div>
+        </div>
+    </div>
+
+    <!-- HLS.js Library (required for HLS streams - .m3u8) -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+    <script>
+        const m3uUrlInput = document.getElementById('m3u-url');
+        const epgUrlInput = document.getElementById('epg-url');
+        const loadButton = document.getElementById('load-button');
+        const loader = document.getElementById('loader');
+        const statusMessage = document.getElementById('status-message');
+        const channelListUl = document.getElementById('channel-list');
+        const videoPlayer = document.getElementById('video-player');
+        const epgContainer = document.getElementById('epg-container'); // Keep reference for later
+        const epgPlaceholder = document.getElementById('epg-placeholder'); // Keep reference for later
+
+        let channels = []; // To store parsed channel data { name, url, tvgId, tvgName, logo, group }
+        let hls = null; // HLS.js instance
+
+        // --- M3U Parsing Logic (REVISED) ---
+        async function loadM3U(url) {
+            if (!url) {
+                throw new Error("M3U URL is empty.");
+            }
+            console.log(`Fetching M3U from: ${url}`);
+            // Add cache-busting parameter to try and avoid stale caches
+            const cacheBuster = `?_cb=${new Date().getTime()}`;
+            const response = await fetch(url + cacheBuster, { cache: 'no-store' }); // Try to prevent caching
+            if (!response.ok) {
+                 // Log more details on fetch failure
+                 console.error(`Failed to fetch M3U. Status: ${response.status} ${response.statusText}. URL: ${response.url}`);
+                 let errorText = `Failed to fetch M3U: ${response.status} ${response.statusText}`;
+                 // Check for CORS issues (though detection is limited client-side)
+                 if (response.status === 0 || response.type === 'opaque' || response.type === 'error') {
+                    errorText += ' (This might be a CORS issue or network problem)';
+                 } else {
+                    try {
+                        // Try reading error response body if available
+                        const body = await response.text();
+                        console.error("Error response body:", body);
+                        errorText += ` - ${body.substring(0, 100)}`; // Show part of body
+                    } catch (e) { /* Ignore if body cannot be read */ }
+                 }
+                throw new Error(errorText);
+            }
+            const m3uText = await response.text();
+            console.log("M3U content fetched, parsing...");
+            return parseM3U(m3uText);
+        }
+
+        function parseM3U(m3uText) {
+            console.log("Starting M3U Parse...");
+            const lines = m3uText.split('\n');
+            const parsedChannels = [];
+            let currentChannel = null; // Use null to indicate no channel is being processed
+
+            if (!lines[0] || !lines[0].trim().startsWith('#EXTM3U')) {
+                console.warn("M3U file does not start with #EXTM3U. Proceeding anyway.");
+                 // It's common for the first line to be just #EXTM3U, so check trimmed version
+            }
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                // console.log(`Processing line ${i + 1}: "${line}"`); // DEBUG Line
+
+                if (line.startsWith('#EXTINF:')) {
+                     // If a previous channel was defined but lacked a URL, log a warning
+                     if (currentChannel && !currentChannel.url) {
+                         console.warn(`Discarding previous channel entry "${currentChannel.name}" because a new #EXTINF was found before its URL.`);
+                     }
+
+                    // Start of a new channel entry
+                    currentChannel = { name: '', tvgId: '', tvgName: '', logo: '', group: '', url: '', rawExtInf: line }; // Include raw line for debugging
+                    // console.log(`Found #EXTINF at line ${i+1}. Initializing channel object.`);
+
+                    const infoLine = line.substring(8).trim(); // Remove '#EXTINF:'
+                    const commaIndex = infoLine.lastIndexOf(',');
+
+                    if (commaIndex === -1) {
+                        console.warn(`Skipping malformed #EXTINF line (no comma found): ${line}`);
+                        currentChannel = null; // Invalidate current channel
+                        continue;
+                    }
+
+                    // Extract the display name (text after the last comma)
+                    currentChannel.name = infoLine.substring(commaIndex + 1).trim();
+                    // console.log(`  - Extracted Name: "${currentChannel.name}"`);
+
+                    // Extract attributes part (before the last comma)
+                    const attributesPart = infoLine.substring(0, commaIndex).trim();
+                    // console.log(`  - Attributes Part: "${attributesPart}"`);
+
+                    // Regex to find key="value" pairs
+                    const attributeRegex = /([a-zA-Z0-9_-]+)="([^"]*)"/g;
+                    let match;
+                    while ((match = attributeRegex.exec(attributesPart)) !== null) {
+                        const key = match[1].toLowerCase(); // Lowercase key for consistency
+                        const value = match[2];
+                        // console.log(`    - Found Attribute: ${key} = "${value}"`);
+                        switch (key) {
+                            case 'tvg-id':
+                                currentChannel.tvgId = value;
+                                break;
+                            case 'tvg-name':
+                                currentChannel.tvgName = value; // Store tvg-name separately
+                                break;
+                            case 'tvg-logo':
+                                currentChannel.logo = value;
+                                break;
+                            case 'group-title':
+                                currentChannel.group = value;
+                                break;
+                            // Add other attributes if needed
+                        }
+                    }
+
+                    // Use tvg-name as a fallback if the primary name is empty or generic
+                    if ((!currentChannel.name || currentChannel.name.match(/^Channel\s*\d+$/i)) && currentChannel.tvgName) {
+                        console.log(`  - Using tvg-name "${currentChannel.tvgName}" as primary name (fallback).`);
+                        currentChannel.name = currentChannel.tvgName;
+                    }
+                     // If still no name, generate a placeholder
+                     if (!currentChannel.name) {
+                         console.warn(`  - No channel name found for line: ${line}. Using placeholder.`);
+                         currentChannel.name = `Unnamed Channel ${parsedChannels.length + 1}`;
+                     }
+
+
+                } else if (currentChannel && line && !line.startsWith('#')) {
+                    // This line should be the URL for the previously parsed #EXTINF
+                    // console.log(`  - Found URL: "${line}" for channel "${currentChannel.name}"`);
+                    currentChannel.url = line;
+                    // Clean up the raw line from the final object if desired
+                    delete currentChannel.rawExtInf;
+                    parsedChannels.push(currentChannel);
+                    // console.log(`  - Added Channel:`, JSON.parse(JSON.stringify(currentChannel))); // Log a copy - Can be verbose
+                    currentChannel = null; // Reset, ready for the next #EXTINF
+                } else if (line && !line.startsWith('#') && !currentChannel) {
+                     // Found a potential URL line but we weren't expecting one (no preceding #EXTINF)
+                     // This can happen in very simple M3U files. Let's create a basic entry.
+                     console.warn(`Found URL "${line}" at line ${i+1} without a preceding #EXTINF. Creating basic entry.`);
+                     parsedChannels.push({
+                         name: `Channel ${parsedChannels.length + 1}`,
+                         url: line,
+                         tvgId: '', tvgName: '', logo: '', group: ''
+                     });
+                } else if (line.startsWith('#') && line !== '#EXTM3U' && currentChannel && !currentChannel.url) {
+                     // Found another comment/directive before finding a URL for the current channel
+                     console.warn(`Found directive/comment "${line}" before finding a URL for channel "${currentChannel.name}". Discarding channel entry.`);
+                     currentChannel = null; // Discard incomplete entry
+                }
+            } // End of loop
+
+            // Check if the loop finished while processing a channel that never got a URL
+            if (currentChannel && !currentChannel.url) {
+                console.warn(`Reached end of file, but the last channel entry starting with "${currentChannel.rawExtInf}" was missing its URL.`);
+            }
+
+            console.log(`Parsing complete. Successfully parsed ${parsedChannels.length} channels.`);
+            if (parsedChannels.length === 0 && lines.length > 1) {
+                 console.warn("Parsing finished with 0 channels, but the M3U file was not empty. Check M3U format and console logs.");
+            }
+            return parsedChannels;
+        }
+
+
+        // --- Display Logic ---
+        function displayChannels(channelData) {
+            channelListUl.innerHTML = ''; // Clear previous list
+            if (!channelData || channelData.length === 0) {
+                channelListUl.innerHTML = '<li>No channels found or parsed correctly. Check console for errors.</li>';
+                return;
+            }
+
+            channelData.forEach((channel, index) => {
+                const li = document.createElement('li');
+                li.dataset.url = channel.url;
+                li.dataset.tvgId = channel.tvgId || ''; // Store tvg-id for EPG later
+                li.dataset.index = index; // Store index for easy lookup
+
+                // Add logo if available
+                if (channel.logo) {
+                    const img = document.createElement('img');
+                    img.src = channel.logo;
+                    img.alt = ''; // Decorative
+                    img.classList.add('logo');
+                    img.onerror = function() { // Handle broken logo links
+                         this.style.display = 'none'; // Hide broken image icon
+                         // Optionally replace with a placeholder or remove completely
+                    }
+                    li.appendChild(img);
+                }
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = channel.name || `Channel ${index + 1}`; // Use name or fallback
+                li.appendChild(nameSpan);
+
+
+                li.addEventListener('click', handleChannelClick);
+                channelListUl.appendChild(li);
+            });
+        }
+
+        // --- Event Handlers ---
+        function handleChannelClick(event) {
+             // Remove selection from previously selected item
+            const currentSelected = channelListUl.querySelector('.selected');
+            if (currentSelected) {
+                currentSelected.classList.remove('selected');
+            }
+
+            // Add selection to clicked item
+            const listItem = event.currentTarget;
+            listItem.classList.add('selected');
+
+            const url = listItem.dataset.url;
+            const index = parseInt(listItem.dataset.index, 10);
+            const selectedChannel = channels[index];
+
+            if (selectedChannel) {
+                 console.log(`Channel clicked: ${selectedChannel.name}, URL: ${selectedChannel.url}, TVG-ID: ${selectedChannel.tvgId}`);
+                 playChannel(selectedChannel.url);
+                 // Future: update EPG based on selectedChannel.tvgId
+                 epgPlaceholder.textContent = `Selected: ${selectedChannel.name}. EPG display coming soon...`;
+            } else {
+                 console.error("Could not find channel data for clicked item index:", index);
+                 setStatus("Error selecting channel.", true);
+            }
+        }
+
+       async function handleLoadButtonClick() {
+            const m3uUrl = m3uUrlInput.value.trim();
+            const epgUrl = epgUrlInput.value.trim(); // Get EPG URL, but don't use yet
+
+            if (!m3uUrl) {
+                setStatus("Please enter an M3U URL.", true);
+                return;
+            }
+
+            // Basic URL validation (very simple)
+            if (!m3uUrl.toLowerCase().startsWith('http://') && !m3uUrl.toLowerCase().startsWith('https://')) {
+                // Allow relative paths too? For now, require http/https for clarity
+                 // setStatus("M3U URL must start with http:// or https://", true);
+                 // return;
+                 console.warn("M3U URL does not start with http/https. Assuming relative path or other protocol.");
+            }
+             if (epgUrl && !epgUrl.toLowerCase().startsWith('http://') && !epgUrl.toLowerCase().startsWith('https://')) {
+                 // setStatus("EPG URL must start with http:// or https:// (if provided)", true);
+                 // return;
+                  console.warn("EPG URL does not start with http/https. Assuming relative path or other protocol.");
+             }
+
+            clearStatus();
+            showLoader(true);
+            loadButton.disabled = true;
+            channelListUl.innerHTML = '<li>Loading channels...</li>'; // Placeholder
+            epgPlaceholder.textContent = 'Loading EPG data...'; // Placeholder
+
+            try {
+                // Load M3U first
+                channels = await loadM3U(m3uUrl);
+                displayChannels(channels);
+                if (channels.length > 0) {
+                    setStatus(`Loaded ${channels.length} channels. Select one to play.`, false);
+                } else {
+                     setStatus(`Loaded M3U, but found 0 channels. Check M3U format/content and console logs.`, true);
+                }
+
+
+                // --- Placeholder for EPG Loading (to be added next iteration) ---
+                console.log("EPG loading logic will go here. URL:", epgUrl);
+                // Simulate EPG loading delay/placeholder update for now
+                await new Promise(resolve => setTimeout(resolve, 100)); // Shorter delay
+                if (epgUrl) {
+                     epgPlaceholder.textContent = `EPG loading from ${epgUrl} (not implemented yet).`;
+                     // TODO: Add call to loadEPG(epgUrl) here in the next step
+                } else {
+                     epgPlaceholder.textContent = 'No EPG URL provided. EPG data not available.';
+                }
+                // ----------------------------------------------------------------
+
+            } catch (error) {
+                console.error("Error loading data:", error);
+                // Display the error message caught from loadM3U or other steps
+                setStatus(`Error: ${error.message}`, true);
+                channels = []; // Clear channels on error
+                displayChannels(channels); // Show empty list message
+                epgPlaceholder.textContent = 'Failed to load data.';
+            } finally {
+                showLoader(false);
+                loadButton.disabled = false;
+            }
+        }
+
+        // --- Video Player Logic ---
+        function playChannel(url) {
+            if (!url) {
+                setStatus("Cannot play channel: URL is missing.", true);
+                return;
+            }
+            console.log(`Attempting to play: ${url}`);
+            setStatus(`Loading: ${url}`, false);
+
+            if (hls) {
+                hls.destroy(); // Destroy previous HLS instance if exists
+                hls = null;
+                console.log("Previous HLS instance destroyed.");
+            }
+             // Also reset native player source
+             videoPlayer.src = '';
+             videoPlayer.removeAttribute('src'); // Ensure src is fully removed
+             videoPlayer.load(); // Reset the media element
+
+            // Check if the stream is likely HLS (M3U8)
+            if (url.toLowerCase().includes('.m3u8')) {
+                if (Hls.isSupported()) {
+                    console.log("HLS stream detected, using HLS.js");
+                    hls = new Hls({
+                        // Optional configuration
+                         // enableWorker: false, // Try disabling worker if issues occur
+                         // lowLatencyMode: true, // Try enabling for low latency streams
+                         // fragilityHint: 0.5 // Adjust stability vs latency
+                    });
+                     // Bind error handling before loading source
+                    hls.on(Hls.Events.ERROR, function (event, data) {
+                        handleHlsError(event, data, url);
+                    });
+                    hls.loadSource(url);
+                    hls.attachMedia(videoPlayer);
+                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                        console.log("HLS Manifest Parsed, attempting to play...");
+                        videoPlayer.play()
+                            .then(() => setStatus(`Playing HLS: ${url}`, false))
+                            .catch(e => {
+                                console.error("Autoplay failed:", e);
+                                // Provide a more informative message if autoplay fails
+                                setStatus(`Ready to play HLS (Click play if needed): ${url}`, false);
+                            });
+                    });
+                    // Add more logging for HLS events
+                    hls.on(Hls.Events.LEVEL_LOADED, (event, data) => console.log(`HLS Level ${data.level} loaded`));
+                    hls.on(Hls.Events.FRAG_BUFFERED, (event, data) => console.log(`HLS Fragment buffered: ${data.frag.sn}`));
+
+
+                } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                    console.log("HLS stream detected, using native browser support.");
+                    videoPlayer.src = url;
+                    videoPlayer.load(); // Explicitly load
+                    videoPlayer.play()
+                        .then(() => setStatus(`Playing Native HLS: ${url}`, false))
+                        .catch(e => {
+                             console.error("Autoplay failed:", e);
+                             setStatus(`Ready to play Native HLS (Click play if needed): ${url}`, false);
+                         });
+                } else {
+                    setStatus("HLS stream detected, but neither HLS.js nor native support is available.", true);
+                     console.error("HLS not supported by this browser.");
+                }
+            } else {
+                // Assume it's a progressive stream (MP4, WebM, etc.) or other type
+                console.log("Non-HLS stream detected, using standard video source.");
+                videoPlayer.src = url;
+                videoPlayer.load(); // Explicitly load
+                videoPlayer.play()
+                    .then(() => setStatus(`Playing: ${url}`, false))
+                    .catch(e => {
+                        console.error("Autoplay failed:", e);
+                        setStatus(`Ready to play (Click play if needed): ${url}`, false);
+                    });
+            }
+        }
+
+         // --- HLS.js Error Handling ---
+         function handleHlsError(event, data, url) {
+             const errorType = data.type;
+             const errorDetails = data.details;
+             const isFatal = data.fatal;
+
+             console.error(`HLS Error: Type: ${errorType}, Details: ${errorDetails}, Fatal: ${isFatal}, URL: ${url}`, data);
+
+             if (isFatal) {
+                 switch (errorType) {
+                     case Hls.ErrorTypes.NETWORK_ERROR:
+                         console.error(`HLS Fatal network error: ${errorDetails}`);
+                         setStatus(`Error: Network issue loading stream (${errorDetails}). Check connection or stream source.`, true);
+                         // Attempt to recover? Maybe not for fatal network errors.
+                         // hls.startLoad(); // or hls.loadSource(url)
+                         break;
+                     case Hls.ErrorTypes.MEDIA_ERROR:
+                         console.error(`HLS Fatal media error: ${errorDetails}`);
+                         setStatus(`Error: Media error playing stream (${errorDetails}). Stream might be corrupt or incompatible.`, true);
+                         // Try to recover?
+                         // hls.recoverMediaError(); // Might help sometimes, but often indicates deeper issues
+                         break;
+                     default:
+                         console.error(`HLS Unrecoverable error: ${errorDetails}`);
+                         setStatus(`Error: Cannot play stream (${errorDetails}).`, true);
+                         // Cannot recover, destroy HLS instance
+                         if (hls) {
+                             hls.destroy();
+                             hls = null;
+                             console.log("Destroyed HLS instance due to fatal error.");
+                         }
+                         break;
+                 }
+             } else {
+                 // Non-fatal errors (e.g., buffering issues, segment load failures)
+                 console.warn(`HLS Non-fatal error: Type: ${errorType}, Details: ${errorDetails}`);
+                 // HLS.js often tries to recover automatically.
+                 // Optionally add specific handling, e.g., if manifest load fails but isn't fatal yet.
+                 if (errorDetails === Hls.ErrorDetails.MANIFEST_LOAD_ERROR || errorDetails === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT) {
+                     setStatus(`Warning: Issue loading manifest (${errorDetails}). Retrying...`, false);
+                 } else if (errorDetails === Hls.ErrorDetails.LEVEL_LOAD_ERROR || errorDetails === Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT) {
+                    setStatus(`Warning: Issue loading stream level (${errorDetails}). Retrying...`, false);
+                 } else if (errorDetails.includes('BUFFER_STALLED_ERROR')) {
+                    setStatus('Buffering stalled, trying to recover...', false);
+                 }
+             }
+         }
+
+        // --- Utility Functions ---
+        function showLoader(show) {
+            loader.style.display = show ? 'block' : 'none';
+        }
+
+        function setStatus(message, isError = false) {
+             statusMessage.textContent = message;
+             statusMessage.style.color = isError ? 'red' : '#333'; // Use red for errors, default for info
+             // Log status messages to console as well for easier debugging
+             if (isError) {
+                 console.error("Status Update:", message);
+             } else {
+                 console.log("Status Update:", message);
+             }
+        }
+
+        function clearStatus() {
+            statusMessage.textContent = '';
+        }
+
+         // --- Video Element Error Handling (for non-HLS or native HLS) ---
+         videoPlayer.addEventListener('error', (e) => {
+             let errorMsg = "Unknown video error.";
+             const videoErrorCode = videoPlayer.error ? videoPlayer.error.code : 'N/A';
+             const videoErrorMsg = videoPlayer.error ? videoPlayer.error.message : 'No message';
+
+             // Avoid logging errors if HLS.js is active AND has also reported a fatal error,
+             // as the video element error is likely a consequence of the HLS failure.
+             // Check if hls exists and maybe if a fatal error was recently logged (needs state tracking).
+             // Simpler approach: Log always, but note if HLS is active.
+             const isHlsActive = !!hls;
+
+             if (videoPlayer.error) {
+                 switch (videoPlayer.error.code) {
+                     case MediaError.MEDIA_ERR_ABORTED: // Code 1
+                         errorMsg = 'Video playback aborted by user or script.';
+                         break;
+                     case MediaError.MEDIA_ERR_NETWORK: // Code 2
+                         errorMsg = 'Video download failed due to network error.';
+                         break;
+                     case MediaError.MEDIA_ERR_DECODE: // Code 3
+                         errorMsg = 'Video playback failed due to decoding error. The stream might be corrupt or in an unsupported format.';
+                         break;
+                     case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED: // Code 4
+                         errorMsg = 'Video source format not supported or stream URL invalid/unreachable.';
+                         break;
+                     default: // Other or unknown errors
+                         errorMsg = `An unknown error occurred (HTML5 MediaError code ${videoErrorCode}, message: ${videoErrorMsg}).`;
+                 }
+             }
+             console.error(`Video Element Error: ${errorMsg} (HLS active: ${isHlsActive})`, e);
+             // Update status only if HLS isn't handling it or if it's a non-HLS stream
+             if (!isHlsActive || videoPlayer.error?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+                  setStatus(`Error: ${errorMsg}`, true);
+             } else if (isHlsActive) {
+                 console.warn("Video element error occurred while HLS was active. Check HLS error logs for primary cause.");
+             }
+         });
+
+          videoPlayer.addEventListener('stalled', () => {
+              console.warn("Video stalled (download paused). Network might be slow or stream interrupted.");
+              // setStatus("Buffering stalled...", false); // Can be noisy
+          });
+
+           videoPlayer.addEventListener('waiting', () => {
+               console.log("Video waiting for data (buffering)...");
+               setStatus("Buffering...", false);
+           });
+
+            videoPlayer.addEventListener('playing', () => {
+                console.log("Video playback started/resumed.");
+                // Clear buffering/loading status if needed
+                if(statusMessage.textContent === "Buffering...") {
+                    clearStatus(); // Or set to 'Playing...'
+                }
+            });
+
+             videoPlayer.addEventListener('loadedmetadata', () => {
+                 console.log("Video metadata loaded.");
+                 // You could potentially check dimensions or duration here if needed
+             });
+
+              videoPlayer.addEventListener('canplay', () => {
+                  console.log("Video can play (enough data buffered).");
+              });
+
+
+        // --- Initial Setup ---
+        loadButton.addEventListener('click', handleLoadButtonClick);
+
+        // Optional: Load default URLs if desired (for testing)
+        // m3uUrlInput.value = 'YOUR_DEFAULT_M3U_URL_HERE';
+        // epgUrlInput.value = 'YOUR_DEFAULT_EPG_URL_HERE';
+
+        console.log("IPTV Player Initialized.");
+        setStatus("Enter M3U URL and click Load.", false);
+
+        // Add basic check for HLS.js library
+        if (typeof Hls === 'undefined') {
+             console.error("HLS.js library not found! HLS streams might not play.");
+             setStatus("HLS.js library not loaded. HLS playback may fail.", true);
+        }
+
+    </script>
+
+</body>
+</html>
