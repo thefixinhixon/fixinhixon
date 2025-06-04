@@ -80,6 +80,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="parseM3U.js"></script>
 
     <script>
         // Constants and variable declarations remain the same
@@ -106,7 +107,6 @@
                 reader.onerror = (event) => reject(new Error(`Error reading file: ${file.name}`));
                 reader.readAsText(file);
             });
-        }
 
         // --- M3U Loading/Parsing (Remains the same) ---
         async function getM3UContent(file, url) { /* ... same as 1.2 ... */
@@ -132,49 +132,6 @@
                 throw new Error("No M3U file or URL provided.");
             }
          }
-        function parseM3U(m3uText) { /* ... same as 1.2 ... */
-            console.log("Starting M3U Parse...");
-            const lines = m3uText.split('\n');
-            const parsedChannels = [];
-            let currentChannel = null;
-            if (!lines[0] || !lines[0].trim().startsWith('#EXTM3U')) { console.warn("M3U file does not start with #EXTM3U."); }
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (line.startsWith('#EXTINF:')) {
-                     if (currentChannel && !currentChannel.url) { console.warn(`Discarding previous channel "${currentChannel.name}" missing URL.`); }
-                    currentChannel = { name: '', tvgId: '', tvgName: '', logo: '', group: '', url: '', rawExtInf: line };
-                    const infoLine = line.substring(8).trim();
-                    const commaIndex = infoLine.lastIndexOf(',');
-                    if (commaIndex === -1) { console.warn(`Skipping malformed #EXTINF (no comma): ${line}`); currentChannel = null; continue; }
-                    currentChannel.name = infoLine.substring(commaIndex + 1).trim();
-                    const attributesPart = infoLine.substring(0, commaIndex).trim();
-                    const attributeRegex = /([a-zA-Z0-9_-]+)="([^"]*)"/g;
-                    let match;
-                    while ((match = attributeRegex.exec(attributesPart)) !== null) {
-                        const key = match[1].toLowerCase(); const value = match[2];
-                        switch (key) {
-                            case 'tvg-id': currentChannel.tvgId = value; break;
-                            case 'tvg-name': currentChannel.tvgName = value; break;
-                            case 'tvg-logo': currentChannel.logo = value; break;
-                            case 'group-title': currentChannel.group = value; break;
-                        }
-                    }
-                    if ((!currentChannel.name || currentChannel.name.match(/^Channel\s*\d+$/i)) && currentChannel.tvgName) { currentChannel.name = currentChannel.tvgName; }
-                     if (!currentChannel.name) { currentChannel.name = `Unnamed Channel ${parsedChannels.length + 1}`; }
-                } else if (currentChannel && line && !line.startsWith('#')) {
-                    currentChannel.url = line; delete currentChannel.rawExtInf; parsedChannels.push(currentChannel); currentChannel = null;
-                } else if (line && !line.startsWith('#') && !currentChannel) {
-                     console.warn(`Found URL "${line}" without #EXTINF. Creating basic entry.`);
-                     parsedChannels.push({ name: `Channel ${parsedChannels.length + 1}`, url: line, tvgId: '', tvgName: '', logo: '', group: '' });
-                } else if (line.startsWith('#') && line !== '#EXTM3U' && currentChannel && !currentChannel.url) {
-                     console.warn(`Found directive "${line}" before URL for "${currentChannel.name}". Discarding.`); currentChannel = null;
-                }
-            }
-            if (currentChannel && !currentChannel.url) { console.warn(`Last channel "${currentChannel.rawExtInf}" missing URL at EOF.`); }
-            console.log(`M3U Parsing complete. Parsed ${parsedChannels.length} channels.`);
-            if (parsedChannels.length === 0 && lines.length > 1) { console.warn("Parsed 0 channels from non-empty M3U."); }
-            return parsedChannels;
-        }
 
         // --- EPG Loading Placeholder (Remains the same) ---
         async function getEPGContent(file, url) { /* ... same as 1.2 ... */
@@ -197,7 +154,6 @@
              } else {
                  return null; // No EPG source provided
              }
-        }
 
         // --- Display Logic (Remains the same) ---
         function displayChannels(channelData) { /* ... same as 1.2 ... */
@@ -218,7 +174,6 @@
                 li.addEventListener('click', handleChannelClick);
                 channelListUl.appendChild(li);
             });
-        }
 
         // --- Event Handlers (handleLoadButtonClick remains the same) ---
         function handleChannelClick(event) { /* ... same as 1.2 ... */
@@ -236,7 +191,6 @@
                  console.error("Could not find channel data for index:", index);
                  setStatus("Error selecting channel.", true);
             }
-        }
         async function handleLoadButtonClick() { /* ... same as 1.2 ... */
              const m3uFile = m3uFileInput.files[0];
              const m3uUrl = m3uUrlInput.value.trim();
@@ -374,7 +328,6 @@
                     setStatus(`Ready to play (Click play): ${url}`, false);
                 });
             }
-        }
 
 
         // --- HLS.js Error Handling (Improved Logging) ---
