@@ -468,6 +468,11 @@ services:
     <pre><code>echo "/usr/bin/startplasma-x11" &gt; ~/.xsession
 </code></pre>
     <p>These commands install <code>xrdp</code>, enable the service to start at boot and set KDE Plasma as the session so that remote logins start the full desktop【878471215736407†L45-L61】.</p>
+    <h3>Wayland vs X11</h3>
+    <p>Recent releases of Kubuntu (starting with 25.10) boot into a Wayland session by default. Since <code>xrdp</code> only supports the X11 display server, you must ensure an X11 session is available. If your system does not offer a &ldquo;Plasma on Xorg&rdquo; choice on the login screen, install the X11 session package:</p>
+    <pre><code>sudo apt install plasma-session-x11
+</code></pre>
+    <p>Log out, click the gear icon in the SDDM login screen and select <em>Plasma (X11)</em> before signing in. Kubuntu still provides X11 sessions for compatibility; you can install the package and switch to X11 even on a Wayland-first release【1429275212086†L120-L134】.</p>
     <h3>Connecting from another computer</h3>
     <p>After <code>xrdp</code> is running, open a remote desktop client on your other computer and connect to <code>&lt;server-ip&gt;:3389</code>. Enter your Kubuntu username and password to log in. Common client tools include:</p>
     <ul>
