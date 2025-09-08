@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kubuntu & Docker Media Server Setup Guide</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: #f8f9fa;
+    color: #212529;
+  }
+  header {
+    background: linear-gradient(135deg, #007acc, #40c9ff);
+    color: #fff;
+    padding: 40px 20px;
+    text-align: center;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 2.5rem;
+  }
+  nav {
+    background-color: #343a40;
+    padding: 10px 0;
+  }
+  nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+  }
+  nav ul li {
+    display: inline-block;
+    margin: 0 15px;
+  }
+  nav ul li a {
+    color: #f8f9fa;
+    text-decoration: none;
+    font-weight: bold;
+  }
+  nav ul li a:hover {
+    text-decoration: underline;
+  }
+  main {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  section {
+    margin-bottom: 40px;
+  }
+  h2 {
+    color: #007acc;
+    margin-top: 0;
+  }
+  h3 {
+    color: #0d6efd;
+  }
+  img.responsive {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 20px 0;
+  }
+  pre {
+    background: #f1f1f1;
+    padding: 15px;
+    overflow-x: auto;
+    border-radius: 4px;
+  }
+  code {
+    font-family: "Courier New", monospace;
+    color: #d63384;
+  }
+  .callout {
+    background-color: #e9f7fd;
+    border-left: 6px solid #007acc;
+    padding: 10px 20px;
+    margin: 20px 0;
+    border-radius: 4px;
+  }
+  footer {
+    background-color: #343a40;
+    color: #adb5bd;
+    text-align: center;
+    padding: 20px;
+  }
+  footer a {
+    color: #adb5bd;
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Kubuntu & Docker Media Server Setup Guide</h1>
+  <p>A comprehensive tutorial for installing Kubuntu, Docker and a full suite of media applications.</p>
+</header>
+
+<nav>
+  <ul>
+    <li><a href="#kubuntu">Install Kubuntu</a></li>
+    <li><a href="#docker">Install Docker</a></li>
+    <li><a href="#plex">Plex</a></li>
+    <li><a href="#servarr">Sonarr/Radarr/Lidarr/Prowlarr</a></li>
+    <li><a href="#overseerr">Overseerr</a></li>
+    <li><a href="#compose">Compose Example</a></li>
+  </ul>
+</nav>
+
+<main>
+  <section id="intro">
+    <h2>Introduction</h2>
+    <p>This guide walks you through installing Kubuntu on your laptop, adding Docker, and deploying a fully‑featured media server stack—including Plex, Sonarr, Radarr, Lidarr, Prowlarr and Overseerr—inside containers. New users will find step‑by‑step instructions with commands to copy and paste and explanations along the way.</p>
+    <img src="421ca3e4-1c69-44f5-a011-e86c7a818d72.png" alt="Abstract OS installation" class="responsive">
+  </section>
+
+  <section id="kubuntu">
+    <h2>Installing Kubuntu</h2>
+    <h3>Download the ISO</h3>
+    <p>Navigate to the official Kubuntu download page and choose your preferred version. The latest release (as of September&nbsp;2025) is <strong>Kubuntu&nbsp;25.04</strong>, supported until January&nbsp;2026, and the long‑term support release is <strong>Kubuntu&nbsp;24.04.3&nbsp;LTS</strong>, supported until April&nbsp;2027【529364997254177†L18-L35】. Click the download link for your chosen version.</p>
+    <h3>Verify the checksum</h3>
+    <p>After downloading the ISO, verify its integrity using the SHA‑256 checksum. On Linux you can run:</p>
+<pre><code>cd ~/Downloads
+sha256sum kubuntu-24.04-desktop-amd64.iso
+</code></pre>
+    <p>Compare the output with the official checksum posted on the Kubuntu site. Verifying the checksum ensures the ISO was downloaded correctly【636867691122734†L70-L100】.</p>
+    <h3>Create bootable installation media</h3>
+    <p>Use a tool like <a href="https://www.balena.io/etcher/">Balena Etcher</a> to flash the ISO to a USB drive. In Etcher:</p>
+    <ol>
+      <li>Select the Kubuntu ISO file.</li>
+      <li>Select your USB drive.</li>
+      <li>Click <em>Flash!</em> to create the bootable media【636867691122734†L104-L123】.</li>
+    </ol>
+    <p>On Linux you can also run Etcher as an AppImage by extracting the downloaded archive and executing the .AppImage file【636867691122734†L126-L141】.</p>
+    <h3>Boot and install</h3>
+    <p>Insert the USB drive and reboot the computer. Enter the boot menu (often by pressing <kbd>F12</kbd>, <kbd>Esc</kbd> or another key) and choose the USB device. When the installer appears you can try the live environment or start installation. The installer guides you through:</p>
+    <ul>
+      <li><strong>Preparation</strong> – connect to the Internet and optionally enable updates and third‑party software【636867691122734†L163-L177】.</li>
+      <li><strong>Disk setup</strong> – choose automatic partitioning or manual partitioning if you need custom layouts【636867691122734†L178-L188】.</li>
+      <li><strong>Timezone and keyboard</strong> – select your region (America/Denver) and preferred keyboard layout.</li>
+      <li><strong>User information</strong> – choose a username, computer name and password.</li>
+    </ul>
+    <p>After the installation completes, restart and remove the USB drive.</p>
+  </section>
+
+  <section id="docker">
+    <h2>Installing Docker</h2>
+    <p>Docker provides a lightweight way to run applications in isolated containers. The recommended method is to install Docker Engine from the official package repository.</p>
+    <h3>Set up the Docker repository</h3>
+    <p>Open a terminal and run the following commands to add Docker’s GPG key and repository. Replace <code>$(. /etc/os-release &amp;&amp; echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")</code> with your release codename (for Kubuntu&nbsp;24.04 the codename is <code>noble</code>):</p>
+<pre><code>sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+  sudo tee /etc/apt/keyrings/docker.asc &gt; /dev/null
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+  https://download.docker.com/linux/ubuntu \n  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list &gt; /dev/null
+sudo apt-get update
+</code></pre>
+    <p>This procedure imports Docker’s signing key and adds the stable repository【572806795776503†L940-L963】.</p>
+    <h3>Install Docker packages</h3>
+    <p>To install the latest Docker Engine and Docker Compose plugin, run:</p>
+<pre><code>sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+</code></pre>
+    <p>After installation, verify everything is working by running the hello‑world container:</p>
+<pre><code>sudo docker run hello-world
+</code></pre>
+    <p>This will download a test image and print a confirmation message【572806795776503†L969-L999】.</p>
+    <h3>Running Docker without sudo</h3>
+    <p>By default Docker commands require root privileges. To run Docker as your regular user, create a <code>docker</code> group and add yourself to it:</p>
+<pre><code>sudo groupadd docker
+sudo usermod -aG docker $USER
+newgrp docker
+</code></pre>
+    <p>After logging out and back in (or running <code>newgrp docker</code>), you should be able to execute Docker commands without <code>sudo</code>. This process modifies permissions for the Docker socket【367289420136513†L846-L889】.</p>
+    <img src="5be473d2-a08b-4a25-8f10-d8533428287b.png" alt="Abstract containerization" class="responsive">
+  </section>
+
+  <section id="plex">
+    <h2>Installing Plex Media Server</h2>
+    <p>Plex organizes and streams your personal media collection. Running Plex inside a Docker container keeps it isolated and easy to update.</p>
+    <h3>Prepare directories and user IDs</h3>
+    <p>Plex needs a place to store its configuration and a path to your media files. First determine your user ID and group ID:</p>
+<pre><code>id -u   # shows your UID (e.g. 1000)
+id -g   # shows your GID (e.g. 1000)
+</code></pre>
+    <p>Create directories for Plex and your media. This example uses <code>/opt/stacks/plex</code> to store the compose file and configuration:</p>
+<pre><code>sudo mkdir -p /opt/stacks/plex
+cd /opt/stacks/plex
+</code></pre>
+    <p>Next, obtain a Plex claim token. Visit <a href="https://www.plex.tv/claim">plex.tv/claim</a>, sign in and copy the short code. The token expires after a few minutes【586422616407160†L145-L160】.</p>
+    <h3>Create a docker‑compose file</h3>
+    <p>Create <code>compose.yml</code> in <code>/opt/stacks/plex</code> and paste the following, replacing:</p>
+    <ul>
+      <li><code>&lt;USERID&gt;</code> and <code>&lt;GROUPID&gt;</code> with the numbers returned by <code>id</code></li>
+      <li><code>&lt;TIMEZONE&gt;</code> with your timezone (e.g., <code>America/Denver</code>)</li>
+      <li><code>&lt;CLAIM&gt;</code> with your Plex claim code</li>
+      <li><code>/path/to/media</code> with the directory containing your movies, TV shows or music</li>
+    </ul>
+<pre><code>services:
+  plex:
+    container_name: plex
+    image: plexinc/pms-docker
+    restart: unless-stopped
+    environment:
+      - PLEX_UID=&lt;USERID&gt;
+      - PLEX_GID=&lt;GROUPID&gt;
+      - TZ=&lt;TIMEZONE&gt;
+      - PLEX_CLAIM=&lt;CLAIM&gt;
+    network_mode: host
+    volumes:
+      - ./config:/config
+      - ./transcode:/transcode
+      - /path/to/media:/data
+    devices:
+      - /dev/dri:/dev/dri
+</code></pre>
+    <p>This compose configuration follows the LinuxServer.io recommendations for Plex: it mounts a config directory, a transcode directory and your media directory, sets the container to restart automatically, and runs in host network mode【586422616407160†L174-L223】.</p>
+    <h3>Start Plex</h3>
+    <p>From the directory containing <code>compose.yml</code>, run:</p>
+<pre><code>docker compose up -d
+</code></pre>
+    <p>Docker will download the Plex image and start the container. Once running, open a browser and navigate to:</p>
+<pre><code>http://localhost:32400/web
+</code></pre>
+    <p>The Plex setup wizard will prompt you to sign in, name your server and add media libraries【586422616407160†L245-L279】. Follow the on‑screen instructions to finish setup.</p>
+    <img src="b5909edb-e349-456d-875d-b158d16564ad.png" alt="Abstract media streaming" class="responsive">
+  </section>
+
+  <section id="servarr">
+    <h2>Configuring Sonarr, Radarr, Lidarr &amp; Prowlarr</h2>
+    <p>The <em>Servarr</em> family of applications automates media acquisition. They monitor RSS feeds and manage downloads through BitTorrent or Usenet clients. Each application runs well inside a container.</p>
+    <h3>Common environment variables</h3>
+    <p>All LinuxServer.io containers support specifying the user and group IDs via <code>PUID</code> and <code>PGID</code> environment variables and setting your timezone via <code>TZ</code>. Defining these variables prevents permission issues when accessing host volumes【292111000025181†L488-L543】【701571932794003†L488-L501】. You can find your IDs using <code>id your_user</code>.</p>
+    
+    <h3>Sonarr (TV series)</h3>
+    <p>Sonarr runs a web interface on port <strong>8989</strong>【292111000025181†L488-L499】. A typical docker-compose service looks like:</p>
+<pre><code>  sonarr:
+    container_name: sonarr
+    image: lscr.io/linuxserver/sonarr:latest
+    environment:
+      - PUID=&lt;USERID&gt;
+      - PGID=&lt;GROUPID&gt;
+      - TZ=&lt;TIMEZONE&gt;
+    volumes:
+      - /opt/stacks/sonarr/config:/config
+      - /mnt/media/tv:/tv
+      - /mnt/media/downloads:/downloads
+    ports:
+      - "8989:8989"
+    restart: unless-stopped
+</code></pre>
+    <p>After starting the container, access Sonarr at <code>http://&lt;server-ip&gt;:8989</code>.</p>
+
+    <h3>Radarr (Movies)</h3>
+    <p>Radarr uses port <strong>7878</strong>【701571932794003†L480-L501】. Example service:</p>
+<pre><code>  radarr:
+    container_name: radarr
+    image: lscr.io/linuxserver/radarr:latest
+    environment:
+      - PUID=&lt;USERID&gt;
+      - PGID=&lt;GROUPID&gt;
+      - TZ=&lt;TIMEZONE&gt;
+    volumes:
+      - /opt/stacks/radarr/config:/config
+      - /mnt/media/movies:/movies
+      - /mnt/media/downloads:/downloads
+    ports:
+      - "7878:7878"
+    restart: unless-stopped
+</code></pre>
+    <p>Open <code>http://&lt;server-ip&gt;:7878</code> to configure Radarr.</p>
+
+    <h3>Lidarr (Music)</h3>
+    <p>Lidarr manages music libraries and listens on port <strong>8686</strong>. The container requires volumes for its config, music library and download directory【535833833172406†L492-L505】:</p>
+<pre><code>  lidarr:
+    container_name: lidarr
+    image: lscr.io/linuxserver/lidarr:latest
+    environment:
+      - PUID=&lt;USERID&gt;
+      - PGID=&lt;GROUPID&gt;
+      - TZ=&lt;TIMEZONE&gt;
+    volumes:
+      - /opt/stacks/lidarr/config:/config
+      - /mnt/media/music:/music
+      - /mnt/media/downloads:/downloads
+    ports:
+      - "8686:8686"
+    restart: unless-stopped
+</code></pre>
+    <p>Open <code>http://&lt;server-ip&gt;:8686</code> to access Lidarr.</p>
+
+    <h3>Prowlarr (Indexer manager)</h3>
+    <p>Prowlarr centralizes indexer configuration and sits behind your Arr apps. It runs on port <strong>9696</strong>【320509593831303†L471-L483】:</p>
+<pre><code>  prowlarr:
+    container_name: prowlarr
+    image: lscr.io/linuxserver/prowlarr:latest
+    environment:
+      - PUID=&lt;USERID&gt;
+      - PGID=&lt;GROUPID&gt;
+      - TZ=&lt;TIMEZONE&gt;
+    volumes:
+      - /opt/stacks/prowlarr/config:/config
+    ports:
+      - "9696:9696"
+    restart: unless-stopped
+</code></pre>
+    <p>Visit <code>http://&lt;server-ip&gt;:9696</code> to add your preferred torrent/Usenet indexers. After configuring Prowlarr, point Sonarr, Radarr and Lidarr at Prowlarr rather than adding individual indexers.</p>
+  </section>
+
+  <section id="overseerr">
+    <h2>Overseerr</h2>
+    <p><a href="https://overseerr.dev/">Overseerr</a> provides a user‑friendly request management system for Plex. It allows your household or friends to request movies and shows. According to the LinuxServer.io image documentation, Overseerr supports the same <code>PUID</code>, <code>PGID</code> and <code>TZ</code> variables【646177183736035†L466-L476】.</p>
+<pre><code>  overseerr:
+    container_name: overseerr
+    image: lscr.io/linuxserver/overseerr:latest
+    environment:
+      - PUID=&lt;USERID&gt;
+      - PGID=&lt;GROUPID&gt;
+      - TZ=&lt;TIMEZONE&gt;
+    volumes:
+      - /opt/stacks/overseerr/config:/config
+    ports:
+      - "5055:5055"
+    restart: unless-stopped
+</code></pre>
+    <p>Once started, access Overseerr at <code>http://&lt;server-ip&gt;:5055</code>. In the initial setup wizard, connect it to your Plex server and configure user authentication. Overseerr uses your Plex account to authenticate users and can forward approved requests to Sonarr or Radarr automatically.</p>
+  </section>
+
+  <section id="compose">
+    <h2>Putting it all together</h2>
+    <p>You can combine all services into a single <code>docker-compose.yml</code> file. Organizing your media directories and config paths up front makes the stack manageable. Here’s an example (replace paths, IDs and timezones as before):</p>
+<pre><code>version: "3.8"
+services:
+  plex:
+    container_name: plex
+    image: plexinc/pms-docker
+    network_mode: host
+    environment:
+      - PLEX_UID=&lt;UID&gt;
+      - PLEX_GID=&lt;GID&gt;
+      - TZ=America/Denver
+      - PLEX_CLAIM=&lt;CLAIM&gt;
+    volumes:
+      - /opt/stacks/plex/config:/config
+      - /opt/stacks/plex/transcode:/transcode
+      - /mnt/media:/data
+    devices:
+      - /dev/dri:/dev/dri
+    restart: unless-stopped
+
+  sonarr:
+    container_name: sonarr
+    image: lscr.io/linuxserver/sonarr:latest
+    ports:
+      - "8989:8989"
+    environment:
+      - PUID=&lt;UID&gt;
+      - PGID=&lt;GID&gt;
+      - TZ=America/Denver
+    volumes:
+      - /opt/stacks/sonarr/config:/config
+      - /mnt/media/tv:/tv
+      - /mnt/media/downloads:/downloads
+    restart: unless-stopped
+
+  radarr:
+    container_name: radarr
+    image: lscr.io/linuxserver/radarr:latest
+    ports:
+      - "7878:7878"
+    environment:
+      - PUID=&lt;UID&gt;
+      - PGID=&lt;GID&gt;
+      - TZ=America/Denver
+    volumes:
+      - /opt/stacks/radarr/config:/config
+      - /mnt/media/movies:/movies
+      - /mnt/media/downloads:/downloads
+    restart: unless-stopped
+
+  lidarr:
+    container_name: lidarr
+    image: lscr.io/linuxserver/lidarr:latest
+    ports:
+      - "8686:8686"
+    environment:
+      - PUID=&lt;UID&gt;
+      - PGID=&lt;GID&gt;
+      - TZ=America/Denver
+    volumes:
+      - /opt/stacks/lidarr/config:/config
+      - /mnt/media/music:/music
+      - /mnt/media/downloads:/downloads
+    restart: unless-stopped
+
+  prowlarr:
+    container_name: prowlarr
+    image: lscr.io/linuxserver/prowlarr:latest
+    ports:
+      - "9696:9696"
+    environment:
+      - PUID=&lt;UID&gt;
+      - PGID=&lt;GID&gt;
+      - TZ=America/Denver
+    volumes:
+      - /opt/stacks/prowlarr/config:/config
+    restart: unless-stopped
+
+  overseerr:
+    container_name: overseerr
+    image: lscr.io/linuxserver/overseerr:latest
+    ports:
+      - "5055:5055"
+    environment:
+      - PUID=&lt;UID&gt;
+      - PGID=&lt;GID&gt;
+      - TZ=America/Denver
+    volumes:
+      - /opt/stacks/overseerr/config:/config
+    restart: unless-stopped
+</code></pre>
+    <p>Save this file and start all containers at once with:</p>
+<pre><code>docker compose up -d
+</code></pre>
+    <p>Docker will pull each image, create containers, and set up volumes and ports. After a few minutes, your media stack will be available across different ports on your Kubuntu machine.</p>
+  </section>
+
+</main>
+
+<footer>
+  <p>© 2025 Media Server Guide • Created with love for self‑hosters.</p>
+  <p><a href="#">Back to top</a></p>
+</footer>
+</body>
+</html>
