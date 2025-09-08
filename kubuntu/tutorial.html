@@ -107,10 +107,12 @@
   <ul>
     <li><a href="#kubuntu">Install Kubuntu</a></li>
     <li><a href="#docker">Install Docker</a></li>
+    <li><a href="#mounts">Mounts &amp; Permissions</a></li>
     <li><a href="#plex">Plex</a></li>
     <li><a href="#servarr">Sonarr/Radarr/Lidarr/Prowlarr</a></li>
     <li><a href="#overseerr">Overseerr</a></li>
     <li><a href="#compose">Compose Example</a></li>
+    <li><a href="#remote-desktop">Remote Desktop</a></li>
   </ul>
 </nav>
 
@@ -184,6 +186,23 @@ newgrp docker
 </code></pre>
     <p>After logging out and back in (or running <code>newgrp docker</code>), you should be able to execute Docker commands without <code>sudo</code>. This process modifies permissions for the Docker socket【367289420136513†L846-L889】.</p>
     <img src="5be473d2-a08b-4a25-8f10-d8533428287b.png" alt="Abstract containerization" class="responsive">
+  </section>
+
+  <!-- Mounts and Permissions section -->
+  <section id="mounts">
+    <h2>Understanding Mounts &amp; Permissions</h2>
+    <p>Before diving into each media application, it&#39;s important to understand how Docker stores data and how file permissions impact your containers. Docker supports two primary types of persistent storage: <em>volumes</em> and <em>bind mounts</em>.</p>
+    <h3>Volumes vs bind mounts</h3>
+    <p>When you mount a volume into a container, Docker creates a directory within its storage area and manages that directory for you. This is similar to bind mounts but the volume is isolated from the host&#39;s core filesystem【577024411694145†L872-L894】. Volumes are easier to back up or migrate and can be safely shared among multiple containers【577024411694145†L872-L894】. Bind mounts map a specific file or directory from the host into the container. They are ideal for sharing source code or configuration files, but they have direct write access to the host filesystem【588888816183141†L852-L893】. Processes inside the container run as root by default, so a bind mount could inadvertently modify or delete host files【588888816183141†L888-L893】. Use the <code>readonly</code> (<code>:ro</code>) option to make a bind mount read‑only, or prefer volumes when you do not need direct host access.</p>
+    <h3>PUID, PGID &amp; umask</h3>
+    <p>The LinuxServer.io containers used in this guide run processes as the root user by default. They offer environment variables <code>PUID</code> (user ID) and <code>PGID</code> (group ID) so that files created inside the container are owned by a specific user on the host【512354269466441†L320-L341】. To find your IDs, run <code>id your_user</code>; typical non‑root accounts have <code>uid=1000</code> and <code>gid=1000</code>【292111000025181†L539-L548】. Set these values in your <code>docker‑compose.yml</code> to avoid permission issues【292111000025181†L539-L544】.</p>
+    <p>Many LinuxServer images also support an optional <code>UMASK</code> variable to control default file permissions【292111000025181†L525-L531】. Umask values subtract permissions from a base of 777 for directories and 666 for files. For example, the default umask of 002 for non‑root users results in directory permissions of 775 and file permissions of 664, while the root default of 022 yields 755 and 644【103379520723746†L220-L226】. If you want new files to be group‑writable (e.g., 775), set <code>UMASK=002</code> in the container’s environment.</p>
+    <h3>Preparing host directories</h3>
+    <p>Create directories on the host for your configuration and media data, then ensure they are owned by the same user and group specified by <code>PUID</code> and <code>PGID</code> to prevent permission errors【292111000025181†L539-L542】. For example:</p>
+    <pre><code>sudo mkdir -p /opt/stacks/sonarr /mnt/media/tv /mnt/media/downloads</code></pre>
+    <p>After creating the directories, adjust ownership by running <code>sudo chown -R &lt;UID&gt;:&lt;GID&gt; /opt/stacks/sonarr /mnt/media/tv /mnt/media/downloads</code> with your actual UID and GID.</p>
+    <p>If using bind mounts, append <code>:ro</code> to mount paths to make them read‑only in the container, protecting host files from modifications【588888816183141†L896-L903】.</p>
+    <img src="4496096c-7240-42ff-8eb9-2f7066114c95.png" alt="Abstract mounts and permissions" class="responsive">
   </section>
 
   <section id="plex">
@@ -434,6 +453,31 @@ services:
 <pre><code>docker compose up -d
 </code></pre>
     <p>Docker will pull each image, create containers, and set up volumes and ports. After a few minutes, your media stack will be available across different ports on your Kubuntu machine.</p>
+  </section>
+
+  <!-- Remote Desktop Access section -->
+  <section id="remote-desktop">
+    <h2>Remote Desktop Access</h2>
+    <p>After your media stack is running, you might want to manage the Kubuntu machine from another computer. The easiest way is to enable the Remote Desktop Protocol (RDP) server using <code>xrdp</code>.</p>
+    <h3>Install and configure xrdp</h3>
+    <p>Install the RDP server and start it automatically with the following commands:</p>
+    <pre><code>sudo apt install -y xrdp
+</code></pre>
+    <pre><code>sudo systemctl enable --now xrdp
+</code></pre>
+    <pre><code>echo "/usr/bin/startplasma-x11" &gt; ~/.xsession
+</code></pre>
+    <p>These commands install <code>xrdp</code>, enable the service to start at boot and set KDE Plasma as the session so that remote logins start the full desktop【878471215736407†L45-L61】.</p>
+    <h3>Connecting from another computer</h3>
+    <p>After <code>xrdp</code> is running, open a remote desktop client on your other computer and connect to <code>&lt;server-ip&gt;:3389</code>. Enter your Kubuntu username and password to log in. Common client tools include:</p>
+    <ul>
+      <li><strong>Windows</strong>: use the built‑in <em>Remote Desktop Connection</em> (`mstsc`)</li>
+      <li><strong>macOS</strong>: install <a href="https://apps.apple.com/us/app/microsoft-remote-desktop/id1295203466">Microsoft Remote Desktop</a> from the App Store</li>
+      <li><strong>Linux</strong>: install <a href="https://remmina.org/">Remmina</a></li>
+      <li><strong>Web</strong>: self‑host <a href="https://guacamole.apache.org/">Apache Guacamole</a> or another web RDP proxy【878471215736407†L96-L111】</li>
+    </ul>
+    <p>Remote and local logins cannot be active simultaneously on KDE Plasma, and performance over RDP may be lower than a local session【878471215736407†L136-L147】.</p>
+    <img src="e5e41a85-02a3-44db-a234-4c3fbf5f9153.png" alt="Abstract remote desktop" class="responsive">
   </section>
 
 </main>
