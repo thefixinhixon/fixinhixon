@@ -112,6 +112,8 @@
     <li><a href="#servarr">Sonarr/Radarr/Lidarr/Prowlarr</a></li>
     <li><a href="#overseerr">Overseerr</a></li>
     <li><a href="#compose">Compose Example</a></li>
+    <li><a href="#download">Download Client</a></li>
+    <li><a href="#security">Security</a></li>
     <li><a href="#remote-desktop">Remote Desktop</a></li>
   </ul>
 </nav>
@@ -126,26 +128,26 @@
   <section id="kubuntu">
     <h2>Installing Kubuntu</h2>
     <h3>Download the ISO</h3>
-    <p>Navigate to the official Kubuntu download page and choose your preferred version. The latest release (as of September&nbsp;2025) is <strong>Kubuntu&nbsp;25.04</strong>, supported until January&nbsp;2026, and the long‑term support release is <strong>Kubuntu&nbsp;24.04.3&nbsp;LTS</strong>, supported until April&nbsp;2027【529364997254177†L18-L35】. Click the download link for your chosen version.</p>
+    <p>Navigate to the official Kubuntu download page and choose your preferred version. The latest release (as of September&nbsp;2025) is <strong>Kubuntu&nbsp;25.04</strong>, supported until January&nbsp;2026, and the long‑term support release is <strong>Kubuntu&nbsp;24.04.3&nbsp;LTS</strong>, supported until April&nbsp;2027. Click the download link for your chosen version.</p>
     <h3>Verify the checksum</h3>
     <p>After downloading the ISO, verify its integrity using the SHA‑256 checksum. On Linux you can run:</p>
 <pre><code>cd ~/Downloads
 sha256sum kubuntu-24.04-desktop-amd64.iso
 </code></pre>
-    <p>Compare the output with the official checksum posted on the Kubuntu site. Verifying the checksum ensures the ISO was downloaded correctly【636867691122734†L70-L100】.</p>
+    <p>Compare the output with the official checksum posted on the Kubuntu site. Verifying the checksum ensures the ISO was downloaded correctly.</p>
     <h3>Create bootable installation media</h3>
     <p>Use a tool like <a href="https://www.balena.io/etcher/">Balena Etcher</a> to flash the ISO to a USB drive. In Etcher:</p>
     <ol>
       <li>Select the Kubuntu ISO file.</li>
       <li>Select your USB drive.</li>
-      <li>Click <em>Flash!</em> to create the bootable media【636867691122734†L104-L123】.</li>
+      <li>Click <em>Flash!</em> to create the bootable media.</li>
     </ol>
-    <p>On Linux you can also run Etcher as an AppImage by extracting the downloaded archive and executing the .AppImage file【636867691122734†L126-L141】.</p>
+    <p>On Linux you can also run Etcher as an AppImage by extracting the downloaded archive and executing the .AppImage file.</p>
     <h3>Boot and install</h3>
     <p>Insert the USB drive and reboot the computer. Enter the boot menu (often by pressing <kbd>F12</kbd>, <kbd>Esc</kbd> or another key) and choose the USB device. When the installer appears you can try the live environment or start installation. The installer guides you through:</p>
     <ul>
-      <li><strong>Preparation</strong> – connect to the Internet and optionally enable updates and third‑party software【636867691122734†L163-L177】.</li>
-      <li><strong>Disk setup</strong> – choose automatic partitioning or manual partitioning if you need custom layouts【636867691122734†L178-L188】.</li>
+      <li><strong>Preparation</strong> – connect to the Internet and optionally enable updates and third‑party software.</li>
+      <li><strong>Disk setup</strong> – choose automatic partitioning or manual partitioning if you need custom layouts.</li>
       <li><strong>Timezone and keyboard</strong> – select your region (America/Denver) and preferred keyboard layout.</li>
       <li><strong>User information</strong> – choose a username, computer name and password.</li>
     </ul>
@@ -169,7 +171,7 @@ echo \
   sudo tee /etc/apt/sources.list.d/docker.list &gt; /dev/null
 sudo apt-get update
 </code></pre>
-    <p>This procedure imports Docker’s signing key and adds the stable repository【572806795776503†L940-L963】.</p>
+    <p>This procedure imports Docker’s signing key and adds the stable repository.</p>
     <h3>Install Docker packages</h3>
     <p>To install the latest Docker Engine and Docker Compose plugin, run:</p>
 <pre><code>sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
@@ -177,14 +179,14 @@ sudo apt-get update
     <p>After installation, verify everything is working by running the hello‑world container:</p>
 <pre><code>sudo docker run hello-world
 </code></pre>
-    <p>This will download a test image and print a confirmation message【572806795776503†L969-L999】.</p>
+    <p>This will download a test image and print a confirmation message.</p>
     <h3>Running Docker without sudo</h3>
     <p>By default Docker commands require root privileges. To run Docker as your regular user, create a <code>docker</code> group and add yourself to it:</p>
 <pre><code>sudo groupadd docker
 sudo usermod -aG docker $USER
 newgrp docker
 </code></pre>
-    <p>After logging out and back in (or running <code>newgrp docker</code>), you should be able to execute Docker commands without <code>sudo</code>. This process modifies permissions for the Docker socket【367289420136513†L846-L889】.</p>
+    <p>After logging out and back in (or running <code>newgrp docker</code>), you should be able to execute Docker commands without <code>sudo</code>. This process modifies permissions for the Docker socket.</p>
     <img src="5be473d2-a08b-4a25-8f10-d8533428287b.png" alt="Abstract containerization" class="responsive">
   </section>
 
@@ -193,15 +195,15 @@ newgrp docker
     <h2>Understanding Mounts &amp; Permissions</h2>
     <p>Before diving into each media application, it&#39;s important to understand how Docker stores data and how file permissions impact your containers. Docker supports two primary types of persistent storage: <em>volumes</em> and <em>bind mounts</em>.</p>
     <h3>Volumes vs bind mounts</h3>
-    <p>When you mount a volume into a container, Docker creates a directory within its storage area and manages that directory for you. This is similar to bind mounts but the volume is isolated from the host&#39;s core filesystem【577024411694145†L872-L894】. Volumes are easier to back up or migrate and can be safely shared among multiple containers【577024411694145†L872-L894】. Bind mounts map a specific file or directory from the host into the container. They are ideal for sharing source code or configuration files, but they have direct write access to the host filesystem【588888816183141†L852-L893】. Processes inside the container run as root by default, so a bind mount could inadvertently modify or delete host files【588888816183141†L888-L893】. Use the <code>readonly</code> (<code>:ro</code>) option to make a bind mount read‑only, or prefer volumes when you do not need direct host access.</p>
+    <p>When you mount a volume into a container, Docker creates a directory within its storage area and manages that directory for you. This is similar to bind mounts but the volume is isolated from the host&#39;s core filesystem. Volumes are easier to back up or migrate and can be safely shared among multiple containers. Bind mounts map a specific file or directory from the host into the container. They are ideal for sharing source code or configuration files, but they have direct write access to the host filesystem. Processes inside the container run as root by default, so a bind mount could inadvertently modify or delete host files. Use the <code>readonly</code> (<code>:ro</code>) option to make a bind mount read‑only, or prefer volumes when you do not need direct host access.</p>
     <h3>PUID, PGID &amp; umask</h3>
-    <p>The LinuxServer.io containers used in this guide run processes as the root user by default. They offer environment variables <code>PUID</code> (user ID) and <code>PGID</code> (group ID) so that files created inside the container are owned by a specific user on the host【512354269466441†L320-L341】. To find your IDs, run <code>id your_user</code>; typical non‑root accounts have <code>uid=1000</code> and <code>gid=1000</code>【292111000025181†L539-L548】. Set these values in your <code>docker‑compose.yml</code> to avoid permission issues【292111000025181†L539-L544】.</p>
-    <p>Many LinuxServer images also support an optional <code>UMASK</code> variable to control default file permissions【292111000025181†L525-L531】. Umask values subtract permissions from a base of 777 for directories and 666 for files. For example, the default umask of 002 for non‑root users results in directory permissions of 775 and file permissions of 664, while the root default of 022 yields 755 and 644【103379520723746†L220-L226】. If you want new files to be group‑writable (e.g., 775), set <code>UMASK=002</code> in the container’s environment.</p>
+    <p>The LinuxServer.io containers used in this guide run processes as the root user by default. They offer environment variables <code>PUID</code> (user ID) and <code>PGID</code> (group ID) so that files created inside the container are owned by a specific user on the host. To find your IDs, run <code>id your_user</code>; typical non‑root accounts have <code>uid=1000</code> and <code>gid=1000</code>. Set these values in your <code>docker‑compose.yml</code> to avoid permission issues.</p>
+    <p>Many LinuxServer images also support an optional <code>UMASK</code> variable to control default file permissions. Umask values subtract permissions from a base of 777 for directories and 666 for files. For example, the default umask of 002 for non‑root users results in directory permissions of 775 and file permissions of 664, while the root default of 022 yields 755 and 644. If you want new files to be group‑writable (e.g., 775), set <code>UMASK=002</code> in the container’s environment.</p>
     <h3>Preparing host directories</h3>
-    <p>Create directories on the host for your configuration and media data, then ensure they are owned by the same user and group specified by <code>PUID</code> and <code>PGID</code> to prevent permission errors【292111000025181†L539-L542】. For example:</p>
+    <p>Create directories on the host for your configuration and media data, then ensure they are owned by the same user and group specified by <code>PUID</code> and <code>PGID</code> to prevent permission errors. For example:</p>
     <pre><code>sudo mkdir -p /opt/stacks/sonarr /mnt/media/tv /mnt/media/downloads</code></pre>
     <p>After creating the directories, adjust ownership by running <code>sudo chown -R &lt;UID&gt;:&lt;GID&gt; /opt/stacks/sonarr /mnt/media/tv /mnt/media/downloads</code> with your actual UID and GID.</p>
-    <p>If using bind mounts, append <code>:ro</code> to mount paths to make them read‑only in the container, protecting host files from modifications【588888816183141†L896-L903】.</p>
+    <p>If using bind mounts, append <code>:ro</code> to mount paths to make them read‑only in the container, protecting host files from modifications.</p>
     <img src="4496096c-7240-42ff-8eb9-2f7066114c95.png" alt="Abstract mounts and permissions" class="responsive">
   </section>
 
@@ -217,7 +219,7 @@ id -g   # shows your GID (e.g. 1000)
 <pre><code>sudo mkdir -p /opt/stacks/plex
 cd /opt/stacks/plex
 </code></pre>
-    <p>Next, obtain a Plex claim token. Visit <a href="https://www.plex.tv/claim">plex.tv/claim</a>, sign in and copy the short code. The token expires after a few minutes【586422616407160†L145-L160】.</p>
+    <p>Next, obtain a Plex claim token. Visit <a href="https://www.plex.tv/claim">plex.tv/claim</a>, sign in and copy the short code. The token expires after a few minutes.</p>
     <h3>Create a docker‑compose file</h3>
     <p>Create <code>compose.yml</code> in <code>/opt/stacks/plex</code> and paste the following, replacing:</p>
     <ul>
@@ -244,7 +246,7 @@ cd /opt/stacks/plex
     devices:
       - /dev/dri:/dev/dri
 </code></pre>
-    <p>This compose configuration follows the LinuxServer.io recommendations for Plex: it mounts a config directory, a transcode directory and your media directory, sets the container to restart automatically, and runs in host network mode【586422616407160†L174-L223】.</p>
+    <p>This compose configuration follows the LinuxServer.io recommendations for Plex: it mounts a config directory, a transcode directory and your media directory, sets the container to restart automatically, and runs in host network mode.</p>
     <h3>Start Plex</h3>
     <p>From the directory containing <code>compose.yml</code>, run:</p>
 <pre><code>docker compose up -d
@@ -252,7 +254,14 @@ cd /opt/stacks/plex
     <p>Docker will download the Plex image and start the container. Once running, open a browser and navigate to:</p>
 <pre><code>http://localhost:32400/web
 </code></pre>
-    <p>The Plex setup wizard will prompt you to sign in, name your server and add media libraries【586422616407160†L245-L279】. Follow the on‑screen instructions to finish setup.</p>
+    <p>The Plex setup wizard will prompt you to sign in, name your server and add media libraries. Follow the on‑screen instructions to finish setup.</p>
+
+    <h3>Hardware Transcoding (optional)</h3>
+    <p>If your CPU or GPU supports hardware video acceleration, Plex can leverage it to transcode streams more efficiently. LinuxServer’s Plex image automatically grants the container user permission to access the GPU when you mount the <code>/dev/dri</code> device. To enable hardware acceleration on Intel/AMD GPUs, add the following to your service definition:</p>
+<pre><code>    devices:
+      - /dev/dri:/dev/dri
+</code></pre>
+    <p>Mounting <code>/dev/dri</code> exposes the host’s video device inside the container, allowing Plex to use Intel QuickSync or VAAPI. LinuxServer notes that you simply need to pass <code>--device=/dev/dri:/dev/dri</code> and the container will handle permissions. NVIDIA GPUs require the Nvidia Container Toolkit and the <code>NVIDIA_VISIBLE_DEVICES</code> variable.</p>
     <img src="b5909edb-e349-456d-875d-b158d16564ad.png" alt="Abstract media streaming" class="responsive">
   </section>
 
@@ -260,10 +269,10 @@ cd /opt/stacks/plex
     <h2>Configuring Sonarr, Radarr, Lidarr &amp; Prowlarr</h2>
     <p>The <em>Servarr</em> family of applications automates media acquisition. They monitor RSS feeds and manage downloads through BitTorrent or Usenet clients. Each application runs well inside a container.</p>
     <h3>Common environment variables</h3>
-    <p>All LinuxServer.io containers support specifying the user and group IDs via <code>PUID</code> and <code>PGID</code> environment variables and setting your timezone via <code>TZ</code>. Defining these variables prevents permission issues when accessing host volumes【292111000025181†L488-L543】【701571932794003†L488-L501】. You can find your IDs using <code>id your_user</code>.</p>
+    <p>All LinuxServer.io containers support specifying the user and group IDs via <code>PUID</code> and <code>PGID</code> environment variables and setting your timezone via <code>TZ</code>. Defining these variables prevents permission issues when accessing host volumes. You can find your IDs using <code>id your_user</code>.</p>
     
     <h3>Sonarr (TV series)</h3>
-    <p>Sonarr runs a web interface on port <strong>8989</strong>【292111000025181†L488-L499】. A typical docker-compose service looks like:</p>
+    <p>Sonarr runs a web interface on port <strong>8989</strong>. A typical docker-compose service looks like:</p>
 <pre><code>  sonarr:
     container_name: sonarr
     image: lscr.io/linuxserver/sonarr:latest
@@ -282,7 +291,7 @@ cd /opt/stacks/plex
     <p>After starting the container, access Sonarr at <code>http://&lt;server-ip&gt;:8989</code>.</p>
 
     <h3>Radarr (Movies)</h3>
-    <p>Radarr uses port <strong>7878</strong>【701571932794003†L480-L501】. Example service:</p>
+    <p>Radarr uses port <strong>7878</strong>. Example service:</p>
 <pre><code>  radarr:
     container_name: radarr
     image: lscr.io/linuxserver/radarr:latest
@@ -301,7 +310,7 @@ cd /opt/stacks/plex
     <p>Open <code>http://&lt;server-ip&gt;:7878</code> to configure Radarr.</p>
 
     <h3>Lidarr (Music)</h3>
-    <p>Lidarr manages music libraries and listens on port <strong>8686</strong>. The container requires volumes for its config, music library and download directory【535833833172406†L492-L505】:</p>
+    <p>Lidarr manages music libraries and listens on port <strong>8686</strong>. The container requires volumes for its config, music library and download directory:</p>
 <pre><code>  lidarr:
     container_name: lidarr
     image: lscr.io/linuxserver/lidarr:latest
@@ -320,7 +329,7 @@ cd /opt/stacks/plex
     <p>Open <code>http://&lt;server-ip&gt;:8686</code> to access Lidarr.</p>
 
     <h3>Prowlarr (Indexer manager)</h3>
-    <p>Prowlarr centralizes indexer configuration and sits behind your Arr apps. It runs on port <strong>9696</strong>【320509593831303†L471-L483】:</p>
+    <p>Prowlarr centralizes indexer configuration and sits behind your Arr apps. It runs on port <strong>9696</strong>:</p>
 <pre><code>  prowlarr:
     container_name: prowlarr
     image: lscr.io/linuxserver/prowlarr:latest
@@ -339,7 +348,7 @@ cd /opt/stacks/plex
 
   <section id="overseerr">
     <h2>Overseerr</h2>
-    <p><a href="https://overseerr.dev/">Overseerr</a> provides a user‑friendly request management system for Plex. It allows your household or friends to request movies and shows. According to the LinuxServer.io image documentation, Overseerr supports the same <code>PUID</code>, <code>PGID</code> and <code>TZ</code> variables【646177183736035†L466-L476】.</p>
+    <p><a href="https://overseerr.dev/">Overseerr</a> provides a user‑friendly request management system for Plex. It allows your household or friends to request movies and shows. According to the LinuxServer.io image documentation, Overseerr supports the same <code>PUID</code>, <code>PGID</code> and <code>TZ</code> variables.</p>
 <pre><code>  overseerr:
     container_name: overseerr
     image: lscr.io/linuxserver/overseerr:latest
@@ -455,6 +464,62 @@ services:
     <p>Docker will pull each image, create containers, and set up volumes and ports. After a few minutes, your media stack will be available across different ports on your Kubuntu machine.</p>
   </section>
 
+  <!-- Security and Best Practices section -->
+  <section id="security">
+    <h2>Security &amp; Exposure</h2>
+    <p>Running these services on your home network is convenient, but exposing their web interfaces directly to the Internet can be risky. A reverse proxy such as LinuxServer’s <strong>SWAG</strong>, Nginx Proxy Manager, Traefik or Caddy sits in front of your containers, terminates TLS and centralises authentication. Instead of opening many random ports, you forward only port&nbsp;443 (HTTPS) to the proxy, which then routes traffic to the right container.</p>
+    <p>Using a reverse proxy has several advantages: you no longer need to remember port numbers for each app, you get free TLS certificates via Let’s Encrypt, and you can configure a single sign‑on or password prompt for all services. Opening just one port reduces your attack surface and simplifies firewall rules. LinuxServer’s reverse‑proxy guide notes that it also provides sample configurations for Plex and the Servarr suite.</p>
+    <p>If you choose to make services available remotely, consider combining a reverse proxy with a VPN such as WireGuard or Tailscale for extra protection. A VPN creates an encrypted tunnel between your client and server so that your media stack is never directly exposed to the public Internet. Always use strong passwords and keep your containers up to date.</p>
+    <img src="2214136c-f097-4f00-bfb5-e9c4539709d9.png" alt="Abstract security shield and server" class="responsive">
+  </section>
+
+  <section id="download">
+    <h2>Adding a Download Client</h2>
+    <p>The Servarr applications hand off downloads to a BitTorrent or Usenet client. Two popular options are <strong>qBittorrent</strong> (torrent) and <strong>SABnzbd</strong> (Usenet). Both have official LinuxServer images that support <code>PUID</code>, <code>PGID</code> and <code>TZ</code> environment variables. They also expose their web interfaces on port&nbsp;8080 by default.</p>
+    <h3>qBittorrent</h3>
+    <p>The qBittorrent container exposes a WebUI and torrenting port. A minimal service definition looks like this:</p>
+<pre><code>  qbittorrent:
+    container_name: qbittorrent
+    image: lscr.io/linuxserver/qbittorrent:latest
+    environment:
+      - PUID=&lt;UID&gt;
+      - PGID=&lt;GID&gt;
+      - TZ=America/Denver
+      - WEBUI_PORT=8080
+      - TORRENTING_PORT=6881
+    volumes:
+      - /opt/stacks/qbittorrent/config:/config
+      - /mnt/media/downloads:/downloads
+    ports:
+      - "8080:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+    restart: unless-stopped
+</code></pre>
+    <p>After starting the container, access the Web UI at <code>http://&lt;server-ip&gt;:8080</code>. The default login is username <code>admin</code> and password <code>adminadmin</code>; you should change these immediately. Set the <strong>Downloads</strong> directory in qBittorrent to the same path used in your Servarr configuration.</p>
+    <h3>SABnzbd</h3>
+    <p>SABnzbd is a web‑based Usenet downloader. Its service definition is similar: specify your user IDs and mount config and download directories:</p>
+<pre><code>  sabnzbd:
+    container_name: sabnzbd
+    image: lscr.io/linuxserver/sabnzbd:latest
+    environment:
+      - PUID=&lt;UID&gt;
+      - PGID=&lt;GID&gt;
+      - TZ=America/Denver
+    volumes:
+      - /opt/stacks/sabnzbd/config:/config
+      - /mnt/media/downloads/incomplete:/incomplete-downloads
+      - /mnt/media/downloads:/downloads
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+</code></pre>
+    <p>Open <code>http://&lt;server-ip&gt;:8080</code> to complete the SABnzbd wizard. Set the <em>download</em> and <em>incomplete</em> folders to the same volumes you mapped. Whichever client you choose, configure Sonarr, Radarr and Lidarr to send download jobs to qBittorrent or SABnzbd using the corresponding WebUI port and API keys.</p>
+    <img src="de1513c4-e56c-4cdf-ad6f-787d50facfeb.png" alt="Abstract download client" class="responsive">
+  </section>
+
+  
+
   <!-- Remote Desktop Access section -->
   <section id="remote-desktop">
     <h2>Remote Desktop Access</h2>
@@ -467,22 +532,36 @@ services:
 </code></pre>
     <pre><code>echo "/usr/bin/startplasma-x11" &gt; ~/.xsession
 </code></pre>
-    <p>These commands install <code>xrdp</code>, enable the service to start at boot and set KDE Plasma as the session so that remote logins start the full desktop【878471215736407†L45-L61】.</p>
+    <p>These commands install <code>xrdp</code>, enable the service to start at boot and set KDE Plasma as the session so that remote logins start the full desktop.</p>
     <h3>Wayland vs X11</h3>
     <p>Recent releases of Kubuntu (starting with 25.10) boot into a Wayland session by default. Since <code>xrdp</code> only supports the X11 display server, you must ensure an X11 session is available. If your system does not offer a &ldquo;Plasma on Xorg&rdquo; choice on the login screen, install the X11 session package:</p>
     <pre><code>sudo apt install plasma-session-x11
 </code></pre>
-    <p>Log out, click the gear icon in the SDDM login screen and select <em>Plasma (X11)</em> before signing in. Kubuntu still provides X11 sessions for compatibility; you can install the package and switch to X11 even on a Wayland-first release【1429275212086†L120-L134】.</p>
+    <p>Log out, click the gear icon in the SDDM login screen and select <em>Plasma (X11)</em> before signing in. Kubuntu still provides X11 sessions for compatibility; you can install the package and switch to X11 even on a Wayland-first release.</p>
     <h3>Connecting from another computer</h3>
     <p>After <code>xrdp</code> is running, open a remote desktop client on your other computer and connect to <code>&lt;server-ip&gt;:3389</code>. Enter your Kubuntu username and password to log in. Common client tools include:</p>
     <ul>
       <li><strong>Windows</strong>: use the built‑in <em>Remote Desktop Connection</em> (`mstsc`)</li>
       <li><strong>macOS</strong>: install <a href="https://apps.apple.com/us/app/microsoft-remote-desktop/id1295203466">Microsoft Remote Desktop</a> from the App Store</li>
       <li><strong>Linux</strong>: install <a href="https://remmina.org/">Remmina</a></li>
-      <li><strong>Web</strong>: self‑host <a href="https://guacamole.apache.org/">Apache Guacamole</a> or another web RDP proxy【878471215736407†L96-L111】</li>
+      <li><strong>Web</strong>: self‑host <a href="https://guacamole.apache.org/">Apache Guacamole</a> or another web RDP proxy</li>
     </ul>
-    <p>Remote and local logins cannot be active simultaneously on KDE Plasma, and performance over RDP may be lower than a local session【878471215736407†L136-L147】.</p>
+    <p>Remote and local logins cannot be active simultaneously on KDE Plasma, and performance over RDP may be lower than a local session.</p>
     <img src="e5e41a85-02a3-44db-a234-4c3fbf5f9153.png" alt="Abstract remote desktop" class="responsive">
+  </section>
+
+
+  <section id="sources">
+    <h2>Sources</h2>
+    <p>The information in this guide was gathered from a variety of official and community resources:</p>
+    <ul>
+      <li><strong>Kubuntu documentation:</strong> official installation guides and release notes for Kubuntu 24.04 LTS and 25.04.</li>
+      <li><strong>Docker documentation:</strong> instructions for setting up the Docker repository, installing Docker Engine and using volumes, bind mounts and group permissions.</li>
+      <li><strong>LinuxServer.io documentation:</strong> environment variables and configuration examples for Plex, Sonarr, Radarr, Lidarr, Prowlarr, Overseerr, qBittorrent and SABnzbd, plus guidance on PUID/PGID, UMASK and reverse proxies.</li>
+      <li><strong>Plex and Plex claim documentation:</strong> guidelines for obtaining a claim token and enabling hardware acceleration.</li>
+      <li><strong>Remote desktop how‑to articles:</strong> instructions for installing and configuring xrdp on Kubuntu and switching from Wayland to X11.</li>
+      <li><strong>Security best practices:</strong> articles on using reverse proxies, VPNs (WireGuard/Tailscale) and keeping services updated.</li>
+    </ul>
   </section>
 
 </main>
