@@ -1,0 +1,2418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Juggalo Run: Jimmy's Great Faygo Quest</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for arcade retro look -->
+    <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Press+Start+2P&family=Rubik+Mono+One&display=swap" rel="stylesheet">
+    <style>
+        .font-marker {
+            font-family: 'Permanent Marker', cursive;
+        }
+        .font-arcade {
+            font-family: 'Press Start 2P', monospace;
+        }
+        .font-heavy {
+            font-family: 'Rubik Mono One', sans-serif;
+        }
+        /* Custom scrollbar for shop */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ec4899;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a855f7;
+        }
+        /* Custom scanline effect */
+        .scanlines {
+            position: relative;
+            overflow: hidden;
+        }
+        .scanlines::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 10;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-neutral-950 text-white min-h-screen flex flex-col items-center justify-between overflow-hidden font-sans select-none">
+
+    <!-- Header Navigation Bar -->
+    <header class="w-full max-w-5xl px-4 py-3 flex items-center justify-between border-b border-pink-500/30 bg-neutral-900/60 backdrop-blur-md z-20 flex-shrink-0">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl text-pink-500 font-marker animate-pulse">JUGGALO RUN</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <!-- Faygo Wallet Display -->
+            <div class="flex items-center gap-2 bg-black/40 border border-purple-500/40 rounded-full px-3 py-1.5">
+                <svg class="w-5 h-5 text-purple-400 animate-bounce" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-3 6h-2v2h2v2h-2v2h-2v-2H9V9h2v2h2V9h1V7h2v2z"/>
+                </svg>
+                <span class="text-pink-400 font-arcade text-xs" id="header-faygo-count">0</span>
+                <span class="text-neutral-400 text-xs font-semibold">FAYGO</span>
+            </div>
+            
+            <!-- Music & Sound Toggles -->
+            <button id="btn-audio-toggle" class="p-2 rounded-lg bg-pink-600/20 hover:bg-pink-600/40 border border-pink-500/50 transition-all text-xs flex items-center gap-1.5 font-arcade">
+                <span id="audio-icon">🔇</span>
+                <span class="hidden sm:inline">MUSIC</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Container (Fully responsive height adaptation) -->
+    <main class="flex-1 w-full max-w-5xl flex flex-col items-center justify-center p-2 sm:p-4 z-10 relative overflow-hidden">
+        <div class="w-full relative bg-neutral-900 border-2 border-purple-500 rounded-xl overflow-hidden shadow-[0_0_30px_rgba(236,72,153,0.3)] aspect-[16/9] max-h-[calc(100vh-170px)] scanlines">
+            
+            <!-- Canvas Object -->
+            <canvas id="gameCanvas" class="w-full h-full block bg-black"></canvas>
+
+            <!-- Screens & Overlays -->
+            
+            <!-- Main Menu Overlay -->
+            <div id="overlay-menu" class="absolute inset-0 bg-neutral-950/90 flex flex-col items-center justify-between p-6 z-20 text-center">
+                <div class="mt-4 animate-bounce">
+                    <h1 class="text-4xl md:text-6xl font-marker tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-green-400 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
+                        JIMMY'S QUEST
+                    </h1>
+                    <p class="text-green-400 font-arcade text-xs md:text-sm mt-2 tracking-widest">
+                        ~ GET TO THE SHOW! ~
+                    </p>
+                </div>
+
+                <div class="my-2 max-w-md bg-neutral-900/80 border border-purple-500/30 p-4 rounded-lg text-left text-xs md:text-sm text-neutral-300 space-y-2">
+                    <p class="text-pink-400 font-bold font-marker text-lg text-center">🎸 SURVIVAL DIRECTIVES:</p>
+                    <div class="flex justify-between items-center py-0.5 border-b border-neutral-800">
+                        <span><kbd class="px-2 py-0.5 bg-neutral-800 text-white rounded font-mono">SPACE</kbd> / <kbd class="px-2 py-0.5 bg-neutral-800 text-white rounded font-mono">↑</kbd> or <b class="text-pink-400">TAP RIGHT</b></span>
+                        <span class="text-neutral-400">Jump over Obstacles</span>
+                    </div>
+                    <div class="flex justify-between items-center py-0.5 border-b border-neutral-800">
+                        <span><kbd class="px-2 py-0.5 bg-neutral-800 text-white rounded font-mono">↓</kbd> or <b class="text-pink-400">TAP LEFT</b></span>
+                        <span class="text-neutral-400 text-amber-400">Slide under Stage Trusses</span>
+                    </div>
+                    <div class="flex justify-between items-center py-0.5 border-b border-neutral-800">
+                        <span><kbd class="px-2 py-0.5 bg-neutral-800 text-white rounded font-mono">X</kbd> / <kbd class="px-2 py-0.5 bg-neutral-800 text-white rounded font-mono">F</kbd> or <b class="text-pink-400">TOUCH CENTER [🪓]</b></span>
+                        <span class="text-green-400 font-bold">THROW SPINNING HATCHET!</span>
+                    </div>
+                    <div class="flex justify-between items-center text-[10px] text-pink-300">
+                        <span>⚡ <b>JIMMY</b>: Heavy cleaver pierces multiple foes</span>
+                        <span>✨ <b>JENNY</b>: Dual rapid-fire light throws</span>
+                    </div>
+                </div>
+
+                <div class="w-full flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+                    <button id="btn-play" class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-heavy text-lg rounded-xl transform hover:scale-105 active:scale-95 transition-all shadow-[0_4px_15px_rgba(236,72,153,0.4)] border border-pink-400">
+                        WHOOP WHOOP! PLAY
+                    </button>
+                    <button id="btn-open-shop" class="w-full sm:w-auto px-6 py-4 bg-neutral-800 hover:bg-neutral-700 text-pink-400 font-arcade text-xs rounded-xl transition-all border border-purple-500/40">
+                        🛒 CARNIVAL SHOP & UPGRADES
+                    </button>
+                </div>
+                
+                <div class="text-neutral-500 text-[10px] font-mono">
+                    PRODUCED BY THE FAMILY • CURRENT BEST DISTANCE: <span id="best-dist-menu" class="text-green-500">0ft</span>
+                </div>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div id="overlay-gameover" class="absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-6 z-20 text-center hidden">
+                <span class="text-red-600 font-marker text-5xl md:text-7xl mb-1 animate-pulse">CRASHED!</span>
+                <p id="gameover-quote" class="text-neutral-400 italic font-marker text-lg md:text-xl max-w-md mb-6">
+                    "That security guard was a total buzzkill!"
+                </p>
+
+                <div class="grid grid-cols-2 gap-6 bg-neutral-900 border border-red-500/30 p-4 rounded-xl mb-6 w-full max-w-sm">
+                    <div class="text-center">
+                        <p class="text-neutral-400 text-xs font-arcade">DISTANCE</p>
+                        <p id="gameover-distance" class="text-2xl font-heavy text-pink-500 mt-1">0ft</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-neutral-400 text-xs font-arcade">FAYGO POPS</p>
+                        <p id="gameover-faygos" class="text-2xl font-heavy text-green-400 mt-1">0</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md justify-center">
+                    <button id="btn-retry" class="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-black font-heavy text-sm rounded-lg transform hover:scale-105 active:scale-95 transition-all">
+                        TRY AGAIN
+                    </button>
+                    <button id="btn-menu-exit" class="px-6 py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-arcade text-xs rounded-lg transition-all">
+                        MAIN MENU
+                    </button>
+                </div>
+            </div>
+
+            <!-- Carnival Customize & Shop Overlay -->
+            <div id="overlay-shop" class="absolute inset-0 bg-neutral-950/95 flex flex-col justify-between p-4 z-30 hidden">
+                <div class="flex items-center justify-between border-b border-pink-500/30 pb-2 flex-shrink-0">
+                    <h2 class="text-2xl font-marker text-pink-500">🎡 CARNIVAL CUSTOMIZER</h2>
+                    <button id="btn-close-shop" class="text-neutral-400 hover:text-white font-arcade text-xs bg-neutral-800 hover:bg-neutral-700 px-3 py-1.5 rounded flex-shrink-0">
+                        CLOSE [X]
+                    </button>
+                </div>
+
+                <!-- Navigation Shop Tabs -->
+                <div class="flex border-b border-purple-500/20 my-2 text-xs font-arcade flex-shrink-0">
+                    <button id="shop-tab-chars" class="flex-1 py-2 text-pink-500 border-b-2 border-pink-500 hover:text-pink-400 transition-all">JUGGALOS</button>
+                    <button id="shop-tab-paints" class="flex-1 py-2 text-neutral-400 hover:text-white transition-all">PAINTS</button>
+                    <button id="shop-tab-upgrades" class="flex-1 py-2 text-neutral-400 hover:text-white transition-all">UPGRADES</button>
+                </div>
+
+                <!-- Currency Display -->
+                <div class="flex justify-between items-center bg-black/40 p-2 rounded border border-purple-900/50 text-xs flex-shrink-0">
+                    <span class="text-neutral-400 font-arcade">SAVED BUDGET:</span>
+                    <div class="flex items-center gap-1.5 font-arcade text-pink-400">
+                        <span id="shop-faygo-count">0</span> FAYGO BOTTLES
+                    </div>
+                </div>
+
+                <!-- Store Items Content Windows (Using dynamic Flex expansion) -->
+                <div class="flex-1 overflow-y-auto pr-1 py-2 my-1">
+                    
+                    <!-- Characters section -->
+                    <div id="shop-section-chars" class="space-y-3 h-full">
+                        <div class="text-pink-400 font-marker text-sm border-b border-neutral-800 pb-1">CHOOSE YOUR JUGG:</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <!-- Jimmy (Default) -->
+                            <div id="shop-char-jimmy" class="border-2 border-pink-500 bg-neutral-900 p-2.5 rounded-lg flex items-center justify-between cursor-pointer hover:border-pink-400">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-purple-950 flex items-center justify-center font-marker text-xl border border-pink-500">🪓</div>
+                                    <div>
+                                        <h3 class="font-marker text-white text-sm">Jimmy</h3>
+                                        <p class="text-[10px] text-green-400 font-mono">Heavy piercing cleaver</p>
+                                    </div>
+                                </div>
+                                <span class="text-[9px] font-arcade text-pink-500 bg-pink-500/10 px-2 py-1 rounded">SELECTED</span>
+                            </div>
+
+                            <!-- Jenny -->
+                            <div id="shop-char-jenny" class="border border-neutral-800 bg-neutral-900 p-2.5 rounded-lg flex items-center justify-between cursor-pointer hover:border-purple-500">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-pink-950 flex items-center justify-center font-marker text-xl border border-purple-500">🔥</div>
+                                    <div>
+                                        <h3 class="font-marker text-neutral-300 text-sm">Jenny</h3>
+                                        <p class="text-[10px] text-purple-400 font-mono">Rapid dual thrown axes</p>
+                                    </div>
+                                </div>
+                                <span id="status-jenny" class="text-[9px] font-arcade text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded">150 FAYGO</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Makeup section -->
+                    <div id="shop-section-paints" class="space-y-3 hidden h-full">
+                        <div class="text-pink-400 font-marker text-sm border-b border-neutral-800 pb-1">SELECT FACE PAINT:</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <!-- Face Paint Classic -->
+                            <div id="shop-paint-classic" class="border-2 border-pink-500 bg-neutral-900 p-2 rounded-lg flex items-center justify-between cursor-pointer">
+                                <div>
+                                    <h3 class="font-marker text-white text-xs">Monochrome Clown</h3>
+                                    <p class="text-[9px] text-neutral-400">The iconic black & white look</p>
+                                </div>
+                                <span class="text-[9px] font-arcade text-pink-500">ACTIVE</span>
+                            </div>
+
+                            <!-- Face Paint Toxic Green -->
+                            <div id="shop-paint-toxic" class="border border-neutral-800 bg-neutral-900 p-2 rounded-lg flex items-center justify-between cursor-pointer hover:border-purple-500">
+                                <div>
+                                    <h3 class="font-marker text-neutral-300 text-xs">Toxic Sludge</h3>
+                                    <p class="text-[9px] text-green-400">Bright radioactive green paint</p>
+                                </div>
+                                <span id="status-paint-toxic" class="text-[9px] font-arcade text-yellow-500">75 FAYGO</span>
+                            </div>
+
+                            <!-- Face Paint Dark Jester (Hot Pink) -->
+                            <div id="shop-paint-jester" class="border border-neutral-800 bg-neutral-900 p-2 rounded-lg flex items-center justify-between cursor-pointer hover:border-purple-500">
+                                <div>
+                                    <h3 class="font-marker text-neutral-300 text-xs">Pink Carnage</h3>
+                                    <p class="text-[9px] text-pink-400">Sinister glowing neon pink</p>
+                                </div>
+                                <span id="status-paint-jester" class="text-[9px] font-arcade text-yellow-500">180 FAYGO</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Utility Upgrades section -->
+                    <div id="shop-section-upgrades" class="space-y-3 hidden h-full">
+                        <div class="text-pink-400 font-marker text-sm border-b border-neutral-800 pb-1">STAGE UTILITIES:</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <!-- Faygo Magnet Upgrade -->
+                            <div id="shop-upgrade-magnet" class="border border-neutral-800 bg-neutral-900 p-2.5 rounded-lg flex items-center justify-between cursor-pointer hover:border-purple-500">
+                                <div>
+                                    <h3 class="font-marker text-white text-xs">Faygo Magnet</h3>
+                                    <p class="text-[9px] text-neutral-400">Pulls soda bottles toward you</p>
+                                </div>
+                                <span id="status-upgrade-magnet" class="text-[9px] font-arcade text-yellow-500">120 FAYGO</span>
+                            </div>
+
+                            <!-- Riot Shield Upgrade -->
+                            <div id="shop-upgrade-shield" class="border border-neutral-800 bg-neutral-900 p-2.5 rounded-lg flex items-center justify-between cursor-pointer hover:border-purple-500">
+                                <div>
+                                    <h3 class="font-marker text-white text-xs">Riot Shield</h3>
+                                    <p class="text-[9px] text-neutral-400">Survive 1 crash (Stock: <span id="status-shield-count">0</span>)</p>
+                                </div>
+                                <span id="status-upgrade-shield" class="text-[9px] font-arcade text-yellow-500">90 FAYGO</span>
+                            </div>
+
+                            <!-- Overdrive Permanent Multiplier -->
+                            <div id="shop-upgrade-multiplier" class="border border-neutral-800 bg-neutral-900 p-2.5 rounded-lg flex items-center justify-between cursor-pointer hover:border-purple-500">
+                                <div>
+                                    <h3 class="font-marker text-white text-xs">Rock & Rye Overdrive</h3>
+                                    <p class="text-[9px] text-neutral-400">Doubles all collected Faygo value!</p>
+                                </div>
+                                <span id="status-upgrade-multiplier" class="text-[9px] font-arcade text-yellow-500">250 FAYGO</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="text-[10px] text-neutral-500 font-mono text-center pt-2 border-t border-neutral-800 flex-shrink-0">
+                    Upgrades and characters have customized physics & abilities. Whoop Whoop!
+                </div>
+            </div>
+
+            <!-- In-Game HUD (Heads-Up Display) -->
+            <div id="game-hud" class="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none z-10 hidden">
+                <!-- Top Left: Score and Distances -->
+                <div class="flex flex-col gap-1 text-shadow">
+                    <div class="bg-black/60 border border-pink-500/40 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                        <span class="text-neutral-400 font-arcade text-[10px]">STAGE:</span>
+                        <span id="hud-distance" class="text-pink-500 font-heavy text-base">0ft</span>
+                    </div>
+                    <div class="text-neutral-400 font-mono text-[10px] bg-black/40 px-2 py-0.5 rounded-full w-max">
+                        BEST: <span id="hud-best-distance">0ft</span>
+                    </div>
+                </div>
+
+                <!-- Active Shields / Items HUD indicator -->
+                <div class="flex flex-col gap-1.5 items-center">
+                    <div id="hud-active-items" class="hidden bg-blue-900/80 border border-blue-400/50 px-2 py-1 rounded text-[10px] font-arcade text-blue-300 flex items-center gap-1">
+                        🛡️ SHIELD ACTIVE
+                    </div>
+                    <!-- Hatchet Status Meter -->
+                    <div id="hud-hatchet-meter" class="bg-black/60 border border-purple-500/40 rounded px-2.5 py-1 text-[10px] font-arcade flex items-center gap-2">
+                        <span class="text-purple-400">🪓</span>
+                        <div class="w-16 h-2 bg-neutral-800 rounded overflow-hidden relative">
+                            <div id="hud-hatchet-bar" class="w-full h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-75"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Right: Faygo Counter -->
+                <div class="bg-black/60 border border-green-500/40 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                    <span class="text-green-500 font-arcade text-[10px]">🥤 FAYGO:</span>
+                    <span id="hud-faygos" class="text-green-400 font-heavy text-base">0</span>
+                </div>
+            </div>
+
+            <!-- Visual Notification Popup inside Canvas Area -->
+            <div id="notification-toast" class="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-green-500 text-black px-4 py-2 rounded-full font-heavy text-xs tracking-wider z-30 pointer-events-none opacity-0 transition-opacity duration-300">
+                WHOOP WHOOP! +10
+            </div>
+            
+            <!-- Mobile Controls overlay inside Canvas container -->
+            <div id="mobile-control-overlay" class="absolute inset-x-0 bottom-0 top-1/2 flex z-10 pointer-events-none">
+                <!-- Duck/Slide Touch Left -->
+                <div id="touch-left" class="w-1/3 h-full cursor-pointer pointer-events-auto flex items-end p-4 justify-start group">
+                    <div class="bg-neutral-900/70 border border-purple-500/50 text-purple-400 px-3 py-2 rounded-lg font-arcade text-[10px] group-active:bg-purple-500 group-active:text-black opacity-50 transition-all">
+                        ⬇️ DUCK
+                    </div>
+                </div>
+                <!-- Shoot / Throw Action Center Touch -->
+                <div id="touch-center" class="w-1/3 h-full cursor-pointer pointer-events-auto flex items-end p-4 justify-center group">
+                    <div class="bg-gradient-to-r from-purple-600 to-pink-600 border border-pink-400/50 text-white p-3 rounded-full font-arcade text-xs group-active:scale-115 opacity-80 shadow-[0_0_15px_rgba(236,72,153,0.5)] transition-all">
+                        🪓 THROW
+                    </div>
+                </div>
+                <!-- Jump Touch Right -->
+                <div id="touch-right" class="w-1/3 h-full cursor-pointer pointer-events-auto flex items-end p-4 justify-end group">
+                    <div class="bg-neutral-900/70 border border-pink-500/50 text-pink-400 px-3 py-2 rounded-lg font-arcade text-[10px] group-active:bg-pink-500 group-active:text-black opacity-50 transition-all">
+                        ⬆️ JUMP
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer Notes -->
+    <footer class="w-full max-w-5xl p-4 text-center text-xs text-neutral-500 border-t border-neutral-900 flex flex-col sm:flex-row items-center justify-between gap-2 bg-neutral-900/20 backdrop-blur-sm flex-shrink-0">
+        <div>
+            <span>© 2026 Dark Carnival Amusements. Dedicated to the Family.</span>
+        </div>
+        <div class="flex items-center gap-2 text-[11px] text-pink-400/80">
+            <span>🔴 Redpop</span>
+            <span>🟢 Moon Mist</span>
+            <span>🔵 Cotton Candy</span>
+            <span>🟣 Rock & Rye</span>
+        </div>
+    </footer>
+
+    <!-- Audio Engine & Gameplay Script -->
+    <script>
+        // --- GAME SYSTEM CONSTANTS ---
+        const FaygoFlavors = [
+            { name: 'Redpop', color: '#ef4444', score: 1 },
+            { name: 'Moon Mist', color: '#22c55e', score: 1 },
+            { name: 'Cotton Candy', color: '#3b82f6', score: 2 },
+            { name: 'Rock & Rye', color: '#a855f7', score: 3 }
+        ];
+
+        // --- SOUND SYSTEM (WEB AUDIO API CHIPTUNE ENGINE) ---
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = true;
+                this.musicInterval = null;
+                this.musicIndex = 0;
+                
+                // Classic raw rock/industrial synth bassline patterns
+                this.bassline = [
+                    110, 110, 130, 110, 146, 146, 130, 110,
+                    110, 110, 165, 165, 146, 130, 110, 130
+                ];
+                
+                // Lead chiptune melody
+                this.melody = [
+                    220, 0, 220, 261, 293, 0, 293, 261,
+                    329, 329, 293, 261, 220, 0, 220, 0
+                ];
+            }
+
+            init() {
+                if (this.ctx) return;
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+            }
+
+            toggle() {
+                this.init();
+                
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+
+                this.muted = !this.muted;
+                
+                if (this.muted) {
+                    this.stopMusic();
+                } else {
+                    this.startMusic();
+                }
+                return this.muted;
+            }
+
+            playJump() {
+                if (this.muted || !this.ctx) return;
+                
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(450, this.ctx.currentTime + 0.15);
+                
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playThrow() {
+                if (this.muted || !this.ctx) return;
+                
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(550, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.18);
+                
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.18);
+            }
+
+            playLaser() {
+                if (this.muted || !this.ctx) return;
+                
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.1);
+                
+                gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            }
+
+            playCollect() {
+                if (this.muted || !this.ctx) return;
+                
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'sine';
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                const note = notes[Math.floor(Math.random() * notes.length)];
+                
+                osc.frequency.setValueAtTime(note, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(note * 1.5, this.ctx.currentTime + 0.06);
+                
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playCrash() {
+                if (this.muted || !this.ctx) return;
+                
+                // Generate simple noise explosion
+                const bufferSize = this.ctx.sampleRate * 0.4;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(800, this.ctx.currentTime);
+                filter.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 0.4);
+                
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+                
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                noise.start();
+                noise.stop(this.ctx.currentTime + 0.4);
+            }
+
+            startMusic() {
+                this.stopMusic();
+                const tempo = 135; // BPM
+                const interval = 60 / tempo / 2; // Eighth notes
+                
+                this.musicInterval = setInterval(() => {
+                    if (this.muted) return;
+                    this.playStep();
+                }, interval * 1000);
+            }
+
+            stopMusic() {
+                if (this.musicInterval) {
+                    clearInterval(this.musicInterval);
+                    this.musicInterval = null;
+                }
+            }
+
+            playStep() {
+                const now = this.ctx.currentTime;
+                
+                // Bass synth
+                const bassFreq = this.bassline[this.musicIndex % this.bassline.length] / 2;
+                if (bassFreq > 0) {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(bassFreq, now);
+                    
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(now + 0.2);
+                }
+
+                // Lead/melody synth every alternate measure sequence
+                if (this.musicIndex % 2 === 0) {
+                    const leadFreq = this.melody[this.musicIndex % this.melody.length];
+                    if (leadFreq > 0) {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(leadFreq, now);
+                        
+                        gain.gain.setValueAtTime(0.04, now);
+                        gain.gain.exponentialRampToValueAtTime(0.005, now + 0.15);
+                        
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start();
+                        osc.stop(now + 0.15);
+                    }
+                }
+
+                // Chiptune Percussion (Snare-like and Kick-like sound)
+                if (this.musicIndex % 4 === 0) {
+                    // Kick drum effect
+                    const kickOsc = this.ctx.createOscillator();
+                    const kickGain = this.ctx.createGain();
+                    kickOsc.frequency.setValueAtTime(150, now);
+                    kickOsc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+                    kickGain.gain.setValueAtTime(0.15, now);
+                    kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                    kickOsc.connect(kickGain);
+                    kickGain.connect(this.ctx.destination);
+                    kickOsc.start();
+                    kickOsc.stop(now + 0.1);
+                } else if (this.musicIndex % 4 === 2) {
+                    // Snare noise simulation
+                    const snareOsc = this.ctx.createOscillator();
+                    const snareGain = this.ctx.createGain();
+                    snareOsc.type = 'triangle';
+                    snareOsc.frequency.setValueAtTime(200, now);
+                    snareGain.gain.setValueAtTime(0.08, now);
+                    snareGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                    snareOsc.connect(snareGain);
+                    snareGain.connect(this.ctx.destination);
+                    snareOsc.start();
+                    snareOsc.stop(now + 0.08);
+                }
+
+                this.musicIndex++;
+            }
+        }
+
+        const audio = new SoundEngine();
+
+        // --- GAME SYSTEM DATA ---
+        let scoreWallet = 0; // Total accumulated Faygo currency
+        let bestDistance = 0; // High score storage
+
+        // Expanded game upgrades
+        const gameItems = {
+            character: 'jimmy', // 'jimmy' or 'jenny'
+            paint: 'classic',   // 'classic', 'toxic', 'jester'
+            unlockedCharacters: ['jimmy'],
+            unlockedPaints: ['classic'],
+            upgrades: {
+                magnet: 0,        // level 0 (disabled), 1, 2, 3
+                shield: 0,        // Active shield charge count (Max 3)
+                multiplier: false // Double rewards modifier
+            }
+        };
+
+        const failQuotes = [
+            "Pure magic can't save you from faceplanting!",
+            "You got clobbered by a mainstream security guard!",
+            "Faygo down! Need a mop on aisle 4!",
+            "Whoop Whoop! Dust yourself off and run again!",
+            "You didn't drink enough Moon Mist to jump that!",
+            "Magnets... how do they work? Not like this!",
+            "The stage truss came down hard! Watch that headroom!",
+            "Double jump over the fence next time!",
+            "That selfie-taking rival hipster stood his ground!",
+            "The show is starting without you! Hurry up!"
+        ];
+
+        // Load persisted state safely
+        try {
+            const savedScore = localStorage.getItem('juggalo_run_faygo_wallet');
+            const savedBest = localStorage.getItem('juggalo_run_best_distance');
+            const savedItems = localStorage.getItem('juggalo_run_unlocked_items');
+            
+            if (savedScore) scoreWallet = parseInt(savedScore, 10);
+            if (savedBest) bestDistance = parseInt(savedBest, 10);
+            if (savedItems) {
+                const parsed = JSON.parse(savedItems);
+                if (parsed.upgrades) {
+                    Object.assign(gameItems, parsed);
+                } else {
+                    Object.assign(gameItems, parsed);
+                    gameItems.upgrades = { magnet: 0, shield: 0, multiplier: false };
+                }
+            }
+        } catch (e) {
+            console.log('Using in-memory safe game data storage.');
+        }
+
+        // --- CANVAS SETUP ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Virtual internal coordinate system for design consistency (16:9 aspect ratio)
+        const V_WIDTH = 960;
+        const V_HEIGHT = 540;
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(canvas.width / V_WIDTH, canvas.height / V_HEIGHT);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        setTimeout(resizeCanvas, 50);
+
+        // --- GAME STATE ---
+        const GameState = {
+            MENU: 'menu',
+            PLAYING: 'playing',
+            GAMEOVER: 'gameover'
+        };
+        let currentGameState = GameState.MENU;
+
+        // Player configuration
+        const player = {
+            x: 100,
+            y: 380,
+            baseY: 380,
+            width: 70,
+            height: 110,
+            vy: 0,
+            gravity: 0.9,
+            jumpStrength: -18,
+            doubleJumpStrength: -15,
+            isJumping: false,
+            doubleJumpAvailable: true,
+            isDucking: false,
+            invulnerableTimer: 0, 
+            hasHatchet: true,
+            hatchetCooldown: 0,
+            hatchetMaxCooldown: 60, // Jimmy = 60, Jenny = 30
+            animFrame: 0,
+            animTimer: 0,
+            rotation: 0
+        };
+
+        function applyCharacterPhysics() {
+            if (gameItems.character === 'jimmy') {
+                player.gravity = 1.05;         
+                player.jumpStrength = -19;     
+                player.doubleJumpStrength = -15;
+                player.hatchetMaxCooldown = 65; // heavy delay
+            } else if (gameItems.character === 'jenny') {
+                player.gravity = 0.72;         
+                player.jumpStrength = -15.5;   
+                player.doubleJumpStrength = -13.5;
+                player.hatchetMaxCooldown = 32; // rapid fire!
+            }
+        }
+
+        // Game speed variables
+        let gameSpeed = 7;
+        const initialSpeed = 7;
+        const maxSpeed = 16;
+        let distanceCovered = 0;
+        let runFaygosCollected = 0;
+
+        // Entities arrays
+        let obstacles = [];
+        let collectibles = [];
+        let particleEffects = [];
+        let projectiles = [];
+
+        // Simple stars background patterns
+        const stars = [];
+        for (let i = 0; i < 40; i++) {
+            stars.push({
+                x: Math.random() * V_WIDTH,
+                y: Math.random() * (V_HEIGHT / 2),
+                size: Math.random() * 2.5 + 1,
+                alpha: Math.random() * 0.5 + 0.5,
+                flicker: Math.random() * 0.05 + 0.01
+            });
+        }
+
+        // Obstacle classes/definitions
+        const ObstacleTypes = {
+            BARRICADE: {
+                width: 70,
+                height: 55,
+                type: 'low',
+                destructible: false,
+                draw: (ctx, x, y, w, h) => {
+                    ctx.save();
+                    ctx.strokeStyle = '#ec4899';
+                    ctx.lineWidth = 4;
+                    // Legs
+                    ctx.beginPath();
+                    ctx.moveTo(x + 10, y + h);
+                    ctx.lineTo(x + 20, y);
+                    ctx.lineTo(x + w - 20, y);
+                    ctx.lineTo(x + w - 10, y + h);
+                    ctx.stroke();
+
+                    // Wooden cross bar
+                    ctx.fillStyle = '#1e1b4b';
+                    ctx.fillRect(x, y + 10, w, 22);
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(x, y + 10, w, 22);
+
+                    // Caution diagonal stripes
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(x + 2, y + 12, w - 4, 18);
+                    ctx.clip();
+                    ctx.fillStyle = '#000000';
+                    for (let sx = -20; sx < w; sx += 20) {
+                        ctx.beginPath();
+                        ctx.moveTo(x + sx, y + 10);
+                        ctx.lineTo(x + sx + 12, y + 10);
+                        ctx.lineTo(x + sx + 22, y + 32);
+                        ctx.lineTo(x + sx + 10, y + 32);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                    ctx.restore();
+                }
+            },
+            SECURITY: {
+                width: 60,
+                height: 90,
+                type: 'high',
+                destructible: true,
+                shatterColor: '#f59e0b', // Explodes into Donuts!
+                draw: (ctx, x, y, w, h, tick) => {
+                    ctx.save();
+                    // Shadow
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    ctx.beginPath();
+                    ctx.ellipse(x + w/2, y + h - 5, w/2, 6, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // High-Vis vest body
+                    ctx.fillStyle = '#1e293b'; 
+                    ctx.fillRect(x + 10, y + 25, w - 20, h - 35);
+                    ctx.fillStyle = '#eab308'; 
+                    ctx.fillRect(x + 12, y + 25, w - 24, 40);
+
+                    // Reflective stripes
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(x + 15, y + 35, 6, 25);
+                    ctx.fillRect(x + w - 21, y + 35, 6, 25);
+                    ctx.fillRect(x + 12, y + 42, w - 24, 6);
+
+                    // Head
+                    ctx.fillStyle = '#ffedd5';
+                    ctx.beginPath();
+                    ctx.arc(x + w/2, y + 15, 12, 0, Math.PI*2);
+                    ctx.fill();
+
+                    // Cap
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(x + w/2 - 14, y + 3, 28, 6);
+                    ctx.beginPath();
+                    ctx.arc(x + w/2, y + 8, 12, Math.PI, Math.PI * 2);
+                    ctx.fill();
+
+                    // Sunglasses
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(x + w/2 - 8, y + 11, 16, 4);
+
+                    const armOffset = Math.sin(tick * 0.15) * 12;
+                    ctx.strokeStyle = '#1e293b';
+                    ctx.lineWidth = 6;
+                    ctx.lineCap = 'round';
+                    // Left arm waving STOP sign
+                    ctx.beginPath();
+                    ctx.moveTo(x + 12, y + 32);
+                    ctx.lineTo(x - 5, y + 20 + armOffset);
+                    ctx.stroke();
+
+                    // Draw stop sign
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath();
+                    const sX = x - 5;
+                    const sY = y + 20 + armOffset;
+                    ctx.arc(sX, sY, 12, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 7px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('STOP', sX, sY);
+
+                    // Feet
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(x + 12, y + h - 10, 14, 10);
+                    ctx.fillRect(x + w - 26, y + h - 10, 14, 10);
+                    ctx.restore();
+                }
+            },
+            STAGE_TRUSS: {
+                width: 120,
+                height: 400, 
+                type: 'ceiling',
+                destructible: false,
+                draw: (ctx, x, y, w, h) => {
+                    ctx.save();
+                    ctx.strokeStyle = '#475569';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, y + h);
+                    ctx.moveTo(x + w, 0);
+                    ctx.lineTo(x + w, y + h);
+                    ctx.stroke();
+
+                    ctx.strokeStyle = '#64748b';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    for (let step = 0; step < y + h - 60; step += 30) {
+                        ctx.moveTo(x, step);
+                        ctx.lineTo(x + w, step + 20);
+                        ctx.moveTo(x + w, step);
+                        ctx.lineTo(x, step + 20);
+                    }
+                    ctx.stroke();
+
+                    // Speaker
+                    ctx.fillStyle = '#111827';
+                    ctx.strokeStyle = '#a855f7';
+                    ctx.lineWidth = 3.5;
+                    ctx.fillRect(x + 10, y + h - 85, w - 20, 85);
+                    ctx.strokeRect(x + 10, y + h - 85, w - 20, 85);
+
+                    // Speaker cones
+                    ctx.fillStyle = '#1e1b4b';
+                    ctx.strokeStyle = '#ec4899';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(x + w/4 + 6, y + h - 42, 18, 0, Math.PI*2);
+                    ctx.arc(x + (3*w)/4 - 6, y + h - 42, 18, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = (Math.floor(Date.now() / 150) % 2 === 0) ? '#ef4444' : '#1e1b4b';
+                    ctx.beginPath();
+                    ctx.arc(x + w/2, y + h - 6, 6, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            },
+            RIVAL_HIPSTER: {
+                width: 65,
+                height: 95,
+                type: 'high',
+                destructible: true,
+                shatterColor: '#22c55e', // phone/coffee sparks
+                draw: (ctx, x, y, w, h, tick) => {
+                    ctx.save();
+                    // Silhouette of an annoying mainstream phone-gazer
+                    ctx.fillStyle = '#065f46'; // trendy jacket
+                    ctx.fillRect(x + 12, y + 30, w - 24, h - 45);
+
+                    ctx.fillStyle = '#fed7aa'; // head
+                    ctx.beginPath();
+                    ctx.arc(x + w/2, y + 18, 11, 0, Math.PI*2);
+                    ctx.fill();
+
+                    // Neon headphones
+                    ctx.strokeStyle = '#a855f7';
+                    ctx.lineWidth = 3.5;
+                    ctx.beginPath();
+                    ctx.arc(x + w/2, y + 18, 12, Math.PI, 0);
+                    ctx.stroke();
+
+                    // Phone in hand glowing blue
+                    ctx.fillStyle = '#38bdf8'; // glowing screen
+                    const pulse = Math.abs(Math.sin(tick * 0.1)) * 6;
+                    ctx.shadowColor = '#38bdf8';
+                    ctx.shadowBlur = pulse + 4;
+                    ctx.fillRect(x + w - 18, y + 32, 10, 16);
+                    ctx.shadowBlur = 0;
+
+                    // Hipster Beanie Hat
+                    ctx.fillStyle = '#ec4899';
+                    ctx.beginPath();
+                    ctx.arc(x + w/2, y + 10, 8, Math.PI, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillRect(x + w/2 - 8, y + 9, 16, 3);
+
+                    // Feet
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(x + 15, y + h - 15, 12, 15);
+                    ctx.fillRect(x + w - 27, y + h - 15, 12, 15);
+                    ctx.restore();
+                }
+            },
+            POP_MUSIC_DRONE: {
+                width: 70,
+                height: 50,
+                type: 'aerial',
+                destructible: true,
+                shatterColor: '#ff0055',
+                draw: (ctx, x, y, w, h, tick) => {
+                    ctx.save();
+                    // Floating bubble drone spitting pop music laser notes
+                    ctx.fillStyle = '#1e1b4b';
+                    ctx.strokeStyle = '#ec4899';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(x + w/2, y + h/2, 20, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Glowing pink eye lens
+                    ctx.fillStyle = (Math.floor(tick / 12) % 2 === 0) ? '#ff007f' : '#300015';
+                    ctx.beginPath();
+                    ctx.arc(x + w/2, y + h/2, 8, 0, Math.PI*2);
+                    ctx.fill();
+
+                    // Drone flight rotors on side
+                    ctx.strokeStyle = '#64748b';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(x + w/2 - 32, y + h/2 - 5);
+                    ctx.lineTo(x + w/2 - 18, y + h/2);
+                    ctx.moveTo(x + w/2 + 18, y + h/2);
+                    ctx.lineTo(x + w/2 + 32, y + h/2 - 5);
+                    ctx.stroke();
+
+                    // Spin blades
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2.5;
+                    const rX = Math.sin(tick * 0.8) * 12;
+                    ctx.beginPath();
+                    ctx.moveTo(x + w/2 - 32 - rX, y + h/2 - 5);
+                    ctx.lineTo(x + w/2 - 32 + rX, y + h/2 - 5);
+                    ctx.moveTo(x + w/2 + 32 - rX, y + h/2 - 5);
+                    ctx.lineTo(x + w/2 + 32 + rX, y + h/2 - 5);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            },
+            ROLLING_VINYL: {
+                width: 48,
+                height: 48,
+                type: 'low',
+                destructible: true,
+                shatterColor: '#3b82f6',
+                draw: (ctx, x, y, w, h, tick) => {
+                    ctx.save();
+                    // Vinyl record rolling rapidly
+                    ctx.translate(x + w/2, y + h/2);
+                    ctx.rotate(-tick * 0.15); // roll spin
+
+                    // Outer record grooves
+                    ctx.fillStyle = '#09090b';
+                    ctx.strokeStyle = '#27272a';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, w/2, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Record label sticker
+                    ctx.fillStyle = '#ec4899';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, w/5, 0, Math.PI*2);
+                    ctx.fill();
+
+                    // Hole
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 3, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+        };
+
+        // --- PARTICLE EMITTER ---
+        function createExplosion(x, y, color, count = 15) {
+            for (let i = 0; i < count; i++) {
+                particleEffects.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    size: Math.random() * 6 + 3,
+                    color: color,
+                    alpha: 1,
+                    decay: Math.random() * 0.04 + 0.02
+                });
+            }
+        }
+
+        // Custom Donut fragments for dazing/destroying guards
+        function createDonutExplosion(x, y) {
+            const donutColors = ['#f472b6', '#3b82f6', '#fbbf24', '#f87171'];
+            for (let i = 0; i < 10; i++) {
+                particleEffects.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    size: Math.random() * 8 + 4,
+                    color: donutColors[Math.floor(Math.random() * donutColors.length)],
+                    isDonut: true,
+                    alpha: 1,
+                    decay: 0.025
+                });
+            }
+        }
+
+        // --- HELPER RENDERING FUNCTIONS ---
+        function drawJuggaloFace(ctx, cx, cy, radius, type, pColor) {
+            ctx.save();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = '#000';
+            ctx.stroke();
+
+            let paintColor = '#000000';
+            if (pColor === 'toxic') paintColor = '#22c55e';
+            if (pColor === 'jester') paintColor = '#ec4899';
+
+            ctx.fillStyle = paintColor;
+
+            // Left eye
+            ctx.beginPath();
+            ctx.moveTo(cx - 11, cy - 14);
+            ctx.lineTo(cx - 5, cy - 2);
+            ctx.lineTo(cx - 1, cy - 14);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(cx - 10, cy + 2);
+            ctx.lineTo(cx - 5, cy - 1);
+            ctx.lineTo(cx - 2, cy + 10);
+            ctx.closePath();
+            ctx.fill();
+
+            // Right eye
+            ctx.beginPath();
+            ctx.moveTo(cx + 1, cy - 14);
+            ctx.lineTo(cx + 5, cy - 2);
+            ctx.lineTo(cx + 11, cy - 14);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(cx + 2, cy + 10);
+            ctx.lineTo(cx + 5, cy - 1);
+            ctx.lineTo(cx + 10, cy + 2);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(cx - 6, cy - 6, 2, 0, Math.PI*2);
+            ctx.arc(cx + 6, cy - 6, 2, 0, Math.PI*2);
+            ctx.fill();
+
+            ctx.strokeStyle = paintColor;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(cx, cy + 4, 8, 0.1, Math.PI - 0.1);
+            ctx.stroke();
+
+            ctx.fillStyle = paintColor;
+            ctx.beginPath();
+            ctx.arc(cx - 8, cy + 3, 2, 0, Math.PI*2);
+            ctx.arc(cx + 8, cy + 3, 2, 0, Math.PI*2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Updated sprite rendering with state-dependent cleaver display
+        function drawPlayerSprite(ctx, p, frame, pChar, pPaint) {
+            if (p.invulnerableTimer > 0 && Math.floor(frame / 4) % 2 === 0) {
+                return;
+            }
+
+            ctx.save();
+            
+            let renderY = p.y;
+            let renderH = p.height;
+            let renderW = p.width;
+
+            if (p.isDucking) {
+                renderH = 65;
+                renderW = 85;
+                renderY = p.baseY + 45; 
+            }
+
+            // Shadows
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.beginPath();
+            ctx.ellipse(p.x + renderW/2, p.baseY + p.height - 4, renderW * 0.45, 6, 0, 0, Math.PI*2);
+            ctx.fill();
+
+            // Run cycle
+            let limbCycle = Math.sin(frame * 0.25);
+            let torsoBob = Math.abs(Math.sin(frame * 0.25)) * 3.5;
+            if (p.isDucking) torsoBob = 0; 
+
+            let themeColor = '#ec4899'; 
+            if (pPaint === 'toxic') themeColor = '#22c55e';
+            if (pPaint === 'jester') themeColor = '#a855f7';
+
+            // Legs
+            if (!p.isDucking) {
+                ctx.strokeStyle = '#111111';
+                ctx.lineWidth = 7.5;
+                ctx.lineCap = 'round';
+
+                // Back leg
+                ctx.beginPath();
+                ctx.moveTo(p.x + 30, renderY + renderH - 35 + torsoBob);
+                ctx.lineTo(p.x + 20 - limbCycle * 15, renderY + renderH - 18 + torsoBob);
+                ctx.lineTo(p.x + 25 - limbCycle * 25, renderY + renderH);
+                ctx.stroke();
+
+                // Front leg
+                ctx.beginPath();
+                ctx.moveTo(p.x + 40, renderY + renderH - 35 + torsoBob);
+                ctx.lineTo(p.x + 40 + limbCycle * 15, renderY + renderH - 18 + torsoBob);
+                ctx.lineTo(p.x + 45 + limbCycle * 25, renderY + renderH);
+                ctx.stroke();
+            } else {
+                const particlesCount = pChar === 'jimmy' ? 2 : 1;
+                for (let i = 0; i < particlesCount; i++) {
+                    if (Math.random() < 0.6) {
+                        particleEffects.push({
+                            x: p.x + 10,
+                            y: p.baseY + p.height - 2,
+                            vx: -gameSpeed - (Math.random() * 4 + (pChar === 'jimmy' ? 3 : 0)),
+                            vy: -Math.random() * 2,
+                            size: Math.random() * 5 + 1.5,
+                            color: pChar === 'jimmy' ? '#22c55e' : '#ec4899', 
+                            alpha: 1,
+                            decay: 0.04
+                        });
+                    }
+                }
+            }
+
+            // Torso
+            ctx.fillStyle = pChar === 'jenny' ? '#1e1b4b' : '#171717';
+            ctx.strokeStyle = themeColor;
+            ctx.lineWidth = 2.5;
+
+            ctx.save();
+            ctx.translate(0, torsoBob);
+
+            ctx.beginPath();
+            if (!p.isDucking) {
+                ctx.roundRect(p.x + 15, renderY + 30, renderW - 30, 48, 10);
+            } else {
+                ctx.roundRect(p.x + 15, renderY + 18, renderW - 30, 38, 10);
+            }
+            ctx.fill();
+            ctx.stroke();
+
+            // Hatchetman back decal
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(p.x + renderW/2 - 5, renderY + (p.isDucking ? 24 : 45));
+            ctx.lineTo(p.x + renderW/2 + 5, renderY + (p.isDucking ? 34 : 55));
+            ctx.moveTo(p.x + renderW/2 + 5, renderY + (p.isDucking ? 24 : 45));
+            ctx.lineTo(p.x + renderW/2 - 5, renderY + (p.isDucking ? 34 : 55));
+            ctx.stroke();
+
+            // --- THE BACK-ARM (Hides cleaver if thrown!) ---
+            const shoulderX = p.x + 22;
+            const shoulderY = renderY + (p.isDucking ? 25 : 42);
+            
+            const handX = shoulderX - 18 - Math.sin(frame * 0.15) * 3;
+            const handY = shoulderY - 24 + Math.cos(frame * 0.15) * 3;
+
+            ctx.strokeStyle = pChar === 'jenny' ? '#1e1b4b' : '#171717';
+            ctx.lineWidth = 7;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(shoulderX, shoulderY);
+            ctx.lineTo(handX, handY);
+            ctx.stroke();
+
+            // Conditionally render cleaver ONLY if loaded
+            if (p.hasHatchet) {
+                ctx.save();
+                ctx.translate(handX, handY);
+                ctx.rotate(-Math.PI / 6 + Math.sin(frame * 0.1) * 0.1); 
+
+                // Handle
+                ctx.strokeStyle = '#78350f'; 
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, 14);
+                ctx.stroke();
+
+                // Blade
+                const bladeGrad = ctx.createLinearGradient(-18, -10, 4, -10);
+                bladeGrad.addColorStop(0, '#64748b'); 
+                bladeGrad.addColorStop(0.5, '#94a3b8'); 
+                bladeGrad.addColorStop(1, '#f8fafc'); 
+                ctx.fillStyle = bladeGrad;
+                ctx.strokeStyle = themeColor; 
+                ctx.lineWidth = 2;
+
+                ctx.beginPath();
+                ctx.moveTo(-3, 0);
+                ctx.lineTo(-22, -4);    
+                ctx.lineTo(-25, -24);   
+                ctx.lineTo(-2, -24);    
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Weight-cutout hole
+                ctx.fillStyle = '#0f172a'; 
+                ctx.beginPath();
+                ctx.arc(-14, -14, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // --- FRONT ARM ---
+            const frontShoulderX = p.x + renderW - 20;
+            const frontShoulderY = shoulderY;
+            const frontHandX = frontShoulderX + 14 + Math.sin(frame * 0.25) * 6;
+            const frontHandY = frontShoulderY + 10 + Math.cos(frame * 0.25) * 4;
+
+            ctx.strokeStyle = pChar === 'jenny' ? '#1e1b4b' : '#171717';
+            ctx.lineWidth = 7;
+            ctx.beginPath();
+            ctx.moveTo(frontShoulderX, frontShoulderY);
+            ctx.lineTo(frontHandX, frontHandY);
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(frontHandX, frontHandY, 5, 0, Math.PI*2);
+            ctx.fill();
+
+            // --- FACE & HAIR ---
+            const headX = p.x + (p.isDucking ? 52 : 35);
+            const headY = renderY + (p.isDucking ? 12 : 14);
+            drawJuggaloFace(ctx, headX, headY, 15, pChar, pPaint);
+
+            if (pChar === 'jimmy') {
+                ctx.fillStyle = '#22c55e';
+                ctx.strokeStyle = '#15803d';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(headX - 12, headY - 8);
+                ctx.lineTo(headX - 25, headY - 14);
+                ctx.lineTo(headX - 10, headY - 2);
+
+                ctx.moveTo(headX - 14, headY - 2);
+                ctx.lineTo(headX - 28, headY - 6);
+                ctx.lineTo(headX - 12, headY + 4);
+
+                ctx.moveTo(headX - 8, headY - 12);
+                ctx.lineTo(headX - 18, headY - 24);
+                ctx.lineTo(headX - 2, headY - 14);
+                ctx.fill();
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = '#ec4899';
+                ctx.strokeStyle = '#be185d';
+                ctx.lineWidth = 1;
+
+                ctx.beginPath();
+                ctx.arc(headX - 18, headY - 8, 8, 0, Math.PI*2);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.arc(headX - 24, headY, 6, 0, Math.PI*2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(headX + 10, headY - 16, 7, 0, Math.PI*2);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            ctx.restore(); 
+            ctx.restore();
+        }
+
+        // --- HATCHET THROW LOGIC ---
+        function throwHatchet() {
+            if (currentGameState !== GameState.PLAYING) return;
+            if (!player.hasHatchet) return; // on cooldown
+
+            audio.playThrow();
+            player.hasHatchet = false;
+            player.hatchetCooldown = player.hatchetMaxCooldown;
+
+            // Set up projectile attributes based on Character classes
+            const bulletSpeed = gameItems.character === 'jenny' ? 17 : 13;
+            const sizeScale = gameItems.character === 'jimmy' ? 1.4 : 1.0;
+
+            projectiles.push({
+                x: player.x + 40,
+                y: player.y + (player.isDucking ? 35 : 45),
+                vx: bulletSpeed,
+                vy: 0,
+                angle: 0,
+                radius: 18 * sizeScale,
+                piercing: gameItems.character === 'jimmy', // Jimmy can blast through multiple
+                type: 'hatchet',
+                color: gameItems.paint === 'toxic' ? '#22c55e' : (gameItems.paint === 'jester' ? '#a855f7' : '#ec4899')
+            });
+
+            // Fire muzzle pop particles
+            createExplosion(player.x + 50, player.y + 45, '#ec4899', 5);
+        }
+
+        // Drone shooting mainstream Pop-Notes logic
+        function triggerDroneLaser(drone) {
+            audio.playLaser();
+            projectiles.push({
+                x: drone.x,
+                y: drone.y + 25,
+                vx: -8.5,
+                vy: 1.5, // angle downwards towards player
+                angle: 0,
+                radius: 8,
+                type: 'laser',
+                color: '#ff007f'
+            });
+        }
+
+        // --- GAME LOOP LOGIC & COLLISION ---
+
+        function spawnObstacle() {
+            const keys = Object.keys(ObstacleTypes);
+            const randType = keys[Math.floor(Math.random() * keys.length)];
+            const config = ObstacleTypes[randType];
+
+            let obsY = V_HEIGHT - 65 - config.height; 
+            if (randType === 'RADIO_BILLBOARD') {
+                obsY = V_HEIGHT - 210 - config.height;
+            } else if (randType === 'STAGE_TRUSS') {
+                obsY = 0; 
+            } else if (randType === 'POP_MUSIC_DRONE') {
+                obsY = 120 + Math.random() * 110; // floating height
+            }
+
+            obstacles.push({
+                x: V_WIDTH + 100,
+                y: obsY,
+                width: config.width,
+                height: config.height,
+                type: randType,
+                destructible: config.destructible,
+                shatterColor: config.shatterColor || '#ffffff',
+                config: config,
+                laserCooldown: Math.random() * 40 + 30 // drone firing rate
+            });
+        }
+
+        function spawnFaygo() {
+            const randFlavor = FaygoFlavors[Math.floor(Math.random() * FaygoFlavors.length)];
+            const yPositions = [350, 240, 160]; 
+            const spawnY = yPositions[Math.floor(Math.random() * yPositions.length)];
+
+            collectibles.push({
+                x: V_WIDTH + 100,
+                y: spawnY,
+                width: 25,
+                height: 45,
+                flavor: randFlavor,
+                pulseTimer: Math.random() * Math.PI
+            });
+        }
+
+        function triggerToast(text) {
+            const toast = document.getElementById('notification-toast');
+            toast.innerText = text;
+            toast.classList.remove('opacity-0');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0');
+            }, 1200);
+        }
+
+        function resetGame() {
+            obstacles = [];
+            collectibles = [];
+            particleEffects = [];
+            projectiles = [];
+            distanceCovered = 0;
+            runFaygosCollected = 0;
+            gameSpeed = initialSpeed;
+
+            player.y = player.baseY;
+            player.vy = 0;
+            player.isJumping = false;
+            player.doubleJumpAvailable = true;
+            player.isDucking = false;
+            player.invulnerableTimer = 0;
+            player.hasHatchet = true;
+            player.hatchetCooldown = 0;
+
+            applyCharacterPhysics();
+
+            // Update UI displays
+            document.getElementById('hud-distance').innerText = "0ft";
+            document.getElementById('hud-faygos').innerText = "0";
+
+            currentGameState = GameState.PLAYING;
+            document.getElementById('overlay-menu').classList.add('hidden');
+            document.getElementById('overlay-gameover').classList.add('hidden');
+            document.getElementById('game-hud').classList.remove('hidden');
+
+            updateHUDShieldIndicator();
+
+            audio.init();
+        }
+
+        function updateHUDShieldIndicator() {
+            const ind = document.getElementById('hud-active-items');
+            if (gameItems.upgrades.shield > 0) {
+                ind.classList.remove('hidden');
+                ind.innerText = `🛡️ SHIELD ACT: ${gameItems.upgrades.shield}`;
+            } else {
+                ind.classList.add('hidden');
+            }
+        }
+
+        function handleCrash() {
+            if (player.invulnerableTimer > 0) return; 
+
+            // Check if player has Riot Shield active
+            if (gameItems.upgrades.shield > 0) {
+                gameItems.upgrades.shield--;
+                player.invulnerableTimer = 90; // ~1.5s invulnerable buffer
+                audio.playCollect();
+                createExplosion(player.x + 35, player.y + 50, '#3b82f6'); 
+                triggerToast("SHIELD ACTIVATED! OUTTA THE WAY!");
+                updateHUDShieldIndicator();
+                saveUnlockedState();
+                return;
+            }
+
+            audio.playCrash();
+            currentGameState = GameState.GAMEOVER;
+            
+            scoreWallet += runFaygosCollected;
+            
+            if (distanceCovered > bestDistance) {
+                bestDistance = Math.floor(distanceCovered);
+            }
+
+            try {
+                localStorage.setItem('juggalo_run_faygo_wallet', scoreWallet);
+                localStorage.setItem('juggalo_run_best_distance', bestDistance);
+            } catch(e){}
+
+            document.getElementById('gameover-distance').innerText = `${Math.floor(distanceCovered)}ft`;
+            document.getElementById('gameover-faygos').innerText = `+${runFaygosCollected}`;
+            document.getElementById('gameover-quote').innerText = `"${failQuotes[Math.floor(Math.random() * failQuotes.length)]}"`;
+            
+            document.getElementById('overlay-gameover').classList.remove('hidden');
+            document.getElementById('header-faygo-count').innerText = scoreWallet;
+            document.getElementById('shop-faygo-count').innerText = scoreWallet;
+            document.getElementById('best-dist-menu').innerText = `${bestDistance}ft`;
+        }
+
+        // --- EVENT CONTROLLERS ---
+
+        function handleJumpAction() {
+            if (currentGameState !== GameState.PLAYING) return;
+            
+            if (!player.isJumping) {
+                player.vy = player.jumpStrength;
+                player.isJumping = true;
+                player.isDucking = false;
+                audio.playJump();
+                createExplosion(player.x + 35, player.y + 100, '#a855f7');
+            } else if (player.doubleJumpAvailable) {
+                player.vy = player.doubleJumpStrength;
+                player.doubleJumpAvailable = false;
+                audio.playJump();
+                createExplosion(player.x + 35, player.y + 70, '#22c55e');
+            }
+        }
+
+        function handleDuckAction(isDuckingActive) {
+            if (currentGameState !== GameState.PLAYING) return;
+            
+            if (isDuckingActive) {
+                player.isDucking = true;
+                if (player.isJumping) {
+                    player.vy = 16;
+                }
+            } else {
+                player.isDucking = false;
+            }
+        }
+
+        // Keyboard Controls
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                e.preventDefault();
+                handleJumpAction();
+            }
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                e.preventDefault();
+                handleDuckAction(true);
+            }
+            if (e.code === 'KeyX' || e.code === 'KeyF' || e.code === 'ControlLeft') {
+                e.preventDefault();
+                throwHatchet();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                e.preventDefault();
+                handleDuckAction(false);
+            }
+        });
+
+        // Touch Control Listeners
+        const touchLeft = document.getElementById('touch-left');
+        const touchCenter = document.getElementById('touch-center');
+        const touchRight = document.getElementById('touch-right');
+
+        touchLeft.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleDuckAction(true);
+        });
+        touchLeft.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            handleDuckAction(false);
+        });
+
+        touchCenter.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            throwHatchet();
+        });
+
+        touchRight.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleJumpAction();
+        });
+
+        // Menu buttons
+        document.getElementById('btn-play').addEventListener('click', () => {
+            resetGame();
+        });
+        document.getElementById('btn-retry').addEventListener('click', () => {
+            resetGame();
+        });
+        document.getElementById('btn-menu-exit').addEventListener('click', () => {
+            currentGameState = GameState.MENU;
+            document.getElementById('overlay-gameover').classList.add('hidden');
+            document.getElementById('overlay-menu').classList.remove('hidden');
+            document.getElementById('game-hud').classList.add('hidden');
+        });
+
+        // Sound Toggle
+        const soundBtn = document.getElementById('btn-audio-toggle');
+        soundBtn.addEventListener('click', () => {
+            const isMuted = audio.toggle();
+            document.getElementById('audio-icon').innerText = isMuted ? '🔇' : '🔊';
+            soundBtn.classList.toggle('bg-pink-600/20');
+            soundBtn.classList.toggle('bg-green-600/30');
+            soundBtn.classList.toggle('border-pink-500/50');
+            soundBtn.classList.toggle('border-green-500/50');
+        });
+
+        // --- SHOP TABS INTERACTION LOGIC ---
+        const tabBtnChars = document.getElementById('shop-tab-chars');
+        const tabBtnPaints = document.getElementById('shop-tab-paints');
+        const tabBtnUpgrades = document.getElementById('shop-tab-upgrades');
+
+        const sectionChars = document.getElementById('shop-section-chars');
+        const sectionPaints = document.getElementById('shop-section-paints');
+        const sectionUpgrades = document.getElementById('shop-section-upgrades');
+
+        function switchShopTab(activeTab, activeSec) {
+            [tabBtnChars, tabBtnPaints, tabBtnUpgrades].forEach(btn => {
+                btn.classList.remove('text-pink-500', 'border-b-2', 'border-pink-500');
+                btn.classList.add('text-neutral-400');
+            });
+            [sectionChars, sectionPaints, sectionUpgrades].forEach(sec => sec.classList.add('hidden'));
+
+            activeTab.classList.remove('text-neutral-400');
+            activeTab.classList.add('text-pink-500', 'border-b-2', 'border-pink-500');
+            activeSec.classList.remove('hidden');
+        }
+
+        tabBtnChars.addEventListener('click', () => switchShopTab(tabBtnChars, sectionChars));
+        tabBtnPaints.addEventListener('click', () => switchShopTab(tabBtnPaints, sectionPaints));
+        tabBtnUpgrades.addEventListener('click', () => switchShopTab(tabBtnUpgrades, sectionUpgrades));
+
+        // --- SHOP & REVENUE INTERACTION LOGIC ---
+        const btnOpenShop = document.getElementById('btn-open-shop');
+        const btnCloseShop = document.getElementById('btn-close-shop');
+        const overlayShop = document.getElementById('overlay-shop');
+
+        btnOpenShop.addEventListener('click', () => {
+            overlayShop.classList.remove('hidden');
+            updateShopUI();
+        });
+        btnCloseShop.addEventListener('click', () => {
+            overlayShop.classList.add('hidden');
+        });
+
+        function saveUnlockedState() {
+            try {
+                localStorage.setItem('juggalo_run_unlocked_items', JSON.stringify({
+                    character: gameItems.character,
+                    paint: gameItems.paint,
+                    unlockedCharacters: gameItems.unlockedCharacters,
+                    unlockedPaints: gameItems.unlockedPaints,
+                    upgrades: gameItems.upgrades
+                }));
+                localStorage.setItem('juggalo_run_faygo_wallet', scoreWallet);
+            } catch(e){}
+            document.getElementById('header-faygo-count').innerText = scoreWallet;
+            document.getElementById('shop-faygo-count').innerText = scoreWallet;
+        }
+
+        function updateShopUI() {
+            document.getElementById('shop-faygo-count').innerText = scoreWallet;
+
+            const shopJimmy = document.getElementById('shop-char-jimmy');
+            const shopJenny = document.getElementById('shop-char-jenny');
+            const statusJenny = document.getElementById('status-jenny');
+
+            [shopJimmy, shopJenny].forEach(el => el.className = "border border-neutral-800 bg-neutral-900 p-2.5 rounded-lg flex items-center justify-between cursor-pointer hover:border-purple-500");
+            
+            if (gameItems.character === 'jimmy') {
+                shopJimmy.className = "border-2 border-pink-500 bg-neutral-900 p-2.5 rounded-lg flex items-center justify-between cursor-pointer";
+            } else if (gameItems.character === 'jenny') {
+                shopJenny.className = "border-2 border-purple-500 bg-neutral-900 p-2.5 rounded-lg flex items-center justify-between cursor-pointer";
+            }
+
+            if (gameItems.unlockedCharacters.includes('jenny')) {
+                statusJenny.innerText = "UNLOCKED";
+                statusJenny.className = "text-[9px] font-arcade text-green-400 bg-green-500/10 px-2 py-1 rounded";
+            } else {
+                statusJenny.innerText = "150 FAYGO";
+                statusJenny.className = "text-[9px] font-arcade text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded";
+            }
+
+            // Paints styling
+            const paints = {
+                classic: { el: document.getElementById('shop-paint-classic'), status: null, cost: 0 },
+                toxic: { el: document.getElementById('shop-paint-toxic'), status: document.getElementById('status-paint-toxic'), cost: 75 },
+                jester: { el: document.getElementById('shop-paint-jester'), status: document.getElementById('status-paint-jester'), cost: 180 }
+            };
+
+            Object.keys(paints).forEach(pKey => {
+                const item = paints[pKey];
+                item.el.className = "border border-neutral-800 bg-neutral-900 p-2 rounded-lg flex items-center justify-between cursor-pointer hover:border-purple-500";
+                
+                if (gameItems.paint === pKey) {
+                    item.el.className = "border-2 border-pink-500 bg-neutral-900 p-2 rounded-lg flex items-center justify-between cursor-pointer";
+                }
+
+                if (item.status) {
+                    if (gameItems.unlockedPaints.includes(pKey)) {
+                        item.status.innerText = "UNLOCKED";
+                        item.status.className = "text-[9px] font-arcade text-green-400";
+                    } else {
+                        item.status.innerText = `${item.cost} FAYGO`;
+                        item.status.className = "text-[9px] font-arcade text-yellow-500";
+                    }
+                }
+            });
+
+            // Stage Utility upgrades
+            const magnetUp = document.getElementById('shop-upgrade-magnet');
+            const statusMagnet = document.getElementById('status-upgrade-magnet');
+            if (gameItems.upgrades.magnet >= 3) {
+                statusMagnet.innerText = "MAX LVL (3)";
+                statusMagnet.className = "text-[9px] font-arcade text-green-400";
+            } else {
+                statusMagnet.innerText = `${120 + gameItems.upgrades.magnet * 60} FAYGO [Lvl ${gameItems.upgrades.magnet}]`;
+                statusMagnet.className = "text-[9px] font-arcade text-yellow-500";
+            }
+
+            const shieldUp = document.getElementById('shop-upgrade-shield');
+            const statusShield = document.getElementById('status-upgrade-shield');
+            document.getElementById('status-shield-count').innerText = gameItems.upgrades.shield;
+            if (gameItems.upgrades.shield >= 3) {
+                statusShield.innerText = "MAX STOCK";
+                statusShield.className = "text-[9px] font-arcade text-green-400";
+            } else {
+                statusShield.innerText = "90 FAYGO";
+                statusShield.className = "text-[9px] font-arcade text-yellow-500";
+            }
+
+            const multUp = document.getElementById('shop-upgrade-multiplier');
+            const statusMult = document.getElementById('status-upgrade-multiplier');
+            if (gameItems.upgrades.multiplier) {
+                statusMult.innerText = "ACTIVE x2";
+                statusMult.className = "text-[9px] font-arcade text-green-400";
+            } else {
+                statusMult.innerText = "250 FAYGO";
+                statusMult.className = "text-[9px] font-arcade text-yellow-500";
+            }
+        }
+
+        // Shop Selection Actions
+        document.getElementById('shop-char-jimmy').addEventListener('click', () => {
+            gameItems.character = 'jimmy';
+            saveUnlockedState();
+            updateShopUI();
+        });
+
+        document.getElementById('shop-char-jenny').addEventListener('click', () => {
+            if (gameItems.unlockedCharacters.includes('jenny')) {
+                gameItems.character = 'jenny';
+            } else {
+                if (scoreWallet >= 150) {
+                    scoreWallet -= 150;
+                    gameItems.unlockedCharacters.push('jenny');
+                    gameItems.character = 'jenny';
+                    triggerToast("UNLOCKED JENNY!");
+                } else {
+                    triggerToast("NOT ENOUGH FAYGO!");
+                }
+            }
+            saveUnlockedState();
+            updateShopUI();
+        });
+
+        document.getElementById('shop-paint-classic').addEventListener('click', () => {
+            gameItems.paint = 'classic';
+            saveUnlockedState();
+            updateShopUI();
+        });
+
+        document.getElementById('shop-paint-toxic').addEventListener('click', () => {
+            buyPaint('toxic', 75);
+        });
+
+        document.getElementById('shop-paint-jester').addEventListener('click', () => {
+            buyPaint('jester', 180);
+        });
+
+        function buyPaint(key, cost) {
+            if (gameItems.unlockedPaints.includes(key)) {
+                gameItems.paint = key;
+            } else {
+                if (scoreWallet >= cost) {
+                    scoreWallet -= cost;
+                    gameItems.unlockedPaints.push(key);
+                    gameItems.paint = key;
+                    triggerToast(`UNLOCKED PAINT: ${key.toUpperCase()}`);
+                } else {
+                    triggerToast("NEED MORE FAYGO!");
+                }
+            }
+            saveUnlockedState();
+            updateShopUI();
+        }
+
+        // Upgrade Actions
+        document.getElementById('shop-upgrade-magnet').addEventListener('click', () => {
+            if (gameItems.upgrades.magnet >= 3) {
+                triggerToast("MAGNET AT MAX LEVEL!");
+                return;
+            }
+            const cost = 120 + gameItems.upgrades.magnet * 60;
+            if (scoreWallet >= cost) {
+                scoreWallet -= cost;
+                gameItems.upgrades.magnet++;
+                triggerToast(`MAGNET UPGRADED TO LEVEL ${gameItems.upgrades.magnet}!`);
+                saveUnlockedState();
+                updateShopUI();
+            } else {
+                triggerToast("NEED MORE FAYGO!");
+            }
+        });
+
+        document.getElementById('shop-upgrade-shield').addEventListener('click', () => {
+            if (gameItems.upgrades.shield >= 3) {
+                triggerToast("MAX EXTRA LIFE CHARGES HELD!");
+                return;
+            }
+            if (scoreWallet >= 90) {
+                scoreWallet -= 90;
+                gameItems.upgrades.shield++;
+                triggerToast(`SHIELD STOCKED! CHARGES: ${gameItems.upgrades.shield}`);
+                saveUnlockedState();
+                updateShopUI();
+            } else {
+                triggerToast("NEED MORE FAYGO!");
+            }
+        });
+
+        document.getElementById('shop-upgrade-multiplier').addEventListener('click', () => {
+            if (gameItems.upgrades.multiplier) {
+                triggerToast("DOUBLE VALUE ALREADY ACTIVE!");
+                return;
+            }
+            if (scoreWallet >= 250) {
+                scoreWallet -= 250;
+                gameItems.upgrades.multiplier = true;
+                triggerToast("DOUBLE FAYGO PERMANENT UNLOCKED!");
+                saveUnlockedState();
+                updateShopUI();
+            } else {
+                triggerToast("NEED MORE FAYGO!");
+            }
+        });
+
+        // Set initial state
+        document.getElementById('header-faygo-count').innerText = scoreWallet;
+        document.getElementById('best-dist-menu').innerText = `${bestDistance}ft`;
+        document.getElementById('hud-best-distance').innerText = `${bestDistance}ft`;
+
+        // --- ANIMATE / DRAW LOOP ---
+        let lastTime = 0;
+        let globalTick = 0;
+
+        const stageLights = [
+            { x: 200, angle: 0, speed: 0.015, color: 'rgba(236,72,153,0.15)' },
+            { x: 500, angle: Math.PI / 4, speed: 0.01, color: 'rgba(168,85,247,0.15)' },
+            { x: 800, angle: Math.PI / 2, speed: 0.02, color: 'rgba(34,197,94,0.15)' }
+        ];
+
+        function drawBackground() {
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, V_HEIGHT);
+            skyGrad.addColorStop(0, '#000000');
+            skyGrad.addColorStop(0.5, '#0c0a0f');
+            skyGrad.addColorStop(1, '#2e1065');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+
+            stars.forEach(star => {
+                star.alpha += star.flicker;
+                if (star.alpha > 1 || star.alpha < 0.2) star.flicker = -star.flicker;
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
+                ctx.fillRect(star.x, star.y, star.size, star.size);
+            });
+
+            ctx.save();
+            ctx.shadowColor = '#ec4899';
+            ctx.shadowBlur = 20;
+            ctx.fillStyle = '#fdf2f8';
+            ctx.beginPath();
+            ctx.arc(800, 80, 45, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.2)';
+            ctx.beginPath();
+            ctx.arc(785, 65, 8, 0, Math.PI * 2);
+            ctx.arc(815, 75, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Searchlights
+            stageLights.forEach(light => {
+                light.angle += light.speed;
+                const targetX = light.x + Math.sin(light.angle) * 150;
+                
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(light.x, V_HEIGHT - 60);
+                ctx.lineTo(targetX - 90, 0);
+                ctx.lineTo(targetX + 90, 0);
+                ctx.closePath();
+                
+                const lightGrad = ctx.createLinearGradient(light.x, V_HEIGHT - 60, targetX, 0);
+                lightGrad.addColorStop(0, 'rgba(0,0,0,0)');
+                lightGrad.addColorStop(1, light.color);
+                ctx.fillStyle = lightGrad;
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Skyline Parallax
+            ctx.fillStyle = '#050505';
+            for (let i = 0; i < 12; i++) {
+                const width = 110;
+                const height = 150 + Math.sin(i * 3) * 60;
+                const sX = (i * 90) - (distanceCovered * 0.1) % (V_WIDTH + 100);
+                ctx.fillRect(sX, V_HEIGHT - 60 - height, width, height);
+
+                ctx.fillStyle = 'rgba(234, 179, 8, 0.4)';
+                if (i % 2 === 0) {
+                    ctx.fillRect(sX + 20, V_HEIGHT - 60 - height + 30, 8, 8);
+                    ctx.fillRect(sX + 60, V_HEIGHT - 60 - height + 30, 8, 8);
+                }
+                ctx.fillStyle = '#050505'; 
+            }
+
+            // Crowd silhouettes
+            ctx.fillStyle = '#0b0413';
+            for (let i = 0; i < 20; i++) {
+                const height = 35 + Math.cos(i * 2) * 12;
+                const cX = (i * 55) - (distanceCovered * 0.4) % (V_WIDTH + 60);
+                
+                const bounceY = Math.sin(globalTick * 0.2 + i) * 6;
+                ctx.beginPath();
+                ctx.arc(cX + 20, V_HEIGHT - 60 - height + bounceY, 15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillRect(cX, V_HEIGHT - 60 - height + 10 + bounceY, 40, height);
+            }
+
+            // Road ground
+            ctx.fillStyle = '#11051e';
+            ctx.fillRect(0, V_HEIGHT - 65, V_WIDTH, 65);
+            ctx.fillStyle = '#a855f7';
+            ctx.fillRect(0, V_HEIGHT - 65, V_WIDTH, 5);
+
+            // Pink dashed center lines
+            ctx.fillStyle = '#ec4899';
+            const dashWidth = 50;
+            const dashGap = 30;
+            const offset = (distanceCovered * gameSpeed * 0.15) % (dashWidth + dashGap);
+            for (let lx = -dashWidth; lx < V_WIDTH + dashWidth; lx += dashWidth + dashGap) {
+                ctx.fillRect(lx - offset, V_HEIGHT - 32, dashWidth, 4);
+            }
+        }
+
+        function updateAndDrawEntities() {
+            // --- UPDATE & DRAW PROJECTILES ---
+            projectiles.forEach((proj, pIndex) => {
+                proj.x += proj.vx;
+                proj.y += proj.vy;
+                proj.angle += 0.22; // spinning cleaver animation
+
+                ctx.save();
+                ctx.shadowColor = proj.color;
+                ctx.shadowBlur = 10;
+
+                if (proj.type === 'hatchet') {
+                    // Draw spinning meat cleaver
+                    ctx.translate(proj.x, proj.y);
+                    ctx.rotate(proj.angle);
+
+                    // Blade handle wood
+                    ctx.strokeStyle = '#78350f';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(0, 15);
+                    ctx.stroke();
+
+                    // Steel blade
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(-3, 0);
+                    ctx.lineTo(-24, -4);
+                    ctx.lineTo(-26, -26);
+                    ctx.lineTo(-2, -26);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Cleaver weight-relief hole
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.arc(-15, -15, 3.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                } else if (proj.type === 'laser') {
+                    // Draw laser music notes / balls
+                    ctx.fillStyle = '#ff007f';
+                    ctx.beginPath();
+                    ctx.arc(proj.x, proj.y, proj.radius, 0, Math.PI*2);
+                    ctx.fill();
+                    // trail
+                    ctx.fillStyle = 'rgba(255, 0, 127, 0.4)';
+                    ctx.fillRect(proj.x, proj.y - 4, 18, 8);
+                }
+
+                ctx.restore();
+
+                // Projectile hits screen boundaries removal
+                if (proj.x > V_WIDTH + 100 || proj.x < -100) {
+                    projectiles.splice(pIndex, 1);
+                    return;
+                }
+
+                // Laser bullet hits player
+                if (proj.type === 'laser' && player.invulnerableTimer === 0) {
+                    const dx = proj.x - (player.x + player.width/2);
+                    const dy = proj.y - (player.y + (player.isDucking ? 35 : 55));
+                    if (Math.hypot(dx, dy) < proj.radius + 30) {
+                        projectiles.splice(pIndex, 1);
+                        handleCrash();
+                        return;
+                    }
+                }
+
+                // Hatchet projectile hits destructible obstacles
+                if (proj.type === 'hatchet') {
+                    obstacles.forEach((obs, oIndex) => {
+                        if (obs.destructible && 
+                            proj.x + proj.radius > obs.x &&
+                            proj.x - proj.radius < obs.x + obs.width &&
+                            proj.y + proj.radius > obs.y &&
+                            proj.y - proj.radius < obs.y + obs.height
+                        ) {
+                            // Shatter obstacle successfully!
+                            audio.playCrash();
+                            
+                            if (obs.type === 'SECURITY') {
+                                createDonutExplosion(obs.x + obs.width/2, obs.y + obs.height/2);
+                                triggerToast("WHOOP WHOOP! DAZED THE COPS!");
+                            } else if (obs.type === 'RIVAL_HIPSTER') {
+                                createExplosion(obs.x + obs.width/2, obs.y + obs.height/2, '#065f46', 15);
+                                createExplosion(obs.x + obs.width/2, obs.y + obs.height/2, '#fed7aa', 10); // hipster specs
+                                triggerToast("HIPSTER SMASHED!");
+                            } else {
+                                createExplosion(obs.x + obs.width/2, obs.y + obs.height/2, obs.shatterColor);
+                            }
+
+                            // Award free Faygo bottle points!
+                            runFaygosCollected += 2;
+
+                            obstacles.splice(oIndex, 1);
+                            
+                            // Jenny's hatchet shatters instantly. Jimmy's pierces through!
+                            if (!proj.piercing) {
+                                projectiles.splice(pIndex, 1);
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Obstacles handling
+            obstacles.forEach((obs, index) => {
+                obs.x -= gameSpeed;
+
+                // Drone firing updates
+                if (obs.type === 'POP_MUSIC_DRONE') {
+                    obs.laserCooldown--;
+                    if (obs.laserCooldown <= 0) {
+                        triggerDroneLaser(obs);
+                        obs.laserCooldown = Math.random() * 90 + 75; // reset
+                    }
+                }
+
+                obs.config.draw(ctx, obs.x, obs.y, obs.width, obs.height, globalTick);
+
+                // Collision Detection Box
+                let pHeight = player.height;
+                let pWidth = player.width;
+                let pY = player.y;
+                if (player.isDucking) {
+                    pHeight = 65;
+                    pWidth = 85;
+                    pY = player.baseY + 45;
+                }
+
+                if (
+                    player.x + 15 < obs.x + obs.width &&
+                    player.x + pWidth - 15 > obs.x &&
+                    pY + 10 < obs.y + obs.height &&
+                    pY + pHeight > obs.y
+                ) {
+                    handleCrash();
+                }
+
+                if (obs.x < -150) {
+                    obstacles.splice(index, 1);
+                }
+            });
+
+            // Collectibles handling
+            collectibles.forEach((faygo, index) => {
+                faygo.x -= gameSpeed;
+
+                // Faygo Magnetism
+                if (gameItems.upgrades.magnet > 0) {
+                    const range = 130 + gameItems.upgrades.magnet * 65;
+                    const pCenterX = player.x + player.width / 2;
+                    const pCenterY = player.y + (player.isDucking ? 65 : 110) / 2;
+                    const fCenterX = faygo.x + faygo.width / 2;
+                    const fCenterY = faygo.y + faygo.height / 2;
+
+                    const dx = pCenterX - fCenterX;
+                    const dy = pCenterY - fCenterY;
+                    const dist = Math.hypot(dx, dy);
+
+                    if (dist < range) {
+                        const pullStrength = 7 + gameItems.upgrades.magnet * 2.5;
+                        faygo.x += (dx / dist) * pullStrength;
+                        faygo.y += (dy / dist) * pullStrength;
+                        faygo.x += gameSpeed; 
+                    }
+                }
+
+                faygo.pulseTimer += 0.05;
+                const bobOffset = Math.sin(faygo.pulseTimer) * 8;
+
+                // Draw styled Faygo Bottle 
+                ctx.save();
+                ctx.shadowColor = faygo.flavor.color;
+                ctx.shadowBlur = 12;
+
+                const bx = faygo.x;
+                const by = faygo.y + bobOffset;
+
+                // Glass Bottle Base
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                
+                ctx.beginPath();
+                ctx.moveTo(bx + 8, by); 
+                ctx.lineTo(bx + 16, by); 
+                ctx.lineTo(bx + 16, by + 10); 
+                ctx.lineTo(bx + 24, by + 16); 
+                ctx.lineTo(bx + 24, by + 40); 
+                ctx.lineTo(bx + 24, by + 45); 
+                ctx.lineTo(bx, by + 45); 
+                ctx.lineTo(bx, by + 40); 
+                ctx.lineTo(bx, by + 16); 
+                ctx.lineTo(bx + 8, by + 10); 
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // soda fluid
+                ctx.fillStyle = faygo.flavor.color;
+                ctx.beginPath();
+                ctx.moveTo(bx + 2, by + 18);
+                ctx.lineTo(bx + 22, by + 18);
+                ctx.lineTo(bx + 22, by + 43);
+                ctx.lineTo(bx + 2, by + 43);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#d1d5db';
+                ctx.fillRect(bx + 7, by - 3, 10, 4);
+
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                ctx.fillRect(bx + 6 + Math.sin(globalTick * 0.1) * 3, by + 24, 2, 2);
+
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(bx + 3, by + 26, 18, 10);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 5px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('FAYGO', bx + 12, by + 33);
+                ctx.restore();
+
+                // Collect check
+                let pHeight = player.height;
+                let pWidth = player.width;
+                let pY = player.y;
+                if (player.isDucking) {
+                    pHeight = 65;
+                    pWidth = 85;
+                    pY = player.baseY + 45;
+                }
+
+                if (
+                    player.x < faygo.x + faygo.width &&
+                    player.x + pWidth > faygo.x &&
+                    pY < faygo.y + bobOffset + faygo.height &&
+                    pY + pHeight > faygo.y + bobOffset
+                ) {
+                    audio.playCollect();
+                    const valueMult = gameItems.upgrades.multiplier ? 2 : 1;
+                    const finalInc = faygo.flavor.score * valueMult;
+                    runFaygosCollected += finalInc;
+
+                    createExplosion(faygo.x + 12, faygo.y + 20, faygo.flavor.color);
+                    triggerToast(`WHOOP WHOOP! +${finalInc} ${faygo.flavor.name}`);
+                    collectibles.splice(index, 1);
+                }
+
+                if (faygo.x < -100) {
+                    collectibles.splice(index, 1);
+                }
+            });
+
+            // Particles system
+            particleEffects.forEach((p, index) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.decay;
+                
+                ctx.save();
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.alpha;
+
+                if (p.isDonut) {
+                    // Draw tiny glazed donut particles
+                    ctx.strokeStyle = '#78350f'; // crust brown
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+                    ctx.stroke();
+                    ctx.fillStyle = p.color; // glaze frosting
+                    ctx.fill();
+                    // hole
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size * 0.35, 0, Math.PI*2);
+                    ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+
+                if (p.alpha <= 0) {
+                    particleEffects.splice(index, 1);
+                }
+            });
+        }
+
+        // --- CORE GAME loop ---
+        function update(time = 0) {
+            globalTick++;
+
+            ctx.clearRect(0, 0, V_WIDTH, V_HEIGHT);
+
+            if (currentGameState === GameState.PLAYING) {
+                drawBackground();
+
+                distanceCovered += gameSpeed * 0.05;
+                document.getElementById('hud-distance').innerText = `${Math.floor(distanceCovered)}ft`;
+                document.getElementById('hud-faygos').innerText = runFaygosCollected;
+
+                if (gameSpeed < maxSpeed) {
+                    gameSpeed += 0.0012;
+                }
+
+                // Physics
+                player.y += player.vy;
+                player.vy += player.gravity;
+
+                if (player.y >= player.baseY) {
+                    player.y = player.baseY;
+                    player.vy = 0;
+                    player.isJumping = false;
+                    player.doubleJumpAvailable = true;
+                }
+
+                if (player.invulnerableTimer > 0) {
+                    player.invulnerableTimer--;
+                }
+
+                // Hatchet Cooldown ticker
+                if (!player.hasHatchet) {
+                    player.hatchetCooldown--;
+                    const barFill = 1 - (player.hatchetCooldown / player.hatchetMaxCooldown);
+                    document.getElementById('hud-hatchet-bar').style.width = `${barFill * 100}%`;
+                    
+                    if (player.hatchetCooldown <= 0) {
+                        player.hasHatchet = true;
+                        document.getElementById('hud-hatchet-bar').style.width = "100%";
+                    }
+                } else {
+                    document.getElementById('hud-hatchet-bar').style.width = "100%";
+                }
+
+                // Spawners
+                const spawnRate = Math.max(50, 90 - Math.floor(distanceCovered / 140));
+                if (globalTick % spawnRate === 0) {
+                    spawnObstacle();
+                }
+
+                if (globalTick % 45 === 0 && Math.random() < 0.75) {
+                    spawnFaygo();
+                }
+
+                updateAndDrawEntities();
+
+                // Render Animated Juggalo
+                drawPlayerSprite(ctx, player, globalTick, gameItems.character, gameItems.paint);
+
+            } else if (currentGameState === GameState.MENU) {
+                drawBackground();
+                
+                const idleBobY = Math.sin(globalTick * 0.1) * 5;
+                const demoPlayer = {
+                    ...player,
+                    y: player.baseY + idleBobY
+                };
+                drawPlayerSprite(ctx, demoPlayer, globalTick, gameItems.character, gameItems.paint);
+
+                if (globalTick % 10 === 0) {
+                    particleEffects.push({
+                        x: Math.random() * V_WIDTH,
+                        y: V_HEIGHT - 65,
+                        vx: -1,
+                        vy: -Math.random() * 2,
+                        size: Math.random() * 3 + 1,
+                        color: 'rgba(236,72,153,0.3)',
+                        alpha: 1,
+                        decay: 0.02
+                    });
+                }
+                particleEffects.forEach((p, index) => {
+                    p.x += p.vx; p.y += p.vy; p.alpha -= p.decay;
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.alpha;
+                    ctx.fillRect(p.x, p.y, p.size, p.size);
+                    if (p.alpha <= 0) particleEffects.splice(index, 1);
+                });
+            } else if (currentGameState === GameState.GAMEOVER) {
+                drawBackground();
+                updateAndDrawEntities();
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        // Start loop
+        requestAnimationFrame(update);
+    </script>
+</body>
+</html>
