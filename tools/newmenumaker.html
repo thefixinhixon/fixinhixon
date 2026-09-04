@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Builder Pro - Master Edition</title>
+    <style>
+        :root {
+            --color-primary: #27ae60;
+            --color-bg: #f5f5f5;
+            --color-surface: #ffffff;
+            --color-text: #1a1a1a;
+            --color-border: #ddd;
+            /* Classification Colors */
+            --color-sativa: #e74c3c; /* RED */
+            --color-hybrid: #27ae60; /* GREEN */
+            --color-indica: #2980b9; /* BLUE */
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--color-bg); color: var(--color-text); line-height: 1.6; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header { background-color: var(--color-surface); padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        
+        .upload-section { background-color: var(--color-surface); padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .upload-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 15px; }
+        .upload-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        input[type="file"] { padding: 8px; border: 1px solid var(--color-border); border-radius: 4px; width: 100%; }
+
+        .content-wrapper { display: grid; grid-template-columns: 250px 1fr; gap: 20px; }
+        .sidebar { background-color: var(--color-surface); padding: 20px; border-radius: 8px; height: fit-content; }
+        .section-item { padding: 10px; cursor: pointer; border-radius: 4px; margin-bottom: 5px; background-color: var(--color-bg); font-weight: bold; color: var(--color-primary); }
+        .section-item.active { background-color: var(--color-primary); color: white; }
+
+        .main-content { background-color: var(--color-surface); padding: 20px; border-radius: 8px; }
+        .menu-table { width: 100%; border-collapse: collapse; }
+        .menu-table th, .menu-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--color-border); }
+
+        .quick-actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+        .type-selector { display: flex; gap: 4px; }
+        .type-btn {
+            font-size: 10px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px;
+            background: white; cursor: pointer; font-weight: bold; text-transform: uppercase;
+        }
+        .type-btn.active.sativa { background: var(--color-sativa); color: white; border-color: var(--color-sativa); }
+        .type-btn.active.hybrid { background: var(--color-hybrid); color: white; border-color: var(--color-hybrid); }
+        .type-btn.active.indica { background: var(--color-indica); color: white; border-color: var(--color-indica); }
+
+        button { padding: 8px 16px; border-radius: 4px; border: none; cursor: pointer; font-weight: 600; }
+        .btn-primary { background: var(--color-primary); color: white; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-outline { background: transparent; border: 1px solid #ccc; color: #666; font-size: 12px; }
+
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: 8px; width: 450px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; }
+        .form-group input, .form-group textarea { width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px; }
+
+        @media print {
+            @page { size: landscape; margin: 0.5cm; }
+            body * { visibility: hidden; }
+            .print-menu, .print-menu * { visibility: visible; }
+            .print-menu { 
+                display: block; position: absolute; left: 0; top: 0; width: 100%; padding: 20px; 
+                background-image: linear-gradient(#f9f9f9 1px, transparent 1px);
+                background-size: 100% 35px;
+            }
+            .print-section h2 { color: var(--color-primary); font-weight: bold; border-bottom: 2px solid var(--color-primary); margin: 20px 0 10px 0; text-transform: uppercase; }
+            .print-item { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; height: 35px; align-items: center; }
+            .type-sativa-text { color: var(--color-sativa); font-weight: bold; }
+            .type-hybrid-text { color: var(--color-hybrid); font-weight: bold; }
+            .type-indica-text { color: var(--color-indica); font-weight: bold; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>🍃 Menu Builder Pro</h1>
+                <p style="font-size: 12px; color: #666; font-weight: bold;">*All prices are pre-tax</p>
+            </div>
+            <button class="btn-outline" onclick="clearAllData()">⚠️ Reset All & Clear Memory</button>
+        </header>
+
+        <div class="upload-section">
+            <div class="upload-row">
+                <div class="upload-group"><label>1. Prerolls</label><input type="file" id="prerollsFile" accept=".csv"></div>
+                <div class="upload-group"><label>2. Infused</label><input type="file" id="infusedFile" accept=".csv"></div>
+                <div class="upload-group"><label>3. Flower (Gram)</label><input type="file" id="flowerFile" accept=".csv"></div>
+                <div class="upload-group"><label>4. Dabs</label><input type="file" id="dabsFile" accept=".csv"></div>
+            </div>
+            <button class="btn-primary" onclick="processFiles()">Generate / Sync Menu</button>
+        </div>
+
+        <div class="content-wrapper">
+            <div class="sidebar">
+                <ul id="sectionList"></ul>
+                <div style="margin-top: 20px;">
+                    <button class="btn-primary" style="width: 100%; margin-bottom: 10px;" onclick="addNewItem()">+ Add Manual Item</button>
+                    <button class="btn-primary" style="width: 100%; background: #2c3e50;" onclick="window.print()">🖨️ Print Menu</button>
+                </div>
+            </div>
+            <div class="main-content" id="mainContent"></div>
+        </div>
+    </div>
+
+    <div id="printMenu" class="print-menu">
+        <div style="text-align: center; border-bottom: 3px solid #27ae60; margin-bottom: 15px;">
+            <h1 style="font-size: 28px;">🍃 THE GREENERY ROOM</h1>
+            <p>RUIDOSO, NM • CANNABIS MENU</p>
+            <p style="font-size: 12px; margin-top: 2px;">*All prices are pre-tax</p>
+        </div>
+        <div id="printContent"></div>
+    </div>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h3>Edit Item Details</h3>
+            <div class="form-group"><label>Product Name</label><input type="text" id="editName"></div>
+            <div class="form-group"><label>Price ($)</label><input type="number" id="editPrice" step="0.01"></div>
+            <div class="form-group"><label>THC %</label><input type="number" id="editThc" step="0.1"></div>
+            <div class="form-group"><label>Notes</label><textarea id="editNotes" rows="2"></textarea></div>
+            <div style="display:flex; gap:10px; justify-content: flex-end;">
+                <button style="background:#666; color:white;" onclick="closeModal()">Cancel</button>
+                <button class="btn-primary" onclick="saveItem()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let menuData = { sections: {} };
+        let strainLibrary = {}; 
+        let currentItem = null;
+        let currentSec = null;
+
+        window.onload = () => {
+            const savedMenu = localStorage.getItem('menuData');
+            const savedLib = localStorage.getItem('strainLibrary');
+            if (savedMenu) menuData = JSON.parse(savedMenu);
+            if (savedLib) strainLibrary = JSON.parse(savedLib);
+            renderAll();
+        };
+
+        function saveData() {
+            localStorage.setItem('menuData', JSON.stringify(menuData));
+            localStorage.setItem('strainLibrary', JSON.stringify(strainLibrary));
+        }
+
+        function clearAllData() {
+            if(confirm("Clear everything? This wipes the menu and memory of strain types.")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        function parseCSVLine(line) {
+            const res = []; let cur = ''; let q = false;
+            for (let i=0; i<line.length; i++) {
+                if (line[i] === '"') q = !q;
+                else if (line[i] === ',' && !q) { res.push(cur); cur = ''; }
+                else cur += line[i];
+            }
+            res.push(cur); return res;
+        }
+
+        function cleanAndClassify(rawName) {
+            let name = rawName.replace(/\b\d+(\.\d+)?\s*gram(s)?\b/gi, "1g");
+            let type = 'Hybrid';
+            if (/\((S)\)|Sativa/i.test(name)) type = 'Sativa';
+            else if (/\((I)\)|Indica/i.test(name)) type = 'Indica';
+            name = name.replace(/\((S|I|H)\)|Sativa|Indica|Hybrid|CONS - /gi, "").replace(/\s+/g, ' ').trim();
+            if (strainLibrary[name]) return { ...strainLibrary[name], name: name };
+            return { name: name, type: type, notes: "", flare: "" };
+        }
+
+        async function processFiles() {
+            const files = { 
+                'Prerolls': document.getElementById('prerollsFile').files[0], 
+                'Infused': document.getElementById('infusedFile').files[0], 
+                'Flower': document.getElementById('flowerFile').files[0],
+                'Dabs': document.getElementById('dabsFile').files[0]
+            };
+            
+            menuData.sections = {}; 
+
+            for (const [secName, file] of Object.entries(files)) {
+                if (!file) continue;
+                const text = await file.text();
+                const lines = text.trim().split('\n');
+                const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim());
+                
+                menuData.sections[secName] = [];
+                const seenInThisFile = new Set();
+
+                for (let i = 1; i < lines.length; i++) {
+                    const val = parseCSVLine(lines[i]);
+                    const row = {}; headers.forEach((h, idx) => row[h] = val[idx]);
+                    const rawName = (row.product || row.description || "").trim();
+                    if (!rawName) continue;
+                    
+                    const processed = cleanAndClassify(rawName);
+
+                    if (seenInThisFile.has(processed.name)) continue;
+                    seenInThisFile.add(processed.name);
+
+                    menuData.sections[secName].push({
+                        product: processed.name,
+                        price: parseFloat(row.price || row.valueperunit) || 0,
+                        thc: parseFloat(row.thc) || 0,
+                        type: processed.type,
+                        notes: processed.notes,
+                        flare: processed.flare || ""
+                    });
+                }
+            }
+            saveData();
+            renderAll();
+        }
+
+        function renderAll() {
+            const list = document.getElementById('sectionList');
+            list.innerHTML = '';
+            Object.keys(menuData.sections).forEach(s => {
+                const li = document.createElement('li');
+                li.className = 'section-item' + (currentSec === s ? ' active' : '');
+                li.textContent = s;
+                li.onclick = () => renderSection(s, li);
+                list.appendChild(li);
+            });
+            if (!currentSec && list.firstChild) list.firstChild.click();
+            else if (currentSec) renderSection(currentSec, null);
+            renderPrint();
+        }
+
+        function renderSection(name, el) {
+            currentSec = name;
+            document.querySelectorAll('.section-item').forEach(i => i.classList.remove('active'));
+            if(el) el.classList.add('active');
+
+            let html = `<h2 style="color:var(--color-primary); margin-bottom:15px;">${name}</h2>
+            <table class="menu-table">
+                <thead><tr><th>Product</th><th>Price</th><th>THC</th><th>Actions</th></tr></thead><tbody>`;
+            
+            if (menuData.sections[name]) {
+                menuData.sections[name].forEach((item, i) => {
+                    html += `<tr>
+                        <td>
+                            <strong>${item.flare || ''}${item.product}</strong>
+                            <div class="quick-actions">
+                                <div class="type-selector">
+                                    <button class="type-btn sativa ${item.type==='Sativa'?'active':''}" onclick="updateItem(${i}, {type:'Sativa'})">Sativa</button>
+                                    <button class="type-btn hybrid ${item.type==='Hybrid'?'active':''}" onclick="updateItem(${i}, {type:'Hybrid'})">Hybrid</button>
+                                    <button class="type-btn indica ${item.type==='Indica'?'active':''}" onclick="updateItem(${i}, {type:'Indica'})">Indica</button>
+                                </div>
+                                <select class="type-btn" style="text-transform:none; width:auto;" onchange="updateItem(${i}, {flare:this.value})">
+                                    <option value="">No Flare</option>
+                                    <option value="🔥 " ${item.flare==='🔥 '?'selected':''}>🔥 Fire</option>
+                                    <option value="✨ " ${item.flare==='✨ '?'selected':''}>✨ Sparkle</option>
+                                    <option value="💎 " ${item.flare==='💎 '?'selected':''}>💎 Diamond</option>
+                                    <option value="🍃 " ${item.flare==='🍃 '?'selected':''}>🍃 Leaf</option>
+                                    <option value="⭐ " ${item.flare==='⭐ '?'selected':''}>⭐ Star</option>
+                                    <option value="💨 " ${item.flare==='💨 '?'selected':''}>💨 Smoke</option>
+                                </select>
+                            </div>
+                        </td>
+                        <td>$${item.price.toFixed(2)}${name==='Flower'?'/g':''}</td>
+                        <td>${item.thc}%</td>
+                        <td>
+                            <button class="btn-primary" style="padding:4px 8px; font-size:12px;" onclick="openModal(${i})">Edit</button>
+                            <button class="btn-danger" style="padding:4px 8px; font-size:12px;" onclick="deleteItem(${i})">Delete</button>
+                        </td>
+                    </tr>`;
+                });
+            }
+            document.getElementById('mainContent').innerHTML = html + `</tbody></table>`;
+            renderPrint();
+        }
+
+        function updateItem(idx, changes) {
+            const item = menuData.sections[currentSec][idx];
+            Object.assign(item, changes);
+            strainLibrary[item.product] = { type: item.type, notes: item.notes, flare: item.flare };
+            saveData();
+            renderSection(currentSec);
+        }
+
+        function deleteItem(idx) {
+            if(confirm("Remove this item?")) {
+                menuData.sections[currentSec].splice(idx, 1);
+                saveData();
+                renderSection(currentSec);
+            }
+        }
+
+        function openModal(idx) {
+            currentItem = menuData.sections[currentSec][idx];
+            document.getElementById('editName').value = currentItem.product;
+            document.getElementById('editPrice').value = currentItem.price;
+            document.getElementById('editThc').value = currentItem.thc;
+            document.getElementById('editNotes').value = currentItem.notes;
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeModal() { document.getElementById('editModal').classList.remove('active'); }
+
+        function saveItem() {
+            currentItem.product = document.getElementById('editName').value;
+            currentItem.price = parseFloat(document.getElementById('editPrice').value);
+            currentItem.thc = parseFloat(document.getElementById('editThc').value);
+            currentItem.notes = document.getElementById('editNotes').value;
+            strainLibrary[currentItem.product] = { type: currentItem.type, notes: currentItem.notes, flare: currentItem.flare };
+            saveData();
+            renderSection(currentSec);
+            closeModal();
+        }
+
+        function renderPrint() {
+            let html = '';
+            Object.entries(menuData.sections).forEach(([name, items]) => {
+                const isFlower = name === 'Flower';
+                html += `<div class="print-section"><h2>${name} ${isFlower ? '(Sold by the Gram)' : ''}</h2>`;
+                items.forEach(item => {
+                    const typeClass = `type-${item.type.toLowerCase()}-text`;
+                    html += `<div class="print-item">
+                        <div style="flex:2">
+                            <span style="font-weight: 800; font-size: 16px;">${item.flare || ''}${item.product}</span>
+                            <span class="${typeClass}" style="font-size:11px; margin-left:8px">(${item.type.toUpperCase()})</span>
+                            <span style="font-size: 11px; font-style: italic; color: #666; margin-left: 10px;">${item.notes}</span>
+                        </div>
+                        <div style="font-weight: 700; font-size: 15px;">$${item.price.toFixed(2)}${isFlower?'/g':''} • ${item.thc}% THC</div>
+                    </div>`;
+                });
+                html += `</div>`;
+            });
+            document.getElementById('printContent').innerHTML = html;
+        }
+
+        function addNewItem() {
+            if(!currentSec) {
+                menuData.sections['Manual Items'] = [];
+                currentSec = 'Manual Items';
+            }
+            menuData.sections[currentSec].push({ product: "New Item", price: 0, thc: 0, type: "Hybrid", flare: "", notes: "" });
+            renderAll();
+        }
+    </script>
+</body>
+</html>

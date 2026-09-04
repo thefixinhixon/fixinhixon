@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Inventory Label Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+
+  <style>
+    :root {
+      --label-bg: #ffffff;
+      --label-text: #000000;
+      --font-main: "Arial Black", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 1rem;
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      color: #222;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 1.5rem;
+      align-items: flex-start;
+    }
+
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: #fff;
+      border-radius: 6px;
+      padding: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,.08);
+    }
+
+    .panel h2 {
+      margin-top: 0;
+      font-size: 1.1rem;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 0.25rem;
+      margin-bottom: 0.75rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-top: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 0.4rem 0.5rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 0.9rem;
+    }
+
+    input[type="file"] { font-size: 0.8rem; }
+
+    .row {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .row > div { flex: 1; }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      background: #2563a8;
+      color: #fff;
+      margin-top: 0.75rem;
+    }
+
+    button.secondary { background: #444; }
+    button.danger { background: #b32121; }
+    button.small-btn {
+      margin-top: 0;
+      padding: 0.3rem 0.6rem;
+      font-size: 0.8rem;
+      background: #555;
+    }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+
+    .custom-fields-section {
+      margin-top: 0.75rem;
+      border-top: 1px solid #eee;
+      padding-top: 0.75rem;
+    }
+
+    .custom-fields-section h3 {
+      font-size: 0.95rem;
+      margin: 0 0 0.5rem 0;
+    }
+
+    .custom-field-row {
+      display: flex;
+      gap: 0.4rem;
+      align-items: center;
+      margin-bottom: 0.4rem;
+    }
+
+    .custom-field-row input {
+      flex: 1;
+      padding: 0.35rem 0.4rem;
+      font-size: 0.85rem;
+    }
+
+    .custom-field-row .field-label-input {
+      flex: 0 0 110px;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .custom-field-row button {
+      margin-top: 0;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.8rem;
+      background: #b32121;
+      flex: 0 0 auto;
+    }
+
+    .add-field-btn {
+      background: #2563a8;
+      font-size: 0.82rem;
+      padding: 0.35rem 0.6rem;
+      margin-top: 0.3rem;
+    }
+
+    .preview-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .label-preview-container {
+      background: #e5e5e5;
+      padding: 0.25rem;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    .label-preview {
+      background: var(--label-bg);
+      color: var(--label-text);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #000;
+      width: 675px;
+      height: 375px;
+      transform-origin: top left;
+      transform: scale(0.8);
+    }
+
+    .label-preview.size-4x2 {
+      width: 1200px;
+      height: 600px;
+    }
+
+    .label-inner {
+      position: absolute;
+      inset: 4px 10px 4px 10px;
+      font-family: var(--font-main);
+      text-transform: uppercase;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .label-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .brand-block {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .brand-logo {
+      width: var(--logo-size, clamp(80px, 18vw, 160px));
+      height: auto;
+      object-fit: contain;
+    }
+
+    .brand-text {
+      font-size: clamp(12px, 3vw, 28px);
+      line-height: 0.85;
+      word-break: break-word;
+      overflow: hidden;
+      max-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .price {
+      flex: 1;
+      font-size: var(--font-price-size, clamp(80px, 25vw, 180px));
+      line-height: 0.8;
+      font-weight: 900;
+      white-space: nowrap;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      margin: 0;
+      padding: 0;
+    }
+
+    .label-body {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 8px;
+      flex: 1;
+      margin-top: 6px;
+    }
+
+    .left-block {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 2px;
+      font-size: var(--font-main-size, clamp(20px, 5vw, 36px));
+      line-height: 0.95;
+    }
+
+    .label-name-line {
+      font-weight: 900;
+      font-size: 1em;
+      border-bottom: 3px solid #000;
+      display: inline-block;
+      padding-bottom: 2px;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .custom-field-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      font-size: 0.75em;
+    }
+
+    .custom-field-line .cf-label {
+      font-weight: 900;
+    }
+
+    .custom-field-line .cf-value {
+      font-weight: 700;
+    }
+
+    .right-block {
+      flex: 0 0 auto;
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-end;
+      font-size: var(--font-type-size, clamp(24px, 6vw, 52px));
+      font-weight: 900;
+      text-align: right;
+    }
+
+    .batch {
+      margin-top: 0.75rem;
+      border-top: 1px solid #ddd;
+      padding-top: 0.75rem;
+    }
+
+    .batch-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .batch-item {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 0.4rem;
+      background: #fafafa;
+      font-size: 0.75rem;
+      min-width: 150px;
+    }
+
+    .batch-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.3rem;
+    }
+
+    .batch-buttons {
+      display: flex;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+      margin-top: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Inventory Label Builder</h1>
+
+  <div class="app">
+    <div class="panel">
+      <h2>Label Settings</h2>
+
+      <label for="size">Label size</label>
+      <select id="size">
+        <option value="2.25x1.25">2.25" × 1.25"</option>
+        <option value="4x2">4" × 2"</option>
+      </select>
+
+      <label for="brandText">Brand / Company text (optional)</label>
+      <input id="brandText" type="text" placeholder="e.g., Acme Co." />
+
+      <label for="logo">Brand logo (optional)</label>
+      <input id="logo" type="file" accept="image/*" />
+
+      <label for="logoSize" id="logoSizeLabel" style="display:none;">Logo Size</label>
+      <input id="logoSize" type="range" min="40" max="200" value="120" style="width:100%;display:none;" />
+      <small id="logoSizeValue" style="display:none;">120px</small>
+
+      <div class="row">
+        <div>
+          <label for="price">Price (optional)</label>
+          <input id="price" type="text" placeholder="$9.99" />
+        </div>
+        <div>
+          <label for="category">Category</label>
+          <input id="category" type="text" placeholder="e.g., Electronics" />
+        </div>
+      </div>
+
+      <label for="labelName">Label / Product name</label>
+      <input id="labelName" type="text" placeholder="e.g., Widget A - SKU-001" />
+
+      <!-- Custom Fields -->
+      <div class="custom-fields-section">
+        <h3>Custom Fields <small style="font-weight:400;color:#666;">(up to 4)</small></h3>
+        <div id="customFieldRows"></div>
+        <button class="add-field-btn" id="addFieldBtn">+ Add Field</button>
+      </div>
+
+      <h3 style="font-size:0.95rem;margin:1rem 0 0.5rem 0;border-bottom:1px solid #ddd;padding-bottom:0.25rem;">Font Sizes</h3>
+
+      <div class="row">
+        <div>
+          <label for="fontPrice">Price Font</label>
+          <input id="fontPrice" type="range" min="40" max="200" value="120" style="width:100%;" />
+          <small id="fontPriceValue">120px</small>
+        </div>
+        <div>
+          <label for="fontMain">Main Text Font</label>
+          <input id="fontMain" type="range" min="14" max="60" value="32" style="width:100%;" />
+          <small id="fontMainValue">32px</small>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="fontType">Category Font</label>
+          <input id="fontType" type="range" min="14" max="70" value="40" style="width:100%;" />
+          <small id="fontTypeValue">40px</small>
+        </div>
+      </div>
+
+      <button id="addToBatch">Add label to batch</button>
+
+      <div class="batch">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <h2 style="border:none;margin:0;padding:0;">Batch</h2>
+          <button id="downloadPdf" class="secondary" disabled>Download batch as PDF</button>
+        </div>
+        <div id="batchList" class="batch-list"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Live Preview</h2>
+      <div class="preview-wrapper">
+        <div class="label-preview-container">
+          <div id="labelPreview" class="label-preview">
+            <div class="label-inner">
+              <div class="label-top">
+                <div class="brand-block">
+                  <img id="previewLogo" class="brand-logo" style="display:none;" alt="Brand logo" />
+                  <div id="previewBrandText" class="brand-text"></div>
+                </div>
+                <div id="previewPrice" class="price"></div>
+              </div>
+              <div class="label-body">
+                <div class="left-block">
+                  <div id="previewLabelName" class="label-name-line">PRODUCT NAME</div>
+                  <div id="previewCustomFields"></div>
+                </div>
+                <div class="right-block">
+                  <div id="previewCategory"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <small>Preview is scaled down for screen but uses print proportions.</small>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const MAX_FIELDS = 4;
+
+    const state = {
+      size: '2.25x1.25',
+      brandText: '',
+      logoDataUrl: null,
+      logoSize: 120,
+      price: '',
+      category: '',
+      labelName: '',
+      customFields: [],
+      fontPriceSize: 120,
+      fontMainSize: 32,
+      fontTypeSize: 40,
+      batch: []
+    };
+
+    // --- DOM refs ---
+    const sizeEl = document.getElementById('size');
+    const brandTextEl = document.getElementById('brandText');
+    const logoEl = document.getElementById('logo');
+    const logoSizeEl = document.getElementById('logoSize');
+    const priceEl = document.getElementById('price');
+    const categoryEl = document.getElementById('category');
+    const labelNameEl = document.getElementById('labelName');
+    const customFieldRowsEl = document.getElementById('customFieldRows');
+    const addFieldBtn = document.getElementById('addFieldBtn');
+    const addToBatchBtn = document.getElementById('addToBatch');
+    const downloadPdfBtn = document.getElementById('downloadPdf');
+    const batchListEl = document.getElementById('batchList');
+    const fontPriceEl = document.getElementById('fontPrice');
+    const fontMainEl = document.getElementById('fontMain');
+    const fontTypeEl = document.getElementById('fontType');
+
+    const previewRoot = document.getElementById('labelPreview');
+    const previewLogo = document.getElementById('previewLogo');
+    const previewBrandText = document.getElementById('previewBrandText');
+    const previewPrice = document.getElementById('previewPrice');
+    const previewLabelName = document.getElementById('previewLabelName');
+    const previewCustomFields = document.getElementById('previewCustomFields');
+    const previewCategory = document.getElementById('previewCategory');
+
+    function toUpper(str) { return (str || '').toString().toUpperCase(); }
+
+    function normalizePrice(value) {
+      if (!value) return '';
+      const cleaned = value.replace(/[^\d.]/g, '');
+      if (!cleaned) return '';
+      const num = parseFloat(cleaned);
+      if (isNaN(num)) return '';
+      return '$' + (num % 1 === 0 ? num.toFixed(0) : num.toFixed(2));
+    }
+
+    // --- Custom Fields UI ---
+    function renderCustomFieldRows() {
+      customFieldRowsEl.innerHTML = '';
+      state.customFields.forEach((cf, i) => {
+        const row = document.createElement('div');
+        row.className = 'custom-field-row';
+
+        const labelInput = document.createElement('input');
+        labelInput.type = 'text';
+        labelInput.className = 'field-label-input';
+        labelInput.placeholder = 'Field label';
+        labelInput.value = cf.label;
+        labelInput.addEventListener('input', () => {
+          state.customFields[i].label = labelInput.value;
+          updatePreview();
+        });
+
+        const valueInput = document.createElement('input');
+        valueInput.type = 'text';
+        valueInput.placeholder = 'Value';
+        valueInput.value = cf.value;
+        valueInput.addEventListener('input', () => {
+          state.customFields[i].value = valueInput.value;
+          updatePreview();
+        });
+
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = '✕';
+        removeBtn.title = 'Remove field';
+        removeBtn.addEventListener('click', () => {
+          state.customFields.splice(i, 1);
+          renderCustomFieldRows();
+          updatePreview();
+          addFieldBtn.disabled = state.customFields.length >= MAX_FIELDS;
+        });
+
+        row.appendChild(labelInput);
+        row.appendChild(valueInput);
+        row.appendChild(removeBtn);
+        customFieldRowsEl.appendChild(row);
+      });
+      addFieldBtn.disabled = state.customFields.length >= MAX_FIELDS;
+    }
+
+    addFieldBtn.addEventListener('click', () => {
+      if (state.customFields.length >= MAX_FIELDS) return;
+      state.customFields.push({ label: '', value: '' });
+      renderCustomFieldRows();
+      updatePreview();
+    });
+
+    // --- Preview ---
+    function updatePreview() {
+      previewRoot.classList.toggle('size-4x2', state.size === '4x2');
+
+      if (state.logoDataUrl) {
+        previewLogo.src = state.logoDataUrl;
+        previewLogo.style.display = 'block';
+        document.getElementById('logoSizeLabel').style.display = 'block';
+        logoSizeEl.style.display = 'block';
+        document.getElementById('logoSizeValue').style.display = 'block';
+      } else {
+        previewLogo.style.display = 'none';
+        document.getElementById('logoSizeLabel').style.display = 'none';
+        logoSizeEl.style.display = 'none';
+        document.getElementById('logoSizeValue').style.display = 'none';
+      }
+
+      previewBrandText.textContent = toUpper(state.brandText);
+      previewPrice.textContent = state.price || '';
+      previewLabelName.textContent = toUpper(state.labelName) || 'PRODUCT NAME';
+      previewCategory.textContent = toUpper(state.category);
+
+      previewCustomFields.innerHTML = '';
+      state.customFields.forEach(cf => {
+        if (!cf.label && !cf.value) return;
+        const line = document.createElement('div');
+        line.className = 'custom-field-line';
+        if (cf.label) {
+          const lbl = document.createElement('span');
+          lbl.className = 'cf-label';
+          lbl.textContent = toUpper(cf.label) + ':';
+          line.appendChild(lbl);
+        }
+        const val = document.createElement('span');
+        val.className = 'cf-value';
+        val.textContent = toUpper(cf.value);
+        line.appendChild(val);
+        previewCustomFields.appendChild(line);
+      });
+
+      previewRoot.style.setProperty('--logo-size', state.logoSize + 'px');
+      previewRoot.style.setProperty('--font-price-size', state.fontPriceSize + 'px');
+      previewRoot.style.setProperty('--font-main-size', state.fontMainSize + 'px');
+      previewRoot.style.setProperty('--font-type-size', state.fontTypeSize + 'px');
+    }
+
+    // --- Batch ---
+    function createLabelSnapshot() {
+      return {
+        id: crypto.randomUUID(),
+        size: state.size,
+        brandText: state.brandText,
+        logoDataUrl: state.logoDataUrl,
+        logoSize: state.logoSize,
+        price: state.price,
+        category: state.category,
+        labelName: state.labelName,
+        customFields: JSON.parse(JSON.stringify(state.customFields)),
+        fontPriceSize: state.fontPriceSize,
+        fontMainSize: state.fontMainSize,
+        fontTypeSize: state.fontTypeSize
+      };
+    }
+
+    function loadSnapshot(label) {
+      Object.assign(state, {
+        size: label.size,
+        brandText: label.brandText,
+        logoDataUrl: label.logoDataUrl,
+        logoSize: label.logoSize,
+        price: label.price,
+        category: label.category,
+        labelName: label.labelName,
+        customFields: JSON.parse(JSON.stringify(label.customFields)),
+        fontPriceSize: label.fontPriceSize,
+        fontMainSize: label.fontMainSize,
+        fontTypeSize: label.fontTypeSize
+      });
+      sizeEl.value = state.size;
+      brandTextEl.value = state.brandText;
+      priceEl.value = state.price;
+      categoryEl.value = state.category;
+      labelNameEl.value = state.labelName;
+      logoSizeEl.value = state.logoSize;
+      fontPriceEl.value = state.fontPriceSize;
+      fontMainEl.value = state.fontMainSize;
+      fontTypeEl.value = state.fontTypeSize;
+      document.getElementById('logoSizeValue').textContent = state.logoSize + 'px';
+      document.getElementById('fontPriceValue').textContent = state.fontPriceSize + 'px';
+      document.getElementById('fontMainValue').textContent = state.fontMainSize + 'px';
+      document.getElementById('fontTypeValue').textContent = state.fontTypeSize + 'px';
+      renderCustomFieldRows();
+      updatePreview();
+    }
+
+    function refreshBatchUI() {
+      batchListEl.innerHTML = '';
+      if (!state.batch.length) {
+        batchListEl.innerHTML = '<em>No labels in batch yet.</em>';
+        downloadPdfBtn.disabled = true;
+        return;
+      }
+      downloadPdfBtn.disabled = false;
+      state.batch.forEach((label, index) => {
+        const item = document.createElement('div');
+        item.className = 'batch-item';
+
+        const header = document.createElement('div');
+        header.className = 'batch-item-header';
+        const title = document.createElement('div');
+        title.textContent = `${index + 1}. ${label.labelName || '(no name)'} ${label.price ? '- ' + label.price : ''}`;
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'X';
+        deleteBtn.className = 'danger';
+        deleteBtn.style.cssText = 'padding:0.1rem 0.3rem;margin-top:0;';
+        deleteBtn.onclick = () => { state.batch.splice(index, 1); refreshBatchUI(); };
+        header.appendChild(title);
+        header.appendChild(deleteBtn);
+
+        const details = document.createElement('div');
+        details.textContent = [label.size, label.category].filter(Boolean).join(' — ');
+
+        const buttons = document.createElement('div');
+        buttons.className = 'batch-buttons';
+        const loadBtn = document.createElement('button');
+        loadBtn.textContent = 'Load';
+        loadBtn.className = 'secondary small-btn';
+        loadBtn.onclick = () => loadSnapshot(label);
+        buttons.appendChild(loadBtn);
+
+        item.appendChild(header);
+        item.appendChild(details);
+        item.appendChild(buttons);
+        batchListEl.appendChild(item);
+      });
+    }
+
+    // --- Events ---
+    sizeEl.addEventListener('change', () => { state.size = sizeEl.value; updatePreview(); });
+    brandTextEl.addEventListener('input', () => { state.brandText = brandTextEl.value; updatePreview(); });
+    logoEl.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) { state.logoDataUrl = null; updatePreview(); return; }
+      const reader = new FileReader();
+      reader.onload = (ev) => { state.logoDataUrl = ev.target.result; updatePreview(); };
+      reader.readAsDataURL(file);
+    });
+    logoSizeEl.addEventListener('input', () => {
+      state.logoSize = parseInt(logoSizeEl.value);
+      document.getElementById('logoSizeValue').textContent = state.logoSize + 'px';
+      updatePreview();
+    });
+    priceEl.addEventListener('blur', () => { state.price = normalizePrice(priceEl.value); priceEl.value = state.price; updatePreview(); });
+    priceEl.addEventListener('input', () => { state.price = priceEl.value; updatePreview(); });
+    categoryEl.addEventListener('input', () => { state.category = categoryEl.value; updatePreview(); });
+    labelNameEl.addEventListener('input', () => { state.labelName = labelNameEl.value; updatePreview(); });
+    fontPriceEl.addEventListener('input', () => { state.fontPriceSize = parseInt(fontPriceEl.value); document.getElementById('fontPriceValue').textContent = state.fontPriceSize + 'px'; updatePreview(); });
+    fontMainEl.addEventListener('input', () => { state.fontMainSize = parseInt(fontMainEl.value); document.getElementById('fontMainValue').textContent = state.fontMainSize + 'px'; updatePreview(); });
+    fontTypeEl.addEventListener('input', () => { state.fontTypeSize = parseInt(fontTypeEl.value); document.getElementById('fontTypeValue').textContent = state.fontTypeSize + 'px'; updatePreview(); });
+
+    addToBatchBtn.addEventListener('click', () => {
+      if (!state.labelName.trim()) { alert('Please enter a Label / Product name.'); return; }
+      state.batch.push(createLabelSnapshot());
+      refreshBatchUI();
+    });
+
+    downloadPdfBtn.addEventListener('click', async () => {
+      if (!state.batch.length) return;
+      const { jsPDF } = window.jspdf;
+      const firstLabel = state.batch[0];
+      const firstFormat = firstLabel.size === '4x2' ? [4, 2] : [2.25, 1.25];
+      let pdf = new jsPDF({ orientation: 'landscape', unit: 'in', format: firstFormat });
+
+      for (let i = 0; i < state.batch.length; i++) {
+        const label = state.batch[i];
+        loadSnapshot(label);
+        await new Promise(r => setTimeout(r, 120));
+        const format = label.size === '4x2' ? [4, 2] : [2.25, 1.25];
+        if (i > 0) pdf.addPage(format, 'landscape');
+        const canvas = await html2canvas(previewRoot, { scale: 3, useCORS: true, backgroundColor: '#ffffff' });
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, format[0], format[1]);
+      }
+      pdf.save('inventory-labels.pdf');
+    });
+
+    // Init
+    renderCustomFieldRows();
+    updatePreview();
+    refreshBatchUI();
+  </script>
+</body>
+</html>

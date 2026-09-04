@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pre-Roll Label Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+
+  <style>
+    :root {
+      --label-bg: #ffffff;
+      --label-text: #000000;
+      --font-main: "Arial Black", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 1rem;
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      color: #222;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 1.5rem;
+      align-items: flex-start;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: #fff;
+      border-radius: 6px;
+      padding: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,.08);
+    }
+
+    .panel h2 {
+      margin-top: 0;
+      font-size: 1.1rem;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 0.25rem;
+      margin-bottom: 0.75rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-top: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 0.4rem 0.5rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 0.9rem;
+    }
+
+    input[type="file"] {
+      font-size: 0.8rem;
+    }
+
+    .row {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .row > div { flex: 1; }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      background: #1b7c3c;
+      color: #fff;
+      margin-top: 0.75rem;
+    }
+
+    button.secondary {
+      background: #444;
+    }
+
+    button.danger {
+      background: #b32121;
+    }
+
+    button:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+
+    .preview-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .label-preview-container {
+      background: #e5e5e5;
+      padding: 0.25rem;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    .label-preview {
+      background: var(--label-bg);
+      color: var(--label-text);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #000;
+      width: 675px;
+      height: 375px;
+      transform-origin: top left;
+      transform: scale(0.8);
+    }
+
+    .label-preview.size-4x2 {
+      width: 1200px;
+      height: 600px;
+    }
+
+    .label-inner {
+      position: absolute;
+      inset: 4px 10px 4px 10px;
+      font-family: var(--font-main);
+      text-transform: uppercase;
+    }
+
+    .label-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: auto;
+      gap: 8px;
+      height: auto;
+    }
+
+    .brand-block {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .brand-logo {
+      width: var(--logo-size, clamp(80px, 18vw, 160px));
+      height: auto;
+      object-fit: contain;
+      aspect-ratio: auto;
+    }
+
+    .brand-text {
+      font-size: clamp(12px, 3vw, 28px);
+      line-height: 0.85;
+      word-break: break-word;
+      overflow: hidden;
+      max-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .price {
+      flex: 1;
+      font-size: var(--font-price-size, clamp(80px, 25vw, 180px));
+      line-height: 0.8;
+      font-weight: 900;
+      white-space: nowrap;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      margin: 0;
+      padding: 0;
+    }
+
+    .label-body {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 0;
+      height: auto;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .left-block {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 0px;
+      font-size: var(--font-main-size, clamp(32px, 7vw, 48px));
+      line-height: 0.9;
+    }
+
+    .pre-roll {
+      border-bottom: 4px solid #000;
+      display: inline-block;
+      padding-bottom: 2px;
+      font-weight: 900;
+      letter-spacing: -1px;
+    }
+
+    .strain-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px;
+    }
+
+    .strain-line span:first-child,
+    .thc-line span:first-child {
+      font-weight: 900;
+      font-size: var(--font-label-size, 0.75em);
+    }
+
+    .strain-line span:last-child,
+    .thc-line span:last-child {
+      font-weight: 900;
+    }
+
+    .thc-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px;
+      margin-top: 0;
+    }
+
+    .right-block {
+      flex: 0 0 auto;
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-end;
+      font-size: var(--font-type-size, clamp(36px, 9vw, 64px));
+      font-weight: 900;
+      text-align: right;
+      padding: 0;
+    }
+
+    .batch {
+      margin-top: 0.75rem;
+      border-top: 1px solid #ddd;
+      padding-top: 0.75rem;
+    }
+
+    .batch-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .batch-item {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 0.4rem;
+      background: #fafafa;
+      font-size: 0.75rem;
+      min-width: 150px;
+    }
+
+    .batch-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.3rem;
+    }
+
+    .batch-buttons {
+      display: flex;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pre-Roll Label Builder</h1>
+
+  <div class="app">
+    <div class="panel">
+      <h2>Label Settings</h2>
+
+      <label for="size">Label size</label>
+      <select id="size">
+        <option value="2.25x1.25">2.25" × 1.25"</option>
+        <option value="4x2">4" × 2"</option>
+      </select>
+
+      <label for="brandText">Brand text (optional)</label>
+      <input id="brandText" type="text" placeholder="e.g., ON THE LOW" />
+
+      <label for="logo">Brand logo (optional)</label>
+      <input id="logo" type="file" accept="image/*" />
+
+      <label for="logoSize" id="logoSizeLabel" style="display:none;">Logo Size</label>
+      <input id="logoSize" type="range" min="40" max="200" value="120" style="width: 100%; display:none;" />
+      <small id="logoSizeValue" style="display:none;">120px</small>
+
+      <div class="row">
+        <div>
+          <label for="price">Price</label>
+          <input id="price" type="text" placeholder="$4" />
+        </div>
+        <div>
+          <label for="thc">THC %</label>
+          <input id="thc" type="text" placeholder="23.84%" />
+        </div>
+      </div>
+
+      <label for="strain">Strain name</label>
+      <input id="strain" type="text" placeholder="Legend OG" />
+
+      <label for="type">Type</label>
+      <select id="type">
+        <option>Indica</option>
+        <option>Hybrid</option>
+        <option>Sativa</option>
+        <option>Infused</option>
+        <option>Custom</option>
+      </select>
+
+      <label for="customType" id="customTypeLabel" style="display:none;">Custom type text</label>
+      <input id="customType" type="text" style="display:none;" placeholder="Custom text" />
+
+      <label for="preRollText">Pre-Roll Text</label>
+      <input id="preRollText" type="text" placeholder="PRE-ROLL" value="PRE-ROLL" />
+
+      <h3 style="font-size: 0.95rem; margin: 1rem 0 0.5rem 0; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem;">Font Sizes</h3>
+
+      <div class="row">
+        <div>
+          <label for="fontPrice">Price Font</label>
+          <input id="fontPrice" type="range" min="60" max="200" value="140" style="width: 100%;" />
+          <small id="fontPriceValue">140px</small>
+        </div>
+        <div>
+          <label for="fontMain">Main Text Font</label>
+          <input id="fontMain" type="range" min="24" max="60" value="40" style="width: 100%;" />
+          <small id="fontMainValue">40px</small>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="fontType">Type Font</label>
+          <input id="fontType" type="range" min="24" max="70" value="50" style="width: 100%;" />
+          <small id="fontTypeValue">50px</small>
+        </div>
+        <div>
+          <label for="fontLabel">Label Font (STRAIN:)</label>
+          <input id="fontLabel" type="range" min="12" max="40" value="30" style="width: 100%;" />
+          <small id="fontLabelValue">30px</small>
+        </div>
+      </div>
+
+      <button id="addToBatch">Add label to batch</button>
+
+      <div class="batch">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <h2 style="border:none;margin:0;padding:0;">Batch</h2>
+          <button id="downloadPdf" class="secondary" disabled>Download batch as PDF</button>
+        </div>
+        <div id="batchList" class="batch-list"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Live Preview</h2>
+      <div class="preview-wrapper">
+        <div class="label-preview-container">
+          <div id="labelPreview" class="label-preview">
+            <div class="label-inner">
+              <div class="label-top">
+                <div class="brand-block">
+                  <img id="previewLogo" class="brand-logo" style="display:none;" alt="Brand logo" />
+                  <div id="previewBrandText" class="brand-text"></div>
+                </div>
+                <div id="previewPrice" class="price">$0</div>
+              </div>
+
+              <div class="label-body">
+                <div class="left-block">
+                  <div id="previewPreRoll" class="pre-roll">PRE-ROLL</div>
+                  <div class="strain-line">
+                    <span>STRAIN:</span>
+                    <span id="previewStrain">LEGEND OG</span>
+                  </div>
+                  <div class="thc-line">
+                    <span>THC:</span>
+                    <span id="previewThc">23.84%</span>
+                  </div>
+                </div>
+                <div class="right-block">
+                  <div id="previewType">INDICA</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <small>Preview is scaled down for screen but uses print proportions.</small>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      size: '2.25x1.25',
+      brandText: '',
+      logoDataUrl: null,
+      price: '$4',
+      strain: 'LEGEND OG',
+      thc: '23.84%',
+      type: 'INDICA',
+      customTypeText: '',
+      preRollText: 'PRE-ROLL',
+      logoSize: 120,
+      fontPriceSize: 140,
+      fontMainSize: 40,
+      fontTypeSize: 50,
+      fontLabelSize: 30,
+      batch: []
+    };
+
+    const sizeEl = document.getElementById('size');
+    const brandTextEl = document.getElementById('brandText');
+    const logoEl = document.getElementById('logo');
+    const priceEl = document.getElementById('price');
+    const thcEl = document.getElementById('thc');
+    const strainEl = document.getElementById('strain');
+    const typeEl = document.getElementById('type');
+    const customTypeEl = document.getElementById('customType');
+    const customTypeLabelEl = document.getElementById('customTypeLabel');
+    const preRollTextEl = document.getElementById('preRollText');
+    const addToBatchBtn = document.getElementById('addToBatch');
+    const downloadPdfBtn = document.getElementById('downloadPdf');
+    const batchListEl = document.getElementById('batchList');
+
+    const logoSizeEl = document.getElementById('logoSize');
+    const fontPriceEl = document.getElementById('fontPrice');
+    const fontMainEl = document.getElementById('fontMain');
+    const fontTypeEl = document.getElementById('fontType');
+    const fontLabelEl = document.getElementById('fontLabel');
+
+    const previewRoot = document.getElementById('labelPreview');
+    const previewLogo = document.getElementById('previewLogo');
+    const previewBrandText = document.getElementById('previewBrandText');
+    const previewPrice = document.getElementById('previewPrice');
+    const previewStrain = document.getElementById('previewStrain');
+    const previewThc = document.getElementById('previewThc');
+    const previewType = document.getElementById('previewType');
+    const previewPreRoll = document.getElementById('previewPreRoll');
+
+    function toUpper(str) {
+      return (str || '').toString().toUpperCase();
+    }
+
+    function normalizePrice(value) {
+      if (!value) return '';
+      const cleaned = value.replace(/[^\d.]/g, '');
+      if (!cleaned) return '';
+      const num = parseFloat(cleaned);
+      if (isNaN(num)) return '';
+      return '$' + (num % 1 === 0 ? num.toFixed(0) : num.toFixed(2));
+    }
+
+    function normalizeThc(value) {
+      if (!value) return '';
+      const cleaned = value.replace(/[^\d.]/g, '');
+      if (!cleaned) return '';
+      const num = parseFloat(cleaned);
+      if (isNaN(num)) return '';
+      return num.toFixed(2) + '%';
+    }
+
+    function getDisplayType(label) {
+      if (label.type === 'CUSTOM') {
+        return toUpper(label.customTypeText || 'CUSTOM');
+      }
+      return label.type;
+    }
+
+    function updatePreview() {
+      previewRoot.classList.toggle('size-4x2', state.size === '4x2');
+
+      if (state.logoDataUrl) {
+        previewLogo.src = state.logoDataUrl;
+        previewLogo.style.display = 'block';
+        document.getElementById('logoSizeLabel').style.display = 'block';
+        logoSizeEl.style.display = 'block';
+        document.getElementById('logoSizeValue').style.display = 'block';
+      } else {
+        previewLogo.style.display = 'none';
+        document.getElementById('logoSizeLabel').style.display = 'none';
+        logoSizeEl.style.display = 'none';
+        document.getElementById('logoSizeValue').style.display = 'none';
+      }
+
+      previewBrandText.textContent = toUpper(state.brandText || '');
+      previewPrice.textContent = state.price || '';
+      previewStrain.textContent = toUpper(state.strain || '');
+      previewThc.textContent = state.thc || '';
+      previewType.textContent = getDisplayType(state);
+      previewPreRoll.textContent = toUpper(state.preRollText || 'PRE-ROLL');
+
+      previewRoot.style.setProperty('--logo-size', state.logoSize + 'px');
+      previewRoot.style.setProperty('--font-price-size', state.fontPriceSize + 'px');
+      previewRoot.style.setProperty('--font-main-size', state.fontMainSize + 'px');
+      previewRoot.style.setProperty('--font-type-size', state.fontTypeSize + 'px');
+      previewRoot.style.setProperty('--font-label-size', (state.fontLabelSize / state.fontMainSize) + 'em');
+    }
+
+    function refreshBatchUI() {
+      batchListEl.innerHTML = '';
+      if (!state.batch.length) {
+        batchListEl.innerHTML = '<em>No labels in batch yet.</em>';
+        downloadPdfBtn.disabled = true;
+        return;
+      }
+      downloadPdfBtn.disabled = false;
+
+      state.batch.forEach((label, index) => {
+        const item = document.createElement('div');
+        item.className = 'batch-item';
+
+        const header = document.createElement('div');
+        header.className = 'batch-item-header';
+        const title = document.createElement('div');
+        title.textContent = `${index + 1}. ${label.size} - ${label.price} - ${label.strain}`;
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'X';
+        deleteBtn.className = 'danger';
+        deleteBtn.style.padding = '0.1rem 0.3rem';
+        deleteBtn.onclick = () => {
+          state.batch.splice(index, 1);
+          refreshBatchUI();
+        };
+        header.appendChild(title);
+        header.appendChild(deleteBtn);
+
+        const details = document.createElement('div');
+        details.textContent = `${label.thc} - ${getDisplayType(label)}`;
+
+        const buttons = document.createElement('div');
+        buttons.className = 'batch-buttons';
+
+        const loadBtn = document.createElement('button');
+        loadBtn.textContent = 'Load';
+        loadBtn.className = 'secondary';
+        loadBtn.onclick = () => {
+          Object.assign(state, {
+            size: label.size,
+            brandText: label.brandText,
+            logoDataUrl: label.logoDataUrl,
+            logoSize: label.logoSize,
+            price: label.price,
+            strain: label.strain,
+            thc: label.thc,
+            type: label.type,
+            customTypeText: label.customTypeText,
+            preRollText: label.preRollText,
+            fontPriceSize: label.fontPriceSize,
+            fontMainSize: label.fontMainSize,
+            fontTypeSize: label.fontTypeSize,
+            fontLabelSize: label.fontLabelSize
+          });
+          sizeEl.value = state.size;
+          brandTextEl.value = state.brandText;
+          priceEl.value = state.price;
+          strainEl.value = state.strain;
+          thcEl.value = state.thc;
+          typeEl.value = state.type[0] + state.type.slice(1).toLowerCase();
+          preRollTextEl.value = state.preRollText;
+          logoSizeEl.value = state.logoSize;
+          fontPriceEl.value = state.fontPriceSize;
+          fontMainEl.value = state.fontMainSize;
+          fontTypeEl.value = state.fontTypeSize;
+          fontLabelEl.value = state.fontLabelSize;
+          document.getElementById('logoSizeValue').textContent = state.logoSize + 'px';
+          document.getElementById('fontPriceValue').textContent = state.fontPriceSize + 'px';
+          document.getElementById('fontMainValue').textContent = state.fontMainSize + 'px';
+          document.getElementById('fontTypeValue').textContent = state.fontTypeSize + 'px';
+          document.getElementById('fontLabelValue').textContent = state.fontLabelSize + 'px';
+          if (state.type === 'CUSTOM') {
+            customTypeEl.style.display = '';
+            customTypeLabelEl.style.display = '';
+            customTypeEl.value = state.customTypeText;
+          } else {
+            customTypeEl.style.display = 'none';
+            customTypeLabelEl.style.display = 'none';
+          }
+          updatePreview();
+        };
+
+        buttons.appendChild(loadBtn);
+        item.appendChild(header);
+        item.appendChild(details);
+        item.appendChild(buttons);
+        batchListEl.appendChild(item);
+      });
+    }
+
+    function createLabelSnapshot() {
+      return {
+        id: crypto.randomUUID(),
+        size: state.size,
+        brandText: state.brandText,
+        logoDataUrl: state.logoDataUrl,
+        logoSize: state.logoSize,
+        price: state.price,
+        strain: state.strain,
+        thc: state.thc,
+        type: state.type,
+        customTypeText: state.customTypeText,
+        preRollText: state.preRollText,
+        fontPriceSize: state.fontPriceSize,
+        fontMainSize: state.fontMainSize,
+        fontTypeSize: state.fontTypeSize,
+        fontLabelSize: state.fontLabelSize
+      };
+    }
+
+    sizeEl.addEventListener('change', () => { state.size = sizeEl.value; updatePreview(); });
+    brandTextEl.addEventListener('input', () => { state.brandText = brandTextEl.value; updatePreview(); });
+    logoEl.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) { state.logoDataUrl = null; updatePreview(); return; }
+      const reader = new FileReader();
+      reader.onload = (ev) => { state.logoDataUrl = ev.target.result; updatePreview(); };
+      reader.readAsDataURL(file);
+    });
+    logoSizeEl.addEventListener('input', () => {
+      state.logoSize = parseInt(logoSizeEl.value);
+      document.getElementById('logoSizeValue').textContent = state.logoSize + 'px';
+      updatePreview();
+    });
+    priceEl.addEventListener('blur', () => { state.price = normalizePrice(priceEl.value); priceEl.value = state.price; updatePreview(); });
+    priceEl.addEventListener('input', () => { state.price = priceEl.value.toUpperCase(); updatePreview(); });
+    thcEl.addEventListener('blur', () => { state.thc = normalizeThc(thcEl.value); thcEl.value = state.thc; updatePreview(); });
+    thcEl.addEventListener('input', () => { state.thc = thcEl.value.toUpperCase(); updatePreview(); });
+    strainEl.addEventListener('input', () => { state.strain = strainEl.value; updatePreview(); });
+    typeEl.addEventListener('change', () => {
+      const value = typeEl.value.toUpperCase();
+      state.type = value;
+      customTypeEl.style.display = value === 'CUSTOM' ? '' : 'none';
+      customTypeLabelEl.style.display = value === 'CUSTOM' ? '' : 'none';
+      updatePreview();
+    });
+    customTypeEl.addEventListener('input', () => { state.customTypeText = customTypeEl.value; updatePreview(); });
+    preRollTextEl.addEventListener('input', () => { state.preRollText = preRollTextEl.value; updatePreview(); });
+    fontPriceEl.addEventListener('input', () => { state.fontPriceSize = parseInt(fontPriceEl.value); document.getElementById('fontPriceValue').textContent = state.fontPriceSize + 'px'; updatePreview(); });
+    fontMainEl.addEventListener('input', () => { state.fontMainSize = parseInt(fontMainEl.value); document.getElementById('fontMainValue').textContent = state.fontMainSize + 'px'; updatePreview(); });
+    fontTypeEl.addEventListener('input', () => { state.fontTypeSize = parseInt(fontTypeEl.value); document.getElementById('fontTypeValue').textContent = state.fontTypeSize + 'px'; updatePreview(); });
+    fontLabelEl.addEventListener('input', () => { state.fontLabelSize = parseInt(fontLabelEl.value); document.getElementById('fontLabelValue').textContent = state.fontLabelSize + 'px'; updatePreview(); });
+
+    addToBatchBtn.addEventListener('click', () => {
+      const label = createLabelSnapshot();
+      if (!label.price || !label.strain || !label.thc) { alert('Please fill price, strain, and THC.'); return; }
+      state.batch.push(label);
+      refreshBatchUI();
+    });
+
+    downloadPdfBtn.addEventListener('click', async () => {
+      if (!state.batch.length) return;
+      const { jsPDF } = window.jspdf;
+      const firstLabel = state.batch[0];
+      const firstFormat = firstLabel.size === '4x2' ? [4, 2] : [2.25, 1.25];
+      let pdf = new jsPDF({ orientation: 'landscape', unit: 'in', format: firstFormat });
+
+      for (let i = 0; i < state.batch.length; i++) {
+        const label = state.batch[i];
+        Object.assign(state, label);
+        updatePreview();
+        await new Promise(r => setTimeout(r, 100));
+        const format = label.size === '4x2' ? [4, 2] : [2.25, 1.25];
+        if (i > 0) pdf.addPage(format, 'landscape');
+        const canvas = await html2canvas(previewRoot, { scale: 3, useCORS: true, backgroundColor: '#ffffff' });
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, format[0], format[1]);
+      }
+      pdf.save('labels.pdf');
+    });
+
+    updatePreview();
+    refreshBatchUI();
+  </script>
+</body>
+</html>

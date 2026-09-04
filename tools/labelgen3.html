@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greenery Label Maker (Pro)</title>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@700&display=swap');
+    </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #1a1a1a;
+            --bg-panel: #2d2d2d;
+            --accent: #4CAF50;
+            --text-light: #f0f0f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* --- UI STYLES --- */
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            max-width: 1200px;
+            width: 95%;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .panel {
+            background: var(--bg-panel);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        h2 { margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; }
+
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #aaa; }
+        
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #333;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        /* Combined Input Group Styling */
+        .input-group { display: flex; }
+        .input-group input {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            border-right: none;
+        }
+        .input-group select {
+            width: auto;
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+            background-color: #444;
+            flex-shrink: 0;
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #333;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+        
+        .toggle-group input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
+        .toggle-group label { margin: 0; color: white; cursor: pointer; font-weight: bold; }
+
+        .advanced-text-group {
+            background: #222;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px dashed #555;
+            margin-top: -5px;
+            margin-bottom: 15px;
+        }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: opacity 0.2s;
+        }
+
+        .btn-add { background-color: var(--accent); color: white; }
+        .btn-print { background-color: #2196F3; color: white; }
+        .btn-clear { background-color: #f44336; color: white; flex: 0.5; }
+        button:hover { opacity: 0.9; }
+
+        /* Queue List */
+        .queue-list {
+            list-style: none;
+            padding: 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .queue-item {
+            background: #333;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .delete-btn {
+            background: #ff5252;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        /* --- LABEL DESIGN --- */
+        .label-preview-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #444;
+            padding: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .card {
+            background-color: #333; 
+            position: relative;
+            box-sizing: border-box;
+            border: 2px solid black; 
+            display: flex;
+            flex-direction: column;
+            padding: 0.15in; 
+            text-align: center;
+            overflow: hidden; 
+            transition: all 0.3s ease;
+        }
+
+        /* INK SAVER OVERRIDES */
+        .card.ink-saver {
+            background: white !important;
+        }
+        .card.ink-saver .hi-vis {
+            -webkit-text-stroke: 0px !important;
+            text-shadow: none !important;
+            color: black !important;
+        }
+        .card.ink-saver .strain-type {
+            color: var(--theme-color) !important;
+        }
+
+        /* HIGH VISIBILITY TEXT STYLE */
+        .hi-vis {
+            font-family: 'Anton', sans-serif;
+            color: white;
+            -webkit-text-stroke: 3px black;
+            paint-order: stroke fill;
+            text-shadow: 4px 4px 0px #000;
+            line-height: 0.95; 
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .strain-content {
+            flex: 1; 
+            display: flex;
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center;
+            min-height: 0;
+            margin-bottom: 5px;
+        }
+
+        .strain-name { width: 100%; word-wrap: break-word; }
+        
+        .strain-type-container { flex-shrink: 0; margin-bottom: 5px; }
+
+        .strain-type {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 700;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .qr-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
+            margin: 5px 0;
+        }
+
+        .metrics {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-top: 5px;
+            border-top: 4px solid black;
+        }
+        
+        .card.ink-saver .metrics { border-top: 4px solid var(--theme-color); }
+
+        .metric-thc, .metric-price { line-height: 1; }
+
+        /* --- PRINT STYLES --- */
+        #print-area { display: none; }
+
+        @media print {
+            @page { size: landscape; margin: 0.25in; }
+            body { background: white; margin: 0; display: block; }
+            .app-container { display: none; }
+            
+            #print-area {
+                display: flex;
+                flex-wrap: wrap;
+                width: 100%;
+                justify-content: center;
+                align-content: flex-start;
+            }
+
+            .print-page {
+                width: 10.5in;
+                height: 8in;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.1in;
+                page-break-after: always;
+                justify-content: flex-start;
+                align-items: flex-start;
+            }
+
+            .card {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                margin-bottom: 0.1in;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="panel">
+            <h2>Create Label</h2>
+            
+            <div class="form-group toggle-group">
+                <input type="checkbox" id="inputInkSaver" onchange="handleTypeChange()">
+                <label for="inputInkSaver">🌱 Ink-Saver Mode</label>
+            </div>
+
+            <div class="form-group">
+                <label>Label Dimensions</label>
+                <select id="inputSize" onchange="updatePreview()">
+                    <option value="old">Standard (5" wide x 3.75" tall)</option>
+                    <option value="new">Tall (3" wide x 6" tall)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Strain Name</label>
+                <input type="text" id="inputName" placeholder="e.g. Tropical Citrus" oninput="updatePreview()">
+            </div>
+
+            <div class="advanced-text-group">
+                <label style="color: #fff; margin-bottom: 10px;">Text Adjustments (Optional Overrides)</label>
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex:1;">
+                        <label style="font-size:0.8rem">Font Size (pt)</label>
+                        <input type="number" id="inputCustomSize" placeholder="Auto" oninput="updatePreview()">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:0.8rem">Line Spacing</label>
+                        <input type="number" step="0.05" id="inputCustomLineHeight" placeholder="0.95" oninput="updatePreview()">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Strain Type</label>
+                <select id="inputType" onchange="handleTypeChange()">
+                    <option value="INDICA">Indica (Purple)</option>
+                    <option value="SATIVA">Sativa (Red)</option>
+                    <option value="HYBRID">Hybrid (Green)</option>
+                    <option value="SATIVA HYBRID">Sativa Hybrid (Green -> Red)</option>
+                    <option value="INDICA HYBRID">Indica Hybrid (Green -> Purple)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex:1;">
+                        <label>THC % (Number only)</label>
+                        <input type="text" id="inputTHC" placeholder="25" oninput="updatePreview()">
+                    </div>
+                    
+                    <div style="flex:1;">
+                        <label>Price</label>
+                        <div class="input-group">
+                            <input type="text" id="inputPrice" placeholder="5" value="5" oninput="updatePreview()">
+                            <select id="inputPriceUnit" onchange="updatePreview()">
+                                <option value="/G">/g</option>
+                                <option value="">Unit</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>QR Code Link (Optional)</label>
+                <input type="text" id="inputURL" placeholder="https://leafly.com/..." oninput="updatePreview()">
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-add" onclick="addToQueue()">+ Add to Queue</button>
+                <button class="btn-clear" onclick="clearInputs()">Reset</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Preview</h2>
+            <div class="label-preview-container">
+                <div id="previewCard" class="card">
+                    <div class="strain-content">
+                        <div id="prevName" class="strain-name hi-vis">TROPICAL CITRUS</div>
+                    </div>
+
+                    <div class="strain-type-container">
+                        <div id="prevType" class="strain-type hi-vis">SATIVA</div>
+                    </div>
+                    
+                    <div id="prevQR" class="qr-container"></div>
+
+                    <div class="metrics">
+                        <div id="prevTHC" class="metric-thc hi-vis">25% THC</div>
+                        <div id="prevPrice" class="metric-price hi-vis">$5/G</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 2rem;">Print Queue (<span id="queueCount">0</span>)</h3>
+            <ul id="queueList" class="queue-list"></ul>
+            
+            <div class="btn-group">
+                <button class="btn-print" onclick="printLabels()">🖨️ Print Labels</button>
+                <button class="btn-clear" onclick="clearQueue()" style="background:#444;">Clear Queue</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="print-area"></div>
+
+    <script>
+        let queue = [];
+        let currentBackgroundStyle = ""; 
+        let currentBorderStyle = "";
+        let currentThemeColor = "";
+        
+        window.onload = function() {
+            const savedQueue = localStorage.getItem('labelQueue');
+            if(savedQueue) {
+                queue = JSON.parse(savedQueue);
+                renderQueue();
+            }
+            document.getElementById('inputType').value = "SATIVA";
+            handleTypeChange();
+        };
+
+        function getFormattedTHC(val) {
+            let clean = val.replace(/%|THC/gi, '').trim();
+            if(!clean) return "0% THC";
+            return clean + "% THC";
+        }
+
+        function getFormattedPrice(val) {
+            const unit = document.getElementById('inputPriceUnit').value;
+            let clean = val.replace(/\$|\/G|ea/gi, '').trim();
+            if(!clean) return "$5" + unit;
+            return "$" + clean + unit;
+        }
+
+        function handleTypeChange() {
+            const typeRaw = document.getElementById('inputType').value;
+            const isInkSaver = document.getElementById('inputInkSaver').checked;
+            
+            const red = "#d32f2f";
+            const purple = "#7b1fa2";
+            const green = "#388e3c";
+
+            if(typeRaw === "SATIVA") currentThemeColor = red;
+            else if(typeRaw === "INDICA") currentThemeColor = purple;
+            else if(typeRaw === "HYBRID") currentThemeColor = green;
+            else if(typeRaw === "SATIVA HYBRID") currentThemeColor = red;
+            else if(typeRaw === "INDICA HYBRID") currentThemeColor = purple;
+
+            if (isInkSaver) {
+                currentBackgroundStyle = "background-color: white;";
+                currentBorderStyle = `6px solid ${currentThemeColor}`;
+            } else {
+                currentBorderStyle = "2px solid black";
+                if(typeRaw === "SATIVA") currentBackgroundStyle = `background-color: ${red};`;
+                else if(typeRaw === "INDICA") currentBackgroundStyle = `background-color: ${purple};`;
+                else if(typeRaw === "HYBRID") currentBackgroundStyle = `background-color: ${green};`;
+                else if(typeRaw === "SATIVA HYBRID") currentBackgroundStyle = `background: linear-gradient(135deg, ${green}, ${red});`;
+                else if(typeRaw === "INDICA HYBRID") currentBackgroundStyle = `background: linear-gradient(135deg, ${green}, ${purple});`;
+            }
+
+            const card = document.getElementById('previewCard');
+            card.style.cssText = currentBackgroundStyle;
+            card.style.border = currentBorderStyle;
+            card.style.setProperty('--theme-color', currentThemeColor);
+            
+            if (isInkSaver) card.classList.add('ink-saver');
+            else card.classList.remove('ink-saver');
+
+            document.getElementById('prevType').innerText = typeRaw;
+            updatePreview();
+        }
+
+        function updatePreview() {
+            const name = document.getElementById('inputName').value || "STRAIN NAME";
+            const rawTHC = document.getElementById('inputTHC').value;
+            const rawPrice = document.getElementById('inputPrice').value;
+            const url = document.getElementById('inputURL').value;
+            
+            document.getElementById('prevName').innerText = name;
+            document.getElementById('prevTHC').innerText = getFormattedTHC(rawTHC);
+            document.getElementById('prevPrice').innerText = getFormattedPrice(rawPrice);
+
+            // Size mappings 
+            const sizeMap = {
+                'old': { width: '5in', height: '3.75in', scale: 1 },
+                'new': { width: '3in', height: '6in', scale: 0.6 } 
+            };
+            
+            const selectedSize = document.getElementById('inputSize').value;
+            const dims = sizeMap[selectedSize];
+
+            const card = document.getElementById('previewCard');
+            card.style.width = dims.width;
+            card.style.height = dims.height;
+
+            // Font Scaling Logic (Tweaked slightly downward for better defaults on wrapped lines)
+            const nameEl = document.getElementById('prevName');
+            let baseFontSize = 100; 
+            
+            if(name.length > 6) baseFontSize = 80;
+            if(name.length > 9) baseFontSize = 65;
+            if(name.length > 12) baseFontSize = 55;
+            if(name.length > 15) baseFontSize = 45;
+            if(name.length > 20) baseFontSize = 35;
+
+            // Apply overrides if provided by user
+            const customSize = document.getElementById('inputCustomSize').value;
+            const customLineHeight = document.getElementById('inputCustomLineHeight').value || "0.95";
+            
+            if (customSize) {
+                baseFontSize = parseFloat(customSize);
+            }
+            
+            nameEl.style.fontSize = (baseFontSize * dims.scale) + 'pt';
+            nameEl.style.lineHeight = customLineHeight;
+            
+            document.getElementById('prevType').style.fontSize = (35 * dims.scale) + 'pt';
+            document.getElementById('prevTHC').style.fontSize = (45 * dims.scale) + 'pt';
+            document.getElementById('prevPrice').style.fontSize = (45 * dims.scale) + 'pt';
+
+            // Handle QR Code
+            const qrContainer = document.getElementById('prevQR');
+            qrContainer.innerHTML = "";
+            if(url) {
+                new QRCode(qrContainer, {
+                    text: url,
+                    width: 90 * dims.scale,
+                    height: 90 * dims.scale,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.L
+                });
+            }
+        }
+
+        function addToQueue() {
+            const name = document.getElementById('inputName').value || "STRAIN NAME";
+            const finalTHC = getFormattedTHC(document.getElementById('inputTHC').value);
+            const finalPrice = getFormattedPrice(document.getElementById('inputPrice').value);
+            const url = document.getElementById('inputURL').value;
+            const isInkSaver = document.getElementById('inputInkSaver').checked;
+            
+            const selectedSize = document.getElementById('inputSize').value;
+            const sizeMap = {
+                'old': { width: '5in', height: '3.75in', scale: 1, label: 'Standard' },
+                'new': { width: '3in', height: '6in', scale: 0.6, label: 'Tall' }
+            };
+            const dims = sizeMap[selectedSize];
+
+            // Re-calculate the font size and grab custom inputs for this specific queued item
+            let baseFontSize = 100; 
+            if(name.length > 6) baseFontSize = 80;
+            if(name.length > 9) baseFontSize = 65;
+            if(name.length > 12) baseFontSize = 55;
+            if(name.length > 15) baseFontSize = 45;
+            if(name.length > 20) baseFontSize = 35;
+
+            const customSize = document.getElementById('inputCustomSize').value;
+            if (customSize) baseFontSize = parseFloat(customSize);
+            const customLineHeight = document.getElementById('inputCustomLineHeight').value || "0.95";
+
+            const item = {
+                name: name,
+                type: document.getElementById('inputType').value,
+                thc: finalTHC,     
+                price: finalPrice,
+                url: url,
+                bgStyle: currentBackgroundStyle,
+                borderStyle: currentBorderStyle,
+                themeColor: currentThemeColor,
+                isInkSaver: isInkSaver,
+                width: dims.width,
+                height: dims.height,
+                scale: dims.scale,
+                sizeLabel: dims.label,
+                fontSize: baseFontSize,
+                lineHeight: customLineHeight
+            };
+
+            queue.push(item);
+            saveQueue();
+            renderQueue();
+            
+            const btn = document.querySelector('.btn-add');
+            const originalText = btn.innerText;
+            btn.innerText = "Added!";
+            setTimeout(() => btn.innerText = originalText, 1000);
+        }
+
+        function removeFromQueue(index) {
+            queue.splice(index, 1);
+            saveQueue();
+            renderQueue();
+        }
+
+        function clearQueue() {
+            if(confirm("Clear all labels?")) {
+                queue = [];
+                saveQueue();
+                renderQueue();
+            }
+        }
+
+        function saveQueue() {
+            localStorage.setItem('labelQueue', JSON.stringify(queue));
+            document.getElementById('queueCount').innerText = queue.length;
+        }
+
+        function renderQueue() {
+            const list = document.getElementById('queueList');
+            list.innerHTML = "";
+            
+            queue.forEach((item, index) => {
+                // Fallback added for items queued before sizing feature existed
+                const sizeLabel = item.sizeLabel || "Standard"; 
+                
+                const li = document.createElement('li');
+                li.className = "queue-item";
+                li.innerHTML = `
+                    <div>
+                        <div style="font-size:0.8rem; color:${item.themeColor}">
+                            ● ${item.type} | ${sizeLabel} ${item.isInkSaver ? '(Ink-Saver)' : ''}
+                        </div>
+                        <span>${item.name} (${item.thc})</span>
+                    </div>
+                    <button class="delete-btn" onclick="removeFromQueue(${index})">X</button>
+                `;
+                list.appendChild(li);
+            });
+            document.getElementById('queueCount').innerText = queue.length;
+        }
+
+        function clearInputs() {
+            document.getElementById('inputName').value = "";
+            document.getElementById('inputCustomSize').value = "";
+            document.getElementById('inputCustomLineHeight').value = "";
+            document.getElementById('inputTHC').value = "";
+            document.getElementById('inputPrice').value = "5"; 
+            document.getElementById('inputPriceUnit').value = "/G"; 
+            document.getElementById('inputURL').value = ""; 
+            updatePreview();
+        }
+
+        function printLabels() {
+            if(queue.length === 0) {
+                alert("Queue is empty!");
+                return;
+            }
+
+            const printArea = document.getElementById('print-area');
+            printArea.innerHTML = "";
+
+            let currentPage = null;
+            
+            queue.forEach((item, index) => {
+                if (index % 4 === 0) {
+                    currentPage = document.createElement('div');
+                    currentPage.className = 'print-page';
+                    printArea.appendChild(currentPage);
+                }
+
+                // Fallbacks for older queued items
+                const savedFontSize = item.fontSize || 55;
+                const savedLineHeight = item.lineHeight || "0.95";
+
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'card' + (item.isInkSaver ? ' ink-saver' : '');
+                cardDiv.style.cssText = `width: ${item.width}; height: ${item.height}; ${item.bgStyle} border: ${item.borderStyle};`;
+                cardDiv.style.setProperty('--theme-color', item.themeColor);
+
+                cardDiv.innerHTML = `
+                    <div class="strain-content">
+                        <div class="strain-name hi-vis" style="font-size: ${savedFontSize * item.scale}pt; line-height: ${savedLineHeight};">${item.name}</div>
+                    </div>
+                    <div class="strain-type-container">
+                        <div class="strain-type hi-vis" style="font-size: ${35 * item.scale}pt;">${item.type}</div>
+                    </div>
+                    <div class="qr-container"></div>
+                    <div class="metrics">
+                        <div class="metric-thc hi-vis" style="font-size: ${45 * item.scale}pt;">${item.thc}</div>
+                        <div class="metric-price hi-vis" style="font-size: ${45 * item.scale}pt;">${item.price}</div>
+                    </div>
+                `;
+                
+                currentPage.appendChild(cardDiv);
+
+                if(item.url) {
+                    const qrEl = cardDiv.querySelector('.qr-container');
+                    new QRCode(qrEl, {
+                        text: item.url,
+                        width: 100 * item.scale,
+                        height: 100 * item.scale,
+                        colorDark : "#000000",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.L
+                    });
+                }
+            });
+
+            setTimeout(() => {
+                window.print();
+            }, 300);
+        }
+    </script>
+</body>
+</html>

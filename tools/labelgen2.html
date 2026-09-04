@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greenery Label Maker (Unit Pricing)</title>
+    <style>
+        /* Using darker, blockier fonts for distance reading */
+        @import url('https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@700&display=swap');
+
+        :root {
+            --card-width: 5in;
+            --card-height: 3.75in;
+            --bg-dark: #1a1a1a;
+            --bg-panel: #2d2d2d;
+            --accent: #4CAF50;
+            --text-light: #f0f0f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* --- UI STYLES --- */
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            max-width: 1200px;
+            width: 95%;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .panel {
+            background: var(--bg-panel);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        h2 { margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; }
+
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #aaa; }
+        
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #333;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        /* Combined Input Group Styling */
+        .input-group {
+            display: flex;
+        }
+        .input-group input {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            border-right: none;
+        }
+        .input-group select {
+            width: auto;
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+            background-color: #444;
+            flex-shrink: 0;
+        }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: opacity 0.2s;
+        }
+
+        .btn-add { background-color: var(--accent); color: white; }
+        .btn-print { background-color: #2196F3; color: white; }
+        .btn-clear { background-color: #f44336; color: white; flex: 0.5; }
+        button:hover { opacity: 0.9; }
+
+        /* Queue List */
+        .queue-list {
+            list-style: none;
+            padding: 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .queue-item {
+            background: #333;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .delete-btn {
+            background: #ff5252;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        /* --- LABEL DESIGN --- */
+        .label-preview-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #444;
+            padding: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        /* The actual label card */
+        .card {
+            width: var(--card-width);
+            height: var(--card-height);
+            background-color: #333; 
+            position: relative;
+            box-sizing: border-box;
+            border: 2px solid black; 
+            
+            /* FLEXBOX LAYOUT */
+            display: flex;
+            flex-direction: column;
+            padding: 0.15in; 
+            text-align: center;
+            overflow: hidden; 
+        }
+
+        /* HIGH VISIBILITY TEXT STYLE */
+        .hi-vis {
+            font-family: 'Anton', sans-serif;
+            color: white;
+            -webkit-text-stroke: 3px black;
+            paint-order: stroke fill;
+            text-shadow: 4px 4px 0px #000;
+            line-height: 0.95; 
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* TOP SECTION (Flexible) */
+        .strain-content {
+            flex: 1; 
+            display: flex;
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center;
+            min-height: 0;
+            margin-bottom: 5px;
+        }
+
+        .strain-name {
+            width: 100%;
+            word-wrap: break-word;
+        }
+
+        /* MIDDLE SECTION (Type) */
+        .strain-type-container {
+            flex-shrink: 0;
+            margin-bottom: 5px;
+        }
+
+        .strain-type {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 700;
+            font-size: 35pt;
+            -webkit-text-stroke: 2px black;
+            margin: 0;
+            line-height: 1;
+        }
+
+        /* BOTTOM SECTION (Static Footer) */
+        .metrics {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-top: 5px;
+            border-top: 4px solid black;
+        }
+        
+        .metric-thc, .metric-price {
+            font-size: 45pt;
+            line-height: 1;
+        }
+
+        /* --- PRINT STYLES --- */
+        #print-area { display: none; }
+
+        @media print {
+            @page {
+                size: landscape;
+                margin: 0.25in;
+            }
+
+            body {
+                background: white;
+                margin: 0;
+                display: block;
+            }
+
+            .app-container { display: none; }
+            
+            #print-area {
+                display: flex;
+                flex-wrap: wrap;
+                width: 100%;
+                justify-content: center;
+                align-content: flex-start;
+            }
+
+            .print-page {
+                width: 10.5in;
+                height: 8in;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: 1fr 1fr;
+                gap: 0;
+                page-break-after: always;
+                justify-items: center;
+                align-items: center;
+            }
+
+            .card {
+                width: 5in;
+                height: 3.75in;
+                border: 2px solid black !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="panel">
+            <h2>Create Label</h2>
+            
+            <div class="form-group">
+                <label>Strain Name</label>
+                <input type="text" id="inputName" placeholder="e.g. Tropical Citrus" oninput="updatePreview()">
+            </div>
+
+            <div class="form-group">
+                <label>Strain Type</label>
+                <select id="inputType" onchange="handleTypeChange()">
+                    <option value="INDICA">Indica (Purple)</option>
+                    <option value="SATIVA">Sativa (Red)</option>
+                    <option value="HYBRID">Hybrid (Green)</option>
+                    <option value="SATIVA HYBRID">Sativa Hybrid (Green -> Red)</option>
+                    <option value="INDICA HYBRID">Indica Hybrid (Green -> Purple)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex:1;">
+                        <label>THC % (Number only)</label>
+                        <input type="text" id="inputTHC" placeholder="25" oninput="updatePreview()">
+                    </div>
+                    
+                    <div style="flex:1;">
+                        <label>Price</label>
+                        <div class="input-group">
+                            <input type="text" id="inputPrice" placeholder="5" value="5" oninput="updatePreview()">
+                            <select id="inputPriceUnit" onchange="updatePreview()">
+                                <option value="/G">/g</option>
+                                <option value="">Unit</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-add" onclick="addToQueue()">+ Add to Queue</button>
+                <button class="btn-clear" onclick="clearInputs()">Reset</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Preview</h2>
+            <div class="label-preview-container">
+                <div id="previewCard" class="card">
+                    <div class="strain-content">
+                        <div id="prevName" class="strain-name hi-vis" style="font-size: 100pt;">TROPICAL CITRUS</div>
+                    </div>
+
+                    <div class="strain-type-container">
+                        <div id="prevType" class="strain-type hi-vis">SATIVA</div>
+                    </div>
+
+                    <div class="metrics">
+                        <div id="prevTHC" class="metric-thc hi-vis">25% THC</div>
+                        <div id="prevPrice" class="metric-price hi-vis">$5/G</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 2rem;">Print Queue (<span id="queueCount">0</span>)</h3>
+            <ul id="queueList" class="queue-list">
+                </ul>
+            
+            <div class="btn-group">
+                <button class="btn-print" onclick="printLabels()">🖨️ Print Labels</button>
+                <button class="btn-clear" onclick="clearQueue()" style="background:#444;">Clear Queue</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="print-area"></div>
+
+    <script>
+        let queue = [];
+        let currentBackgroundStyle = "background-color: #d32f2f;"; 
+        
+        window.onload = function() {
+            const savedQueue = localStorage.getItem('labelQueue');
+            if(savedQueue) {
+                queue = JSON.parse(savedQueue);
+                renderQueue();
+            }
+            // Init Sativa/Red
+            document.getElementById('inputType').value = "SATIVA";
+            handleTypeChange();
+            updatePreview();
+        };
+
+        // --- HELPER FORMATTING FUNCTIONS ---
+        function getFormattedTHC(val) {
+            let clean = val.replace(/%|THC/gi, '').trim();
+            if(!clean) return "0% THC";
+            return clean + "% THC";
+        }
+
+        function getFormattedPrice(val) {
+            // Get selected unit
+            const unit = document.getElementById('inputPriceUnit').value;
+            
+            // Clean input (remove $, /G, etc if user typed them)
+            let clean = val.replace(/\$|\/G|ea/gi, '').trim();
+            
+            if(!clean) return "$5" + unit;
+            return "$" + clean + unit;
+        }
+
+        function updatePreview() {
+            const name = document.getElementById('inputName').value || "STRAIN NAME";
+            const rawTHC = document.getElementById('inputTHC').value;
+            const rawPrice = document.getElementById('inputPrice').value;
+            
+            document.getElementById('prevName').innerText = name;
+            
+            // Apply Auto-Formatting here
+            document.getElementById('prevTHC').innerText = getFormattedTHC(rawTHC);
+            document.getElementById('prevPrice').innerText = getFormattedPrice(rawPrice);
+
+            // --- Font Scaling ---
+            const nameEl = document.getElementById('prevName');
+            let fontSize = 100; // Max size
+            
+            // Basic length checks
+            if(name.length > 6) fontSize = 85;
+            if(name.length > 9) fontSize = 75;
+            if(name.length > 12) fontSize = 65;
+            if(name.length > 15) fontSize = 55;
+            if(name.length > 20) fontSize = 45;
+            
+            nameEl.style.fontSize = fontSize + 'pt';
+        }
+
+        function handleTypeChange() {
+            const typeRaw = document.getElementById('inputType').value;
+            const card = document.getElementById('previewCard');
+            const typeText = document.getElementById('prevType');
+
+            typeText.innerText = typeRaw;
+
+            const red = "#d32f2f";
+            const purple = "#7b1fa2";
+            const green = "#388e3c";
+
+            if(typeRaw === "SATIVA") {
+                currentBackgroundStyle = `background-color: ${red};`;
+            } else if(typeRaw === "INDICA") {
+                currentBackgroundStyle = `background-color: ${purple};`;
+            } else if(typeRaw === "HYBRID") {
+                currentBackgroundStyle = `background-color: ${green};`;
+            } else if(typeRaw === "SATIVA HYBRID") {
+                currentBackgroundStyle = `background: linear-gradient(135deg, ${green}, ${red});`;
+            } else if(typeRaw === "INDICA HYBRID") {
+                currentBackgroundStyle = `background: linear-gradient(135deg, ${green}, ${purple});`;
+            }
+
+            card.style = currentBackgroundStyle;
+            card.style.cssText += "border: 2px solid black;";
+        }
+
+        function addToQueue() {
+            // Apply formatting BEFORE saving to queue
+            const finalTHC = getFormattedTHC(document.getElementById('inputTHC').value);
+            const finalPrice = getFormattedPrice(document.getElementById('inputPrice').value);
+
+            const item = {
+                name: document.getElementById('inputName').value || "STRAIN NAME",
+                type: document.getElementById('inputType').value,
+                thc: finalTHC,     
+                price: finalPrice, 
+                bgStyle: currentBackgroundStyle
+            };
+
+            queue.push(item);
+            saveQueue();
+            renderQueue();
+            
+            const btn = document.querySelector('.btn-add');
+            const originalText = btn.innerText;
+            btn.innerText = "Added!";
+            setTimeout(() => btn.innerText = originalText, 1000);
+        }
+
+        function removeFromQueue(index) {
+            queue.splice(index, 1);
+            saveQueue();
+            renderQueue();
+        }
+
+        function clearQueue() {
+            if(confirm("Clear all labels?")) {
+                queue = [];
+                saveQueue();
+                renderQueue();
+            }
+        }
+
+        function saveQueue() {
+            localStorage.setItem('labelQueue', JSON.stringify(queue));
+            document.getElementById('queueCount').innerText = queue.length;
+        }
+
+        function renderQueue() {
+            const list = document.getElementById('queueList');
+            list.innerHTML = "";
+            
+            queue.forEach((item, index) => {
+                let dotColor = "#fff";
+                if(item.bgStyle.includes("#d32f2f")) dotColor = "#d32f2f";
+                if(item.bgStyle.includes("#7b1fa2")) dotColor = "#7b1fa2";
+                if(item.bgStyle.includes("#388e3c")) dotColor = "#388e3c";
+
+                const li = document.createElement('li');
+                li.className = "queue-item";
+                li.innerHTML = `
+                    <div>
+                        <div style="font-size:0.8rem; color:${dotColor}">● ${item.type}</div>
+                        <span>${item.name} (${item.thc} - ${item.price})</span>
+                    </div>
+                    <button class="delete-btn" onclick="removeFromQueue(${index})">X</button>
+                `;
+                list.appendChild(li);
+            });
+            document.getElementById('queueCount').innerText = queue.length;
+        }
+
+        function clearInputs() {
+            document.getElementById('inputName').value = "";
+            document.getElementById('inputTHC').value = "";
+            // Reset price to default
+            document.getElementById('inputPrice').value = "5"; 
+            document.getElementById('inputPriceUnit').value = "/G"; 
+            updatePreview();
+        }
+
+        function printLabels() {
+            if(queue.length === 0) {
+                alert("Queue is empty!");
+                return;
+            }
+
+            const printArea = document.getElementById('print-area');
+            printArea.innerHTML = "";
+
+            let currentPage = null;
+            
+            queue.forEach((item, index) => {
+                if (index % 4 === 0) {
+                    currentPage = document.createElement('div');
+                    currentPage.className = 'print-page';
+                    printArea.appendChild(currentPage);
+                }
+
+                let fontSize = 100;
+                if(item.name.length > 6) fontSize = 85;
+                if(item.name.length > 9) fontSize = 75;
+                if(item.name.length > 12) fontSize = 65;
+                if(item.name.length > 15) fontSize = 55;
+                if(item.name.length > 20) fontSize = 45;
+
+                const cardHTML = `
+                    <div class="card" style="${item.bgStyle} border: 2px solid black;">
+                        <div class="strain-content">
+                            <div class="strain-name hi-vis" style="font-size: ${fontSize}pt;">${item.name}</div>
+                        </div>
+                        <div class="strain-type-container">
+                            <div class="strain-type hi-vis">${item.type}</div>
+                        </div>
+                        <div class="metrics">
+                            <div class="metric-thc hi-vis">${item.thc}</div>
+                            <div class="metric-price hi-vis">${item.price}</div>
+                        </div>
+                    </div>
+                `;
+                
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = cardHTML;
+                currentPage.appendChild(tempDiv.firstElementChild);
+            });
+
+            window.print();
+        }
+    </script>
+</body>
+</html>
