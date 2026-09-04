@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Inventory Splitter</title>
+  <style>
+    body { font-family: sans-serif; margin: 30px; background: #fafbfc; color: #1a1a1a; }
+    h1 { font-size: 2em; margin-bottom: 0.3em; }
+    label { font-weight: bold; margin-top: 1em; display: block; }
+    input[type="file"], input[type="number"], input[type="search"] { margin: 8px 0; font-size: 1em; }
+    button { padding: 10px 20px; margin: 8px 4px 0 0; font-size: 1em; border-radius: 7px; border: none; background: #1a943a; color: white; cursor: pointer; }
+    button:disabled { background: #aaa; }
+    .preset-btn { background: #347dca; }
+    .help-btn { background: #aaa; font-weight: bold; font-size: 1.3em; border-radius: 50%; width: 2em; height: 2em; padding: 0; margin-left: 0.5em;}
+    .split-row { display: flex; gap: 1em; margin-bottom: 1em; align-items: center; }
+    .split-row label { font-weight: normal; margin: 0; }
+    #search-bar { margin: 8px 0 0 0; width: 200px; }
+    #table-wrap { max-height: 55vh; overflow: auto; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; min-width: 750px; }
+    th, td { border: 1px solid #ccc; padding: 7px 12px; text-align: left; background: #fff; }
+    th { background: #e5fbe7; position: sticky; top: 0; z-index: 2; }
+    .hidden { display: none; }
+    .totals-row th, .totals-row td { background: #def3e3; font-weight: bold; }
+    .checkbox-cell { text-align: center; }
+    .sticky { position: sticky; left: 0; background: #e5fbe7; z-index: 3; }
+    .help-modal-bg { display: none; position: fixed; z-index: 10; left: 0; top: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4);}
+    .help-modal { background: #fff; border-radius: 12px; max-width: 400px; margin: 6vh auto 0; padding: 2em 1.5em 1.5em 1.5em; box-shadow: 0 4px 32px #0003; }
+    .help-modal h2 { font-size: 1.3em; margin-bottom: .3em; }
+    .help-modal p, .help-modal ul { margin: 0.5em 0; }
+    .help-modal .close-btn { float: right; font-size: 1.1em; background: #347dca; color: white; padding: 2px 10px; border-radius: 7px; border: none; margin-top: -0.7em; margin-right: -0.7em; cursor: pointer;}
+    @media print {
+      body * { visibility: hidden; }
+      #output, #output * { visibility: visible; }
+      #output { position: absolute; left: 0; top: 0; width: 100vw; }
+      .help-modal-bg { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <h1>
+    Inventory Splitter
+    <button class="help-btn" id="help-open" title="How-to">?</button>
+  </h1>
+  <p>Upload your inventory CSV, set the split ratio, and split! <br>Any leftover units always go to <b>Midtown</b>.</p>
+  <form id="split-form">
+    <label>Inventory CSV:
+      <input type="file" id="csv-file" accept=".csv" required>
+    </label>
+    <div class="split-row">
+      <b>Preset Splits:</b>
+      <button type="button" class="preset-btn" data-m="50" data-a="25" data-c="25">50/25/25</button>
+      <button type="button" class="preset-btn" data-m="60" data-a="20" data-c="20">60/20/20</button>
+      <button type="button" class="preset-btn" data-m="70" data-a="15" data-c="15">70/15/15</button>
+    </div>
+    <div class="split-row">
+      <label>Midtown: <input type="number" id="midtown" min="0" required style="width: 4em"></label>
+      <label>Alto: <input type="number" id="alto" min="0" required style="width: 4em"></label>
+      <label>Carrizozo: <input type="number" id="carrizozo" min="0" required style="width: 4em"></label>
+    </div>
+    <button type="submit" id="split-btn">Split Inventory</button>
+  </form>
+
+  <input id="search-bar" type="search" placeholder="Search products...">
+  <div id="output"></div>
+  <button id="print-btn" class="hidden">Print Results</button>
+  <button id="download-btn" class="hidden">Download Split as CSV</button>
+  <div id="debug" class="debug"></div>
+
+  <!-- How-To Help Modal -->
+  <div class="help-modal-bg" id="help-modal-bg">
+    <div class="help-modal">
+      <button class="close-btn" id="help-close">Close</button>
+      <h2>How to use the Inventory Splitter</h2>
+      <ul>
+        <li><b>Step 1:</b> Upload your CSV. It must have <i>Product</i> and <i>Remaining Count</i> columns.</li>
+        <li><b>Step 2:</b> Choose a split ratio (preset buttons, or enter your own for Midtown, Alto, Carrizozo).</li>
+        <li><b>Step 3:</b> Click "Split Inventory".</li>
+        <li><b>Step 4:</b> Exclude products (uncheck box in table) or search/filter by product name.</li>
+        <li><b>Step 5:</b> Download results as CSV or print for your records.</li>
+      </ul>
+      <p><b>Notes:</b> All splits use whole units only. Any leftover units always go to <b>Midtown</b>.</p>
+    </div>
+  </div>
+
+<script>
+function parseCSV(text) {
+  const rows = [];
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  let inQuotes = false, field = '', row = [];
+  for (let line of lines) {
+    row = [];
+    inQuotes = false;
+    field = '';
+    for (let i = 0; i < line.length; i++) {
+      let c = line[i];
+      if (c === '"') {
+        if (inQuotes && line[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if (c === ',' && !inQuotes) {
+        row.push(field);
+        field = '';
+      } else {
+        field += c;
+      }
+    }
+    row.push(field);
+    if (row.length > 1 || field !== '') rows.push(row);
+  }
+  return rows;
+}
+function detectColumns(headers) {
+  let prod = headers.find(h => h.trim().toLowerCase() === "product");
+  let qty = headers.find(h => h.trim().toLowerCase() === "remaining count");
+  if (!prod) prod = headers.find(h => /product/i.test(h));
+  if (!qty) qty = headers.find(h => /remaining\s*count/i.test(h));
+  return { product: prod || headers[0], qty: qty || headers[1] };
+}
+function readCSV(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = e => reject('Failed to read file');
+    reader.readAsText(file);
+  });
+}
+
+let splitRows = [];
+let originalRows = [];
+let splitCols = {};
+let searchValue = '';
+
+function renderTable() {
+  const outputDiv = document.getElementById('output');
+  if (!splitRows.length) {
+    outputDiv.innerHTML = '';
+    document.getElementById('download-btn').classList.add('hidden');
+    document.getElementById('print-btn').classList.add('hidden');
+    return;
+  }
+  let rowsToShow = splitRows.filter(r =>
+    r.include && (!searchValue || r.product.toLowerCase().includes(searchValue))
+  );
+
+  let html = `<div id="table-wrap"><table id="result-table"><thead><tr>
+    <th class="checkbox-cell"></th>
+    <th>Product</th>
+    <th>Midtown</th>
+    <th>Alto</th>
+    <th>Carrizozo</th>
+    <th>Total</th>
+  </tr></thead><tbody>`;
+  let mtTotal = 0, altoTotal = 0, carrizozoTotal = 0, grandTotal = 0;
+  rowsToShow.forEach((r, i) => {
+    html += `<tr>
+      <td class="checkbox-cell"><input type="checkbox" data-row="${r.index}" class="inc-exc" ${r.include ? "checked" : ""}></td>
+      <td>${r.product}</td>
+      <td>${r.midtown}</td>
+      <td>${r.alto}</td>
+      <td>${r.carrizozo}</td>
+      <td>${r.total}</td>
+    </tr>`;
+    mtTotal += r.midtown;
+    altoTotal += r.alto;
+    carrizozoTotal += r.carrizozo;
+    grandTotal += r.total;
+  });
+  html += `</tbody>
+    <tfoot>
+      <tr class="totals-row">
+        <td colspan="2">Totals</td>
+        <td>${mtTotal}</td>
+        <td>${altoTotal}</td>
+        <td>${carrizozoTotal}</td>
+        <td>${grandTotal}</td>
+      </tr>
+    </tfoot>
+  </table></div>`;
+  outputDiv.innerHTML = html;
+  document.getElementById('download-btn').classList.remove('hidden');
+  document.getElementById('print-btn').classList.remove('hidden');
+
+  // Checkbox event
+  document.querySelectorAll('.inc-exc').forEach(cb => {
+    cb.onchange = function() {
+      let idx = parseInt(cb.getAttribute('data-row'), 10);
+      splitRows.find(r => r.index === idx).include = cb.checked;
+      renderTable();
+    };
+  });
+}
+
+document.getElementById('split-form').onsubmit = async function(e) {
+  e.preventDefault();
+  document.getElementById('output').innerHTML = '';
+  document.getElementById('download-btn').classList.add('hidden');
+  document.getElementById('print-btn').classList.add('hidden');
+  document.getElementById('debug').innerHTML = '';
+
+  const csvFile = document.getElementById('csv-file').files[0];
+  const midRatio = parseInt(document.getElementById('midtown').value, 10);
+  const altoRatio = parseInt(document.getElementById('alto').value, 10);
+  const carrizozoRatio = parseInt(document.getElementById('carrizozo').value, 10);
+
+  if (!csvFile || [midRatio, altoRatio, carrizozoRatio].some(x => isNaN(x) || x < 0)) return;
+  const totalRatio = midRatio + altoRatio + carrizozoRatio;
+  if (totalRatio === 0) {
+    document.getElementById('output').innerHTML = '<b style="color:red">The split ratio cannot all be zero.</b>';
+    return;
+  }
+  let csvRaw;
+  try { csvRaw = await readCSV(csvFile); }
+  catch (err) {
+    document.getElementById('output').innerHTML = `<b style="color:red">Error: ${err}</b>`;
+    return;
+  }
+  // Extract data
+  const rows = parseCSV(csvRaw).filter(row => row.length && row.join('').trim() !== '');
+  const headers = rows[0].map(h => h.trim());
+  splitCols = detectColumns(headers);
+  document.getElementById('debug').innerHTML = `Detected product column "<b>${splitCols.product}</b>", quantity column "<b>${splitCols.qty}</b>"<br>`;
+  splitRows = [];
+  originalRows = [];
+  for (let i = 1; i < rows.length; i++) {
+    const rowObj = {};
+    headers.forEach((h, j) => rowObj[h] = (rows[i][j] || '').trim());
+    let pname = rowObj[splitCols.product];
+    let qty = Math.floor(parseFloat(rowObj[splitCols.qty]));
+    if (!pname || isNaN(qty) || qty < 1) continue;
+    // Initial shares (floor division)
+    let midUnits = Math.floor(qty * midRatio / totalRatio);
+    let altoUnits = Math.floor(qty * altoRatio / totalRatio);
+    let carrizozoUnits = Math.floor(qty * carrizozoRatio / totalRatio);
+    let assigned = midUnits + altoUnits + carrizozoUnits;
+    let remainder = qty - assigned;
+    // Leftovers to Midtown (first field)
+    midUnits += remainder;
+    splitRows.push({
+      index: i,
+      include: true,
+      product: pname,
+      midtown: midUnits,
+      alto: altoUnits,
+      carrizozo: carrizozoUnits,
+      total: qty
+    });
+    originalRows.push({ ...splitRows[splitRows.length - 1] });
+  }
+  searchValue = '';
+  document.getElementById('search-bar').value = '';
+  renderTable();
+};
+
+// Preset ratio buttons
+document.querySelectorAll('.preset-btn').forEach(btn => {
+  btn.onclick = function() {
+    document.getElementById('midtown').value = btn.getAttribute('data-m');
+    document.getElementById('alto').value = btn.getAttribute('data-a');
+    document.getElementById('carrizozo').value = btn.getAttribute('data-c');
+  };
+});
+
+// Product filter
+document.getElementById('search-bar').oninput = function() {
+  searchValue = this.value.toLowerCase();
+  renderTable();
+};
+
+// Download CSV
+document.getElementById('download-btn').onclick = function() {
+  let rowsToExport = splitRows.filter(r => r.include && (!searchValue || r.product.toLowerCase().includes(searchValue)));
+  const csvRows = [
+    ['Product', 'Midtown', 'Alto', 'Carrizozo', 'Total'],
+    ...rowsToExport.map(r => [
+      `"${r.product.replace(/"/g, '""')}"`, r.midtown, r.alto, r.carrizozo, r.total
+    ])
+  ].map(r => r.join(','));
+  const blob = new Blob([csvRows.join('\r\n')], {type: 'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'inventory-split.csv';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  }, 100);
+};
+// Print output
+document.getElementById('print-btn').onclick = function() { window.print(); };
+
+// Help modal
+document.getElementById('help-open').onclick = function() {
+  document.getElementById('help-modal-bg').style.display = 'block';
+};
+document.getElementById('help-close').onclick = function() {
+  document.getElementById('help-modal-bg').style.display = 'none';
+};
+document.getElementById('help-modal-bg').onclick = function(e) {
+  if (e.target === this) this.style.display = 'none';
+};
+</script>
+</body>
+</html>

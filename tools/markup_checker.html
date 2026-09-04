@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TGR Markup Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f6f9fa;
+            padding: 16px;
+        }
+        .container {
+            max-width: 98vw;
+            margin: auto;
+            background: #fff;
+            padding: 1.2em 2vw 2em 2vw;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px #0001;
+        }
+        h1 { text-align: center; }
+        .input-section { text-align: center; margin-bottom: 2em; }
+        input[type="file"] { margin: 1em 0; }
+        .actions { margin: 1em 0; text-align: right; }
+        button {
+            padding: 7px 18px; border: none; border-radius: 6px;
+            background: #3280ec; color: #fff; font-weight: bold; cursor: pointer; margin-left: 8px;
+        }
+        button:active { background: #1b52a3; }
+        .wide-table-container { width: 100%; overflow-x: auto; }
+        table {
+            width: 100%; table-layout: auto; border-collapse: collapse; margin-top: 1em; font-size: 1.07em;
+        }
+        th, td {
+            border: 1px solid #ddd; padding: 9px 13px; text-align: left;
+            min-width: 80px; max-width: 440px; word-break: break-word;
+        }
+        th {
+            background: #f0f2f5; cursor: pointer; user-select: none; position: relative;
+        }
+        th.sortable:hover { background: #dbeafe; }
+        th.sorted-asc::after { content: " ▲"; font-size: 0.9em; color: #3280ec; }
+        th.sorted-desc::after { content: " ▼"; font-size: 0.9em; color: #3280ec; }
+        tr:nth-child(even) { background: #fafbfc; }
+        @media (max-width: 800px) {
+            .container { padding: 0.5em 0.1em 1em 0.1em; }
+            table { font-size: 1em; }
+        }
+        @media print {
+            body { background: #fff; }
+            .input-section, .actions { display: none; }
+            .container { box-shadow: none; border: none; padding: 0; max-width: 100vw; }
+            .wide-table-container { overflow: visible !important; }
+            table { page-break-inside: auto; font-size: 0.96em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TGR Markup Checker</h1>
+        <div class="input-section">
+            <label for="csvInput"><b>Upload your Inventory CSV</b></label><br>
+            <input type="file" id="csvInput" accept=".csv">
+            <br>
+            <span id="status"></span>
+        </div>
+        <div class="actions" style="display:none;">
+            <button onclick="window.print()">Print Table</button>
+            <button id="exportBtn">Export to CSV</button>
+        </div>
+        <div id="results"></div>
+    </div>
+    <script>
+    // CSV parsing helper (handles quoted fields, line breaks, commas)
+    function parseCSV(str) {
+        const rows = [];
+        let cur = '', inQuotes = false, row = [];
+        for (let i = 0; i < str.length; i++) {
+            const c = str[i], next = str[i + 1];
+            if (c === '"' && inQuotes && next === '"') { cur += '"'; i++; }
+            else if (c === '"') inQuotes = !inQuotes;
+            else if (c === ',' && !inQuotes) { row.push(cur); cur = ''; }
+            else if ((c === '\n' || c === '\r') && !inQuotes) {
+                if (cur || row.length) { row.push(cur); rows.push(row); }
+                cur = ''; row = [];
+                if (c === '\r' && next === '\n') i++;
+            } else cur += c;
+        }
+        if (cur || row.length) { row.push(cur); rows.push(row); }
+        return rows;
+    }
+
+    // Utility: download string as CSV file
+    function downloadCSV(csv, filename) {
+        const blob = new Blob([csv], {type: "text/csv"});
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+    }
+
+    // Format number as currency or integer for display
+    function fmtNum(val) {
+        return val === null || val === undefined || isNaN(val) ? '' : val % 1 === 0 ? val : Number(val).toFixed(2);
+    }
+
+    // Sorting
+    function sortTableRows(rows, colIdx, isNum, dir) {
+        return rows.sort((a, b) => {
+            let av = a.cells[colIdx].textContent.trim(), bv = b.cells[colIdx].textContent.trim();
+            if (isNum) {
+                av = parseFloat(av); bv = parseFloat(bv);
+                if (isNaN(av)) av = -Infinity;
+                if (isNaN(bv)) bv = -Infinity;
+            }
+            if (av === bv) return 0;
+            return (av > bv ? 1 : -1) * (dir === "asc" ? 1 : -1);
+        });
+    }
+
+    function makeTablesSortable() {
+        document.querySelectorAll("table").forEach(function(table) {
+            const thead = table.querySelector("thead");
+            if (!thead) return;
+            const headers = thead.querySelectorAll("th");
+            headers.forEach((th, idx) => {
+                th.classList.add("sortable");
+                th.onclick = function() {
+                    let dir = th.classList.contains("sorted-asc") ? "desc" : "asc";
+                    headers.forEach(h => h.classList.remove("sorted-asc", "sorted-desc"));
+                    th.classList.add(dir === "asc" ? "sorted-asc" : "sorted-desc");
+                    // Get tbody rows as array
+                    const tbody = table.querySelector("tbody");
+                    let rows = Array.from(tbody.rows);
+                    // Detect if this column is a number
+                    const isNum = rows.some(r => !isNaN(parseFloat(r.cells[idx].textContent.trim())));
+                    // Sort
+                    rows = sortTableRows(rows, idx, isNum, dir);
+                    // Re-append in sorted order
+                    rows.forEach(row => tbody.appendChild(row));
+                }
+            });
+        });
+    }
+
+    document.getElementById('csvInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        document.getElementById('status').textContent = 'Processing...';
+        reader.onload = function(evt) {
+            try {
+                const text = evt.target.result;
+                let rows = parseCSV(text);
+                if (rows.length < 2) throw "Not enough rows.";
+                // Extract headers and map for index
+                const headers = rows[0].map(h => h.trim());
+                const data = rows.slice(1).map(row =>
+                    Object.fromEntries(headers.map((h, i) => [h, (row[i] ?? '').trim()]))
+                );
+                // Find required columns (flexible to capitalizations/spaces)
+                function findCol(name) {
+                    const options = [name, name.toLowerCase(), name.replace(/ /g, ''), name.replace(/ /g, '').toLowerCase()];
+                    return headers.find(h => options.includes(h.replace(/ /g, '').toLowerCase()));
+                }
+                const colCost = findCol("CostPerUnit");
+                const colValue = findCol("ValuePerUnit");
+                const colCategory = findCol("Category");
+                const locCol = findCol("Location");
+                const colProduct = findCol("Product");
+                const colStrain = findCol("Strain");
+                const colType = findCol("Type");
+
+
+                if (!colCost || !colValue) throw "Missing CostPerUnit or ValuePerUnit column!";
+
+                // Filter out accessories and check markup
+                const outData = data.filter(row => {
+                    if (!row[colCategory]) return false;
+                    return row[colCategory].toLowerCase() !== "accessories";
+                }).map(row => {
+                    const cost = parseFloat(row[colCost]);
+                    const value = parseFloat(row[colValue]);
+                    let markup = value / cost;
+                    let corrected = Math.ceil(cost * 2.15); // Base markup of 215%
+                    
+                    // Special rule for Flower Lot
+                    if (row[colCategory] && row[colCategory].toLowerCase() === "flower lot") {
+                        corrected = Math.ceil(cost * 3.00); // 3x markup for Flower Lot
+                    }
+
+                    return {
+                        ...row,
+                        "CostPerUnit": fmtNum(cost),
+                        "ValuePerUnit": fmtNum(value),
+                        "CurrentMarkup": isFinite(markup) ? markup.toFixed(2) : "",
+                        "CorrectedValuePerUnit": isFinite(corrected) ? corrected : "",
+                    };
+                }).filter(row => {
+                    const cost = parseFloat(row[colCost]);
+                    const value = parseFloat(row[colValue]);
+                    if (isNaN(cost) || cost === 0) return false; // Skip if cost is invalid
+
+                    let targetMarkup = 2.15; // Default 215% markup
+                    if (row[colCategory] && row[colCategory].toLowerCase() === "flower lot") {
+                        targetMarkup = 3.00; // 3x markup for Flower Lot
+                    }
+                    
+                    return (value / cost) < targetMarkup;
+                });
+
+                // Group by location
+                let locs = Array.from(new Set(outData.map(r => r[locCol]))).filter(Boolean); // Filter out empty locations
+                let html = "";
+                if (outData.length === 0) {
+                    html = `<p style="color:green;"><b>All applicable items meet the minimum markup requirement!</b></p>`;
+                } else {
+                    locs.forEach(loc => {
+                        const group = outData.filter(r => r[locCol] === loc);
+                        html += `<h2 style="margin-top:2em;">${loc} <span style="font-size:0.6em; color:#888;">(${group.length} items)</span></h2>`;
+                        html += `<div class="wide-table-container"><table id="tab_${loc.replace(/\W/g, '')}"><thead><tr>`;
+                        // Show main columns
+                        const mainCols = [
+                            locCol, colProduct, colCategory, colStrain, colType,
+                            colCost, colValue, "CurrentMarkup", "CorrectedValuePerUnit"
+                        ].filter(Boolean); // Ensure only valid columns are included
+                        
+                        mainCols.forEach(col => html += `<th>${col}</th>`);
+                        html += `</tr></thead><tbody>`;
+                        group.forEach(row => {
+                            html += `<tr>`;
+                            mainCols.forEach(col => html += `<td>${row[col] || ''}</td>`);
+                            html += `</tr>`;
+                        });
+                        html += `</tbody></table></div>`;
+                    });
+                }
+                document.getElementById('results').innerHTML = html;
+                document.querySelector('.actions').style.display = outData.length ? "block" : "none";
+                document.getElementById('status').textContent = outData.length ?
+                    `Found ${outData.length} items below the target markup. Click a column header to sort. This list excludes accessories.` : "";
+                // Export to CSV
+                document.getElementById('exportBtn').onclick = () => {
+                    const exportCols = [
+                        locCol, colProduct, colCategory, colStrain, colType,
+                        colCost, colValue, "CurrentMarkup", "CorrectedValuePerUnit"
+                    ].filter(Boolean);
+                    let csv = exportCols.map(col => `"${col}"`).join(",") + "\n"; // Quote headers
+                    outData.forEach(row => {
+                        csv += exportCols.map(col => `"${(row[col] || '').toString().replace(/"/g, '""')}"`).join(",") + "\n"; // Quote and escape values
+                    });
+                    downloadCSV(csv, "Markup_Below_Target.csv");
+                };
+                // Make tables sortable!
+                setTimeout(makeTablesSortable, 100); // Delay to ensure tables are rendered
+            } catch (e) {
+                document.getElementById('status').textContent = "Error: " + e;
+                document.getElementById('results').innerHTML = "";
+                document.querySelector('.actions').style.display = "none";
+            }
+        };
+        reader.readAsText(file);
+    });
+    </script>
+</body>
+</html>

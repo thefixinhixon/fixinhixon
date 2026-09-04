@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NM Cannabis OTD Calculator — Ruidoso • Alto • Carrizozo</title>
+  <style>
+    :root {
+      --bg: #0e0f13; --panel: #151821; --ink: #e9edf1; --muted:#9aa6b2; --accent:#6aa6ff; --accent-2:#80e0a7;
+      --danger:#ff6b6b; --border:#222735; --good:#29c28b;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+    .wrap { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+    h1 { font-size: 20px; margin: 0 0 2px; }
+    .sub { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+    .grid { display:grid; gap:12px; }
+    .grid.cols-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid.cols-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .grid.cols-4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+    label { display:block; font-weight:600; margin-bottom:6px; }
+    select, input[type="text"], input[type="number"] { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:#0e111a; color:var(--ink); outline:none; }
+    input[type="number"] { appearance: textfield; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    button { background: var(--accent); border:0; color:#06142b; font-weight:700; padding:10px 14px; border-radius:10px; cursor:pointer; }
+    button.secondary { background: #1d2331; color: var(--ink); border:1px solid var(--border); }
+    button.good { background: var(--good); color:#052b19; }
+    button.danger { background: var(--danger); color:#2b0606; }
+    .pill { display:inline-flex; gap:8px; align-items:center; background:#0e111a; border:1px solid var(--border); padding:6px 10px; border-radius:999px; color:var(--muted); font-size:12px; }
+    .table-wrap { overflow:auto; border-radius: 12px; border:1px solid var(--border); }
+    table { width:100%; border-collapse: collapse; min-width:900px; background:#0b0e16; }
+    th, td { padding:10px 12px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap; }
+    th { position:sticky; top:0; background:#111524; z-index:1; }
+    tfoot td { font-weight:700; }
+    .muted { color: var(--muted); }
+    .right { text-align:right; }
+    details { border:1px dashed var(--border); border-radius:10px; padding:10px 12px; }
+    details[open] { background:#0b0e16; }
+    summary { cursor:pointer; font-weight:700; }
+    .small { font-size:12px; }
+    .rate-badge { font-weight:700; color: var(--accent-2); }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="row" style="justify-content:space-between; align-items:flex-end; gap:16px;">
+      <div>
+        <h1>NM Cannabis OTD Calculator</h1>
+        <div class="sub">Ruidoso • Alto (Unincorporated Lincoln County) • Carrizozo — single‑file offline app. Persists to your browser.
+        </div>
+      </div>
+      <div class="row">
+        <span id="activeLocationPill" class="pill">Location: <strong id="activeLocationName">—</strong>
+          <span class="muted">GRT:</span> <span class="rate-badge" id="activeGrt">—</span>
+          <span class="muted">CET:</span> <span class="rate-badge" id="activeCet">—</span>
+        </span>
+        <button class="secondary" id="btnEditRates" title="Adjust rates if TRD updates.">Edit rates</button>
+      </div>
+    </header>
+
+    <section class="card" style="margin-top:12px;">
+      <form id="entryForm">
+        <div class="grid cols-4">
+          <div>
+            <label for="locationSelect">Location</label>
+            <select id="locationSelect" required>
+              <option value="ruidoso">Ruidoso, NM (LocCode 26‑112)</option>
+              <option value="alto">Alto — Unincorporated Lincoln County (LocCode 26‑026)</option>
+              <option value="carrizozo">Carrizozo, NM (LocCode 26‑307)</option>
+            </select>
+            <div class="small muted" id="locHint">GRT is based on the delivery or store location.</div>
+          </div>
+          <div>
+            <label for="upc">UPC</label>
+            <input id="upc" type="text" inputmode="numeric" placeholder="e.g., 860000000000" required />
+          </div>
+          <div>
+            <label for="desc">Description</label>
+            <input id="desc" type="text" placeholder="Product name / notes" required />
+          </div>
+          <div>
+            <label for="price">Pre‑tax Price (USD)</label>
+            <input id="price" type="number" min="0" step="0.01" placeholder="0.00" required />
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px;">
+          <button type="submit" class="good">Add to List</button>
+          <button type="button" class="secondary" id="btnQuickCalc">Quick Calc Only</button>
+          <span class="muted small">Out‑the‑door (OTD) = Price + Cannabis Excise Tax + GRT (GRT excludes CET per statute).</span>
+        </div>
+      </form>
+    </section>
+
+    <section class="card" style="margin-top:12px;">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <h2 style="margin:0; font-size:16px;">Items</h2>
+        <div class="row">
+          <button class="secondary" id="btnExportCsv">Export CSV</button>
+          <button class="danger" id="btnClear">Clear List</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="margin-top:10px;">
+        <table id="itemsTable" class="mono">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Location</th>
+              <th>UPC</th>
+              <th>Description</th>
+              <th class="right">Price</th>
+              <th class="right">CET $</th>
+              <th class="right">GRT $</th>
+              <th class="right">Total Tax</th>
+              <th class="right">OTD</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+          <tfoot>
+            <tr>
+              <td colspan="5" class="right">Totals:</td>
+              <td class="right" id="sumCet">0.00</td>
+              <td class="right" id="sumGrt">0.00</td>
+              <td class="right" id="sumTax">0.00</td>
+              <td class="right" id="sumOtd">0.00</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="small muted" style="margin-top:10px;">Values are rounded to the nearest cent for display; internal math keeps extra precision.
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:12px;">
+      <details>
+        <summary>Show calculation details & notes</summary>
+        <div class="small" style="margin-top:10px; line-height:1.7;">
+          <div><strong>Current default rates</strong> (editable):
+            <ul>
+              <li>Ruidoso GRT: <span class="mono" id="defRuidoso">—</span></li>
+              <li>Alto (Uninc. Lincoln) GRT: <span class="mono" id="defAlto">—</span></li>
+              <li>Carrizozo GRT: <span class="mono" id="defCarrizozo">—</span></li>
+              <li>State Cannabis Excise Tax (CET): <span class="mono" id="defCet">—</span></li>
+            </ul>
+          </div>
+          <div><strong>Formula</strong> (adult‑use): CET = price × CET_rate; GRT = price × GRT_rate; OTD = price + CET + GRT. GRT <em>does not</em> include the CET amount in the base.
+          </div>
+          <div>Medical cannabis is not subject to CET and may be deductible for GRT — not modeled here.
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- Rate editor -->
+    <dialog id="rateDialog" style="border:none; border-radius:14px; padding:0; background:transparent;">
+      <div class="card" style="width:min(680px, 92vw);">
+        <h3 style="margin:0 0 10px; font-size:16px;">Edit Rates</h3>
+        <form id="rateForm">
+          <div class="grid cols-2">
+            <div>
+              <label for="cetRate">Cannabis Excise Tax (CET)</label>
+              <input id="cetRate" type="number" step="0.0001" min="0" />
+              <div class="small muted">Statewide, adult‑use CET. Example: 0.13 = 13%</div>
+            </div>
+            <div></div>
+            <div>
+              <label for="grtRuidoso">Ruidoso GRT</label>
+              <input id="grtRuidoso" type="number" step="0.0001" min="0" />
+              <div class="small muted">Total GRT (state + local). Example: 0.081875 = 8.1875%</div>
+            </div>
+            <div>
+              <label for="grtAlto">Alto (Uninc. Lincoln) GRT</label>
+              <input id="grtAlto" type="number" step="0.0001" min="0" />
+            </div>
+            <div>
+              <label for="grtCarrizozo">Carrizozo GRT</label>
+              <input id="grtCarrizozo" type="number" step="0.0001" min="0" />
+            </div>
+          </div>
+          <div class="row" style="margin-top:12px; justify-content:flex-end;">
+            <button type="button" class="secondary" id="btnResetDefaults">Reset to Defaults</button>
+            <button type="button" class="secondary" id="btnCloseRates">Cancel</button>
+            <button type="submit">Save</button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+
+    <output id="quickCalc" class="card" style="margin-top:12px; display:none;"></output>
+
+    <footer class="small muted" style="margin:18px 0 8px;">
+      <div>Storage key: <span class="mono">nmCannabisTaxItemsV1</span> • Config key: <span class="mono">nmCannabisTaxConfigV1</span></div>
+    </footer>
+  </div>
+
+<script>
+(() => {
+  // --- Defaults (verified against TRD July 1, 2025 – June 30, 2026 schedule) ---
+  const DEFAULT_CONFIG = {
+    cetRate: 0.13, // 13% CET, effective 2025-07-01
+    locations: {
+      ruidoso:  { name: 'Ruidoso, NM', locCode: '26-112', grt: 0.081875 },
+      alto:     { name: 'Alto — Unincorporated Lincoln County, NM', locCode: '26-026', grt: 0.0525 },
+      carrizozo:{ name: 'Carrizozo, NM', locCode: '26-307', grt: 0.072 }
+    }
+  };
+
+  const STORAGE_KEYS = {
+    items: 'nmCannabisTaxItemsV1',
+    config: 'nmCannabisTaxConfigV1',
+    lastLoc: 'nmCannabisTaxLastLoc'
+  };
+
+  // --- Utilities ---
+  const $ = (sel) => document.querySelector(sel);
+  const formatMoney = (n) => (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
+  const nowStamp = () => new Date().toLocaleString();
+  const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
+
+  function loadConfig() {
+    const raw = localStorage.getItem(STORAGE_KEYS.config);
+    if (!raw) return deepClone(DEFAULT_CONFIG);
+    try { const cfg = JSON.parse(raw);
+      // ensure shape
+      return {
+        cetRate: typeof cfg.cetRate === 'number' ? cfg.cetRate : DEFAULT_CONFIG.cetRate,
+        locations: { ...DEFAULT_CONFIG.locations, ...(cfg.locations||{}) }
+      };
+    } catch { return deepClone(DEFAULT_CONFIG); }
+  }
+  function saveConfig(cfg) { localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(cfg)); }
+
+  function getItems() {
+    const raw = localStorage.getItem(STORAGE_KEYS.items);
+    if (!raw) return [];
+    try { return JSON.parse(raw); } catch { return []; }
+  }
+  function saveItems(list) { localStorage.setItem(STORAGE_KEYS.items, JSON.stringify(list)); }
+
+  let CONFIG = loadConfig();
+  let ITEMS = getItems();
+
+  // --- DOM refs ---
+  const locSelect = $('#locationSelect');
+  const upc = $('#upc');
+  const desc = $('#desc');
+  const price = $('#price');
+  const entryForm = $('#entryForm');
+  const tbody = $('#tbody');
+  const sumCet = $('#sumCet');
+  const sumGrt = $('#sumGrt');
+  const sumTax = $('#sumTax');
+  const sumOtd = $('#sumOtd');
+  const activeLocationName = $('#activeLocationName');
+  const activeGrt = $('#activeGrt');
+  const activeCet = $('#activeCet');
+  const quickCalc = $('#quickCalc');
+
+  // rate editor
+  const rateDialog = $('#rateDialog');
+  const btnEditRates = $('#btnEditRates');
+  const btnCloseRates = $('#btnCloseRates');
+  const btnResetDefaults = $('#btnResetDefaults');
+  const rateForm = $('#rateForm');
+  const cetRateInput = $('#cetRate');
+  const grtRuidosoInput = $('#grtRuidoso');
+  const grtAltoInput = $('#grtAlto');
+  const grtCarrizozoInput = $('#grtCarrizozo');
+
+  const defRuidoso = $('#defRuidoso');
+  const defAlto = $('#defAlto');
+  const defCarrizozo = $('#defCarrizozo');
+  const defCet = $('#defCet');
+
+  // buttons
+  const btnExportCsv = $('#btnExportCsv');
+  const btnClear = $('#btnClear');
+
+  // --- Init ---
+  function init() {
+    // restore last location
+    const lastLoc = localStorage.getItem(STORAGE_KEYS.lastLoc);
+    if (lastLoc && CONFIG.locations[lastLoc]) locSelect.value = lastLoc;
+    updateActivePill();
+    renderItems();
+    refreshDefaultsPanel();
+  }
+
+  function updateActivePill() {
+    const locKey = locSelect.value;
+    const loc = CONFIG.locations[locKey];
+    activeLocationName.textContent = loc.name;
+    activeGrt.textContent = (loc.grt * 100).toFixed(4) + '%';
+    activeCet.textContent = (CONFIG.cetRate * 100).toFixed(2) + '%';
+    localStorage.setItem(STORAGE_KEYS.lastLoc, locKey);
+  }
+
+  function compute(price, locKey) {
+    const p = Number(price);
+    const g = CONFIG.locations[locKey].grt;
+    const c = CONFIG.cetRate;
+    const cet = p * c;
+    const grt = p * g; // GRT base excludes CET
+    const tax = cet + grt;
+    const otd = p + tax;
+    return { cet, grt, tax, otd };
+  }
+
+  function addItem(evt) {
+    evt.preventDefault();
+    const locKey = locSelect.value;
+    const p = Number(price.value);
+    if (!isFinite(p) || p < 0) { alert('Enter a valid non‑negative price.'); return; }
+    const u = (upc.value || '').trim();
+    const d = (desc.value || '').trim();
+    if (!u || !d) { alert('UPC and Description are required.'); return; }
+    const { cet, grt, tax, otd } = compute(p, locKey);
+    const item = {
+      ts: nowStamp(), locKey,
+      location: CONFIG.locations[locKey].name,
+      upc: u, desc: d,
+      price: p, cet, grt, tax, otd,
+      cetRate: CONFIG.cetRate, grtRate: CONFIG.locations[locKey].grt,
+      locCode: CONFIG.locations[locKey].locCode
+    };
+    ITEMS.push(item);
+    saveItems(ITEMS);
+    renderItems();
+    entryForm.reset();
+    updateActivePill();
+    locSelect.focus();
+  }
+
+  function renderItems() {
+    tbody.innerHTML = '';
+    let tCet=0, tGrt=0, tTax=0, tOtd=0;
+    for (const it of ITEMS) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${escapeHtml(it.ts)}</td>
+        <td title="LocCode ${it.locCode}">${escapeHtml(it.location)}</td>
+        <td>${escapeHtml(it.upc)}</td>
+        <td>${escapeHtml(it.desc)}</td>
+        <td class="right">${formatMoney(it.price)}</td>
+        <td class="right">${formatMoney(it.cet)}</td>
+        <td class="right">${formatMoney(it.grt)}</td>
+        <td class="right">${formatMoney(it.tax)}</td>
+        <td class="right">${formatMoney(it.otd)}</td>`;
+      tbody.appendChild(tr);
+      tCet += it.cet; tGrt += it.grt; tTax += it.tax; tOtd += it.otd;
+    }
+    sumCet.textContent = formatMoney(tCet);
+    sumGrt.textContent = formatMoney(tGrt);
+    sumTax.textContent = formatMoney(tTax);
+    sumOtd.textContent = formatMoney(tOtd);
+  }
+
+  function exportCsv() {
+    const headers = [
+      'date','location','location_code','upc','description','price','cet_rate','cet_amount','grt_rate','grt_amount','total_tax','otd'
+    ];
+    const rows = ITEMS.map(it => [
+      it.ts, it.location, it.locCode, it.upc, it.desc,
+      formatMoney(it.price), (it.cetRate*100).toFixed(4)+'%', formatMoney(it.cet),
+      (it.grtRate*100).toFixed(4)+'%', formatMoney(it.grt), formatMoney(it.tax), formatMoney(it.otd)
+    ]);
+    const lines = [headers.join(','), ...rows.map(r => r.map(csvEscape).join(','))];
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const stamp = new Date().toISOString().slice(0,10);
+    a.download = `nm_cannabis_otd_${stamp}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function clearList() {
+    if (!ITEMS.length) { alert('The list is already empty.'); return; }
+    if (!confirm('Clear all items? This cannot be undone.')) return;
+    ITEMS = [];
+    saveItems(ITEMS);
+    renderItems();
+  }
+
+  function refreshDefaultsPanel() {
+    defRuidoso.textContent = (CONFIG.locations.ruidoso.grt*100).toFixed(4)+'%';
+    defAlto.textContent = (CONFIG.locations.alto.grt*100).toFixed(4)+'%';
+    defCarrizozo.textContent = (CONFIG.locations.carrizozo.grt*100).toFixed(4)+'%';
+    defCet.textContent = (CONFIG.cetRate*100).toFixed(2)+'%';
+  }
+
+  function openRateEditor() {
+    cetRateInput.value = CONFIG.cetRate;
+    grtRuidosoInput.value = CONFIG.locations.ruidoso.grt;
+    grtAltoInput.value = CONFIG.locations.alto.grt;
+    grtCarrizozoInput.value = CONFIG.locations.carrizozo.grt;
+    rateDialog.showModal();
+  }
+  function closeRateEditor() { rateDialog.close(); }
+  function resetDefaults() {
+    CONFIG = deepClone(DEFAULT_CONFIG);
+    saveConfig(CONFIG);
+    updateActivePill(); refreshDefaultsPanel(); renderItems();
+  }
+  function saveRateEditor(evt) {
+    evt.preventDefault();
+    const next = deepClone(CONFIG);
+    const toNum = v => { const n = Number(v); return (isFinite(n) && n >= 0) ? n : null; };
+    const newCet = toNum(cetRateInput.value);
+    const ruid = toNum(grtRuidosoInput.value);
+    const alto = toNum(grtAltoInput.value);
+    const carr = toNum(grtCarrizozoInput.value);
+    if (newCet === null || ruid === null || alto === null || carr === null) { alert('Enter valid non‑negative numbers.'); return; }
+    next.cetRate = newCet;
+    next.locations.ruidoso.grt = ruid;
+    next.locations.alto.grt = alto;
+    next.locations.carrizozo.grt = carr;
+    CONFIG = next; saveConfig(CONFIG);
+    updateActivePill(); refreshDefaultsPanel(); renderItems();
+    closeRateEditor();
+  }
+
+  function quickCalcOnly() {
+    const locKey = locSelect.value;
+    const p = Number(price.value);
+    if (!isFinite(p) || p < 0) { alert('Enter a valid non‑negative price.'); return; }
+    const { cet, grt, tax, otd } = compute(p, locKey);
+    const loc = CONFIG.locations[locKey];
+    quickCalc.innerHTML = `
+      <div class="grid cols-3">
+        <div class="card" style="background:#0b0e16;">
+          <div class="muted small">Price</div>
+          <div class="mono" style="font-size:20px;">$${formatMoney(p)}</div>
+        </div>
+        <div class="card" style="background:#0b0e16;">
+          <div class="muted small">CET (${(CONFIG.cetRate*100).toFixed(2)}%)</div>
+          <div class="mono" style="font-size:20px;">$${formatMoney(cet)}</div>
+        </div>
+        <div class="card" style="background:#0b0e16;">
+          <div class="muted small">GRT — ${loc.name} (${(loc.grt*100).toFixed(4)}%)</div>
+          <div class="mono" style="font-size:20px;">$${formatMoney(grt)}</div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <span class="pill">Total tax: <strong>$${formatMoney(tax)}</strong></span>
+        <span class="pill">OTD: <strong>$${formatMoney(otd)}</strong></span>
+      </div>`;
+    quickCalc.style.display = 'block';
+  }
+
+  // helpers
+  function escapeHtml(s) { return (s+'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c])); }
+  function csvEscape(s) {
+    const str = String(s);
+    if (/[",\n]/.test(str)) return '"' + str.replace(/"/g, '""') + '"';
+    return str;
+  }
+
+  // --- Wire up ---
+  entryForm.addEventListener('submit', addItem);
+  locSelect.addEventListener('change', updateActivePill);
+  $('#btnExportCsv').addEventListener('click', exportCsv);
+  $('#btnClear').addEventListener('click', clearList);
+  $('#btnQuickCalc').addEventListener('click', quickCalcOnly);
+
+  btnEditRates.addEventListener('click', openRateEditor);
+  btnCloseRates.addEventListener('click', closeRateEditor);
+  btnResetDefaults.addEventListener('click', resetDefaults);
+  rateForm.addEventListener('submit', saveRateEditor);
+
+  // Kickoff
+  init();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cash Drawer Counter (Compact)</title>
+  <style>
+    :root { --fg:#111; --muted:#555; --line:#c7c7c7; --bg:#fff; }
+    html,body{height:100%}
+    body{margin:0; font:14px/1.25 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial; color:var(--fg); background:var(--bg)}
+    .wrap{max-width:960px; margin:16px auto; padding:8px}
+    h1{margin:0 0 6px; font-size:18px}
+    p.note{margin:0 0 10px; color:var(--muted)}
+
+    table.compact{width:100%; border-collapse:collapse; table-layout:fixed; margin:8px 0}
+    .compact th,.compact td{border:1px solid var(--line); padding:4px 6px; text-align:center; white-space:nowrap}
+    .compact thead th{background:#f6f6f6; font-weight:600}
+    .compact tfoot td{font-weight:700}
+
+    input[type=number]{width:100%; border:0; padding:4px 2px; text-align:center; font:inherit; outline:none}
+    input[type=number]:focus{box-shadow:inset 0 0 0 2px #d0eaff}
+    .tot{font-variant-numeric: tabular-nums}
+
+    .controls{display:flex; gap:8px; align-items:center; margin:10px 0}
+    button{border:1px solid var(--line); background:#f7f7f7; padding:6px 10px; cursor:pointer}
+    button:hover{background:#eee}
+    .spacer{flex:1}
+    .grand{font-weight:800; font-size:16px}
+    @media (max-width:740px){
+      body{font-size:13px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap" role="application" aria-label="Cash Drawer Counter (Compact)">
+    <h1>Cash Drawer Counter</h1>
+    <p class="note">Enter counts. Totals update live or press <em>Calculate</em>.</p>
+
+    <!-- Bills table: headers, inputs row, totals row -->
+    <table class="compact" id="bills-table" aria-labelledby="bills-label">
+      <caption id="bills-label" style="text-align:left; caption-side:top; color:#333; padding:4px 0; font-weight:600">Bills</caption>
+      <thead><tr id="bills-head"></tr></thead>
+      <tbody>
+        <tr id="bills-inputs" aria-label="Bill counts"></tr>
+        <tr id="bills-totals" aria-label="Bill totals"></tr>
+      </tbody>
+    </table>
+
+    <!-- Coins table: headers, inputs row, totals row -->
+    <table class="compact" id="coins-table" aria-labelledby="coins-label">
+      <caption id="coins-label" style="text-align:left; caption-side:top; color:#333; padding:4px 0; font-weight:600">Coins</caption>
+      <thead><tr id="coins-head"></tr></thead>
+      <tbody>
+        <tr id="coins-inputs" aria-label="Coin counts"></tr>
+        <tr id="coins-totals" aria-label="Coin totals"></tr>
+      </tbody>
+    </table>
+
+    <div class="controls">
+      <button id="calc" type="button">Calculate</button>
+      <button id="clear" type="button">Clear</button>
+      <div class="spacer"></div>
+      <div class="grand" aria-live="polite" aria-atomic="true">Drawer Total: <span id="grand-total">$0.00</span></div>
+    </div>
+  </div>
+
+  <script>
+    // Compact, single-screen cash counter
+    const USD = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'});
+
+    const BILL_LABELS = ['$100','$50','$20','$10','$5','$2','$1'];
+    const BILL_VALUES = [10000, 5000, 2000, 1000, 500, 200, 100]; // cents
+
+    const COIN_LABELS = ['$1 coin','50¢','25¢','10¢','5¢','1¢'];
+    const COIN_VALUES = [100, 50, 25, 10, 5, 1]; // cents
+
+    function cell(tag, text, cls){
+      const el = document.createElement(tag);
+      if(text!=null) el.textContent = text;
+      if(cls) el.className = cls;
+      return el;
+    }
+
+    function buildGrid(prefix, labels, values){
+      const head = document.getElementById(prefix+'-head');
+      const inputs = document.getElementById(prefix+'-inputs');
+      const totals = document.getElementById(prefix+'-totals');
+      labels.forEach((lab, i)=>{
+        head.appendChild(cell('th', lab));
+        const tdI = document.createElement('td');
+        const inp = document.createElement('input');
+        inp.type = 'number'; inp.min = '0'; inp.step = '1'; inp.inputMode = 'numeric';
+        inp.autocomplete = 'off'; inp.id = `${prefix}-in-${i}`; inp.setAttribute('data-value-cents', values[i]);
+        inp.addEventListener('keydown', e=>{ if(['e','E','+','-','.'].includes(e.key)) e.preventDefault(); });
+        inp.addEventListener('input', recalc);
+        tdI.appendChild(inp); inputs.appendChild(tdI);
+        const tdT = cell('td', '$0.00', 'tot'); tdT.id = `${prefix}-tot-${i}`; totals.appendChild(tdT);
+      });
+    }
+
+    function recalc(){
+      let grand = 0;
+      ['bills','coins'].forEach(prefix => {
+        const inputs = document.querySelectorAll(`#${prefix}-inputs input`);
+        inputs.forEach((inp, i)=>{
+          const count = Math.max(0, parseInt(inp.value||'0',10));
+          const val = parseInt(inp.getAttribute('data-value-cents'),10);
+          const line = count * val;
+          grand += line;
+          const cellTot = document.getElementById(`${prefix}-tot-${i}`);
+          if(cellTot) cellTot.textContent = USD.format(line/100);
+        });
+      });
+      document.getElementById('grand-total').textContent = USD.format(grand/100);
+    }
+
+    function clearAll(){
+      document.querySelectorAll('input[type=number]').forEach(i=> i.value='');
+      document.querySelectorAll('.tot').forEach(td=> td.textContent='$0.00');
+      document.getElementById('grand-total').textContent = '$0.00';
+      document.querySelector('#bills-inputs input')?.focus();
+    }
+
+    // Build UI
+    buildGrid('bills', BILL_LABELS, BILL_VALUES);
+    buildGrid('coins', COIN_LABELS, COIN_VALUES);
+
+    // Wire controls
+    document.getElementById('calc').addEventListener('click', recalc);
+    document.getElementById('clear').addEventListener('click', clearAll);
+
+    // Initial
+    recalc();
+  </script>
+</body>
+</html>

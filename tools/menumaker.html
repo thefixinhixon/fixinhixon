@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>The Greenery Room Menu Builder</title>
+  <style>
+    /* Base Styles for the builder interface */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f0fff0;
+      color: #333;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #006400;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    form, .bulk-form, .logo-upload, .print-options, #itemsList, .action-buttons { /* Added .action-buttons */
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fdfdfd;
+    }
+    label {
+      display: block;
+      margin: 8px 0 4px;
+    }
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    input[type="file"],
+    select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 8px 12px;
+      border: none;
+      background: #008000;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-right: 5px;
+    }
+    button:hover {
+      background: #006400;
+    }
+    /* Specific button styles */
+     button#clearDataButton {
+        background: #ffc107; /* Warning yellow */
+        color: #212529; /* Dark text */
+     }
+      button#clearDataButton:hover {
+        background: #ffae00; /* Darker yellow */
+     }
+     button#clearDataButton:active {
+         background: #e0a800;
+     }
+    .menu-preview {
+      padding: 20px;
+      margin-top: 20px;
+      background: #fff;
+    }
+    /* Logo image styling */
+    #logoImage {
+      display: none;
+      margin: 0 auto 10px;
+    }
+    .menu-item {
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+    }
+    .menu-item strong {
+      font-size: 1.1em;
+      color: #008000;
+    }
+     .menu-item em {
+      margin-left: 5px;
+      color: #006400;
+      font-style: normal; /* Prevent italic for category */
+    }
+    .menu-item span.thc {
+      margin-left: 5px;
+      color: #555; /* Grey color for THC */
+      font-size: 0.9em;
+    }
+    /* Current items list */
+    #itemsList li {
+      margin: 8px 0;
+      padding: 5px;
+      list-style: none;
+      background: #e9ecef;
+      border-radius: 4px;
+    }
+    #itemsList button {
+      background: #dc3545;
+      margin-left: 5px;
+    }
+    #itemsList button:hover {
+      background: #c82333;
+    }
+    #itemsList button:first-of-type { /* Edit button */
+       background: #007bff; /* Blue color */
+    }
+    #itemsList button:first-of-type:hover {
+       background: #0056b3;
+    }
+
+
+    /* Modal Styles for Editing */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fff;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 400px;
+      border-radius: 4px;
+    }
+    .modal-content h3 {
+      margin-top: 0;
+    }
+    .modal-content input[type="text"],
+    .modal-content input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+    .modal-content button {
+      margin-right: 5px;
+    }
+    /* Inline edit fallback styles */
+    .edit-input {
+      margin-bottom: 5px;
+    }
+     #statusMessage {
+        text-align: center;
+        margin-top: 10px;
+        font-size: 0.9em;
+        min-height: 1em; /* Reserve space to prevent layout shifts */
+     }
+     #statusMessage.success { color: #006400; } /* Green */
+     #statusMessage.error { color: red; } /* Red */
+     #statusMessage.warning { color: orange; } /* Orange */
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>The Greenery Room Menu Builder</h1>
+    <div id="statusMessage"></div>
+
+    <!-- Single Item Form -->
+    <form id="singleItemForm">
+      <h2>Add Single Item</h2>
+      <label for="itemName">Item Name:</label>
+      <input type="text" id="itemName" placeholder="e.g. Blue Dream" required>
+      <label for="itemPrice">Price (USD):</label>
+      <input type="number" id="itemPrice" step="0.01" placeholder="e.g. 12.99" required>
+      <label for="itemCategory">Category:</label>
+      <select id="itemCategory">
+        <option value="">Select Category</option>
+        <option value="Prerolls">Prerolls</option>
+        <option value="Infused Prerolls">Infused Prerolls</option>
+        <option value="Bulk Flower (Sold By The Gram)">Bulk Flower (Sold By The Gram)</option>
+        <option value="Prepackaged Flower">Prepackaged Flower</option>
+        <option value="Edibles">Edibles</option>
+        <option value="Vape">Vape</option>
+        <option value="Concentrates">Concentrates</option>
+        <option value="Topicals">Topicals</option>
+        <option value="CBD">CBD</option>
+        <option value="Tincture">Tincture</option>
+        <option value="Liquid Edibles">Liquid Edibles</option>
+        <option value="Medical">Medical</option> <!-- Added Medical -->
+      </select>
+      <label for="itemDescription">Description (optional):</label>
+      <textarea id="itemDescription" rows="2" placeholder="A classic sativa strain"></textarea>
+      <!-- Add THC field for single item -->
+       <label for="itemThc">THC % (optional):</label>
+       <input type="text" id="itemThc" placeholder="e.g. 25.5%">
+      <button type="submit">Add Item</button>
+    </form>
+
+    <!-- Bulk Items Form -->
+    <div class="bulk-form">
+      <h2>Add Items in Bulk (CSV)</h2>
+      <p>Paste CSV data or upload file with headers:</p>
+      <p><code>"Product","PostTaxValuePerUnit","THC","Category"</code> (other columns are ignored)</p>
+      <p>Items with an unmapped CSV 'Category' or the category "Usable Cannabis", "Accessories", "Lounge Rental", or "Cannabis Extract for Inhalation" will be ignored.</p>
+      <label for="bulkCategory">Bulk Category Override (optional):</label>
+      <select id="bulkCategory">
+        <option value="">-- Use CSV Category (if available) --</option>
+        <option value="Prerolls">Prerolls</option>
+        <option value="Infused Prerolls">Infused Prerolls</option>
+        <option value="Bulk Flower (Sold By The Gram)">Bulk Flower (Sold By The Gram)</option>
+        <option value="Prepackaged Flower">Prepackaged Flower</option>
+        <option value="Edibles">Edibles</option>
+        <option value="Vape">Vape</option>
+        <option value="Concentrates">Concentrates</option>
+        <option value="Topicals">Topicals</option>
+        <option value="CBD">CBD</option>
+        <option value="Tincture">Tincture</option>
+        <option value="Liquid Edibles">Liquid Edibles</option>
+        <option value="Medical">Medical</option> <!-- Added Medical -->
+      </select>
+       <p>Paste CSV Data:</p>
+      <textarea id="bulkItems" rows="7" placeholder='Paste CSV data here'></textarea>
+      <button type="button" id="bulkAddButton">Add Bulk Items</button>
+      <label for="csvFileInput">Or Upload CSV File:</label>
+      <input type="file" id="csvFileInput" accept=".csv">
+      <button type="button" id="csvUploadButton">Upload CSV File</button>
+    </div>
+
+    <!-- Logo Upload Section -->
+    <div class="logo-upload">
+      <h2>Upload Logo</h2>
+      <label for="logoFileInput">Select Logo Image:</label>
+      <input type="file" id="logoFileInput" accept="image/*">
+      <label for="logoSizeSelect">Logo Size:</label>
+      <select id="logoSizeSelect">
+        <option value="50">50x50</option>
+        <option value="100">100x100</option>
+        <option value="150" selected>150x150</option>
+      </select>
+      <button type="button" id="logoUploadButton">Upload Logo</button>
+    </div>
+
+    <!-- Print Options -->
+    <div class="print-options">
+      <h2>Print Options</h2>
+      <label for="fontSizeSelect">Select Font Size for Export:</label>
+      <select id="fontSizeSelect">
+        <option value="10">10pt</option>
+        <option value="12" selected>12pt</option>
+        <option value="14">14pt</option>
+      </select>
+      <label for="exportThemeSelect">Select Export Theme:</label>
+      <select id="exportThemeSelect">
+        <option value="classic" selected>Classic</option>
+        <option value="holiday">Holiday</option>
+        <option value="seasonal">Seasonal</option>
+        <option value="modern">Modern</option>
+        <option value="retro">Retro</option>
+        <option value="pastel">Pastel</option>
+        <option value="bold">Bold</option>
+        <option value="ocean">Ocean</option>
+        <option value="sunset">Sunset</option>
+        <option value="forest">Forest</option>
+      </select>
+      <label>
+        <input type="checkbox" id="separatePagesCheckbox"> Separate categories on individual pages
+      </label>
+    </div>
+
+    <!-- Current Items List (for reference) -->
+    <div id="itemsList">
+      <h2>Current Menu Items</h2>
+      <ul id="menuItems"></ul>
+    </div>
+
+    <!-- Menu Preview (for on‑screen view) -->
+    <div class="menu-preview" id="menuPreview">
+      <img id="logoImage" src="" alt="Logo">
+      <h1>The Greenery Room</h1>
+      <div id="previewItems"></div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons" style="text-align: center; margin-top: 20px;">
+      <button onclick="openFinalOutput(true)">Print Menu</button>
+      <button onclick="openFinalOutput(false)">Export Printable HTML</button>
+       <button id="clearDataButton">Clear All Data</button> <!-- Added Clear Data Button -->
+    </div>
+  </div>
+
+  <!-- Modal for Editing Items -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <h3>Edit Item</h3>
+      <label for="editName">Name:</label>
+      <input type="text" id="editName">
+      <label for="editPrice">Price (USD):</label>
+      <input type="number" id="editPrice" step="0.01">
+      <label for="editCategory">Category:</label>
+      <input type="text" id="editCategory">
+       <label for="editThc">THC %:</label> <!-- Added THC field -->
+      <input type="text" id="editThc" placeholder="e.g. 25.5%">
+      <label for="editDescription">Description:</label>
+      <input type="text" id="editDescription">
+      <label for="editBulkGroup">Bulk Group (if any):</label>
+      <input type="text" id="editBulkGroup">
+      <div style="text-align: right; margin-top: 10px;">
+        <button onclick="saveEdit()">Save</button>
+        <button onclick="closeEditModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global variables
+    let menuItems = [];
+    let logoDataURL = ""; // Base64 string for the logo
+
+    let currentEditIndex = null;
+
+    const itemsStorageKey = 'greeneryRoomMenuItems';
+    const optionsStorageKey = 'greeneryRoomPrintOptions';
+    const logoSizeStorageKey = 'greeneryRoomLogoSize'; // Save logo size preference
+
+    const statusDiv = document.getElementById('statusMessage'); // Get status div once
+
+     // Get valid category names from the dropdown options on load
+    let validCategories = []; // Stores the original value attribute of options
+    let normalizedValidCategories = []; // Stores the normalized value for matching
+    const categoryMappings = {}; // Map normalized CSV categories to original valid categories
+
+    function getValidCategories() {
+        const selectElement = document.getElementById('itemCategory'); // Use the single item category list as the source of truth
+        validCategories = [];
+        normalizedValidCategories = [];
+        // Start from index 1 to skip the "Select Category" option
+        for (let i = 1; i < selectElement.options.length; i++) {
+            const value = selectElement.options[i].value;
+            if (value.trim() !== "") {
+                validCategories.push(value.trim());
+                normalizedValidCategories.push(normalizeCategoryName(value));
+                 // Initialize mapping for the exact predefined category name
+                 categoryMappings[normalizeCategoryName(value)] = value.trim();
+            }
+        }
+        // Add specific known variations from the CSV examples to the mapping
+        categoryMappings[normalizeCategoryName("Flower Lot")] = "Bulk Flower (Sold By The Gram)";
+        categoryMappings[normalizeCategoryName("Pre-Rolls")] = "Prerolls"; // Found in Ruidoso/Alto/Carrizozo
+        categoryMappings[normalizeCategoryName("Vapes")] = "Vape"; // Found in Alto
+        categoryMappings[normalizeCategoryName("Concentrate")] = "Concentrates"; // Found in Carrizozo
+        categoryMappings[normalizeCategoryName("Topicals / Tinctures")] = "Topicals"; // Found in Carrizozo
+        categoryMappings[normalizeCategoryName("Liquid Cannabis Infused Edible")] = "Liquid Edibles"; // Found in Carrizozo/Ruidoso Type column, but also Category in Carrizozo
+        categoryMappings[normalizeCategoryName("Solid Cannabis Infused Edible")] = "Edibles"; // Found in Carrizozo Category column
+        categoryMappings[normalizeCategoryName("Flower")] = "Prepackaged Flower"; // Found in Carrizozo Category column (e.g. 3.5g, 28g items)
+         // Cannabis Mix Infused found in Carrizozo Category column for some items, others use Infused Prerolls
+        categoryMappings[normalizeCategoryName("Cannabis Mix Infused")] = "Infused Prerolls";
+         // Explicitly add Medical mapping (even if it matches value, defensive)
+        categoryMappings[normalizeCategoryName("Medical")] = "Medical";
+
+
+        console.log("Valid categories:", validCategories);
+        console.log("Normalized valid categories:", normalizedValidCategories);
+        console.log("Category Mappings:", categoryMappings);
+    }
+
+    // --- Helper: Normalize Category Name for Comparison ---
+    function normalizeCategoryName(name) {
+        if (typeof name !== 'string') return '';
+        // Convert to lowercase and remove spaces, hyphens, slashes and other common separators like underscores or parens for matching
+        return name.toLowerCase().replace(/[\s\-_()/]/g, '');
+    }
+
+
+    // --- Local Storage Functions ---
+
+    function saveMenuState() {
+        try {
+            // Save menu items
+            localStorage.setItem(itemsStorageKey, JSON.stringify(menuItems));
+
+            // Save print options and logo size
+            const printOptions = {
+                fontSize: document.getElementById('fontSizeSelect').value,
+                theme: document.getElementById('exportThemeSelect').value,
+                separatePages: document.getElementById('separatePagesCheckbox').checked
+            };
+            localStorage.setItem(optionsStorageKey, JSON.stringify(printOptions));
+
+             // Save logo size preference
+            localStorage.setItem(logoSizeStorageKey, document.getElementById('logoSizeSelect').value);
+
+            // Display a brief save confirmation
+            showStatus('Menu saved to browser.', 'success', 1500); // Shorter display time
+
+        } catch (e) {
+            console.error("Could not save menu state to localStorage:", e);
+            showStatus('Error saving menu to browser.', 'error', 5000);
+        }
+    }
+
+    function loadMenuState() {
+        getValidCategories(); // Ensure valid categories and mappings are populated before loading/displaying
+
+        try {
+            // Load menu items
+            const itemsJson = localStorage.getItem(itemsStorageKey);
+            if (itemsJson) {
+                // Add default values for new fields (like thc) if loading old data
+                menuItems = JSON.parse(itemsJson).map(item => ({
+                    name: item.name,
+                    price: item.price,
+                    category: item.category || "", // Ensure category is not null/undefined
+                    description: item.description || "", // Ensure description is not null/undefined
+                    bulkGroup: item.bulkGroup || "", // Ensure bulkGroup is not null/undefined
+                    thc: item.thc || "" // Add default for THC
+                }));
+                console.log("Loaded menu items from localStorage.", menuItems);
+            } else {
+                menuItems = []; // Start fresh if nothing saved
+                console.log("No menu items found in localStorage. Starting fresh.");
+            }
+
+            // Load print options
+            const optionsJson = localStorage.getItem(optionsStorageKey);
+            if (optionsJson) {
+                const printOptions = JSON.parse(optionsJson);
+                // Use || default for defaults in case keys are missing or data is corrupted
+                document.getElementById('fontSizeSelect').value = printOptions.fontSize || '12';
+                document.getElementById('exportThemeSelect').value = printOptions.theme || 'classic';
+                document.getElementById('separatePagesCheckbox').checked = printOptions.separatePages || false;
+                console.log("Loaded print options from localStorage.");
+            } else {
+                 // Set defaults if no options saved
+                 document.getElementById('fontSizeSelect').value = '12';
+                 document.getElementById('exportThemeSelect').value = 'classic';
+                 document.getElementById('separatePagesCheckbox').checked = false;
+                 document.getElementById('logoSizeSelect').value = '150'; // Default size
+                 console.log("No print options found in localStorage. Using defaults.");
+            }
+
+             // Load logo size preference
+            const savedLogoSize = localStorage.getItem(logoSizeStorageKey);
+            if (savedLogoSize) {
+                 // Check if the saved size is one of the options, default if not
+                 const logoSizeSelect = document.getElementById('logoSizeSelect');
+                 const validSizes = Array.from(logoSizeSelect.options).map(opt => opt.value);
+                 if (validSizes.includes(savedLogoSize)) {
+                    logoSizeSelect.value = savedLogoSize;
+                    console.log("Loaded logo size preference from localStorage.");
+                 } else {
+                     logoSizeSelect.value = '150'; // Default size
+                     console.log("Invalid saved logo size. Using default.");
+                 }
+            } else {
+                document.getElementById('logoSizeSelect').value = '150'; // Default size
+                console.log("No logo size preference found in localStorage. Using default.");
+            }
+
+             showStatus('Menu loaded from browser.', 'success', 1500); // Shorter display time
+
+        } catch (e) {
+            console.error("Could not load menu state from localStorage:", e);
+            // If load fails, reset to default state to prevent errors
+            menuItems = [];
+             document.getElementById('fontSizeSelect').value = '12';
+             document.getElementById('exportThemeSelect').value = 'classic';
+             document.getElementById('separatePagesCheckbox').checked = false;
+             document.getElementById('logoSizeSelect').value = '150';
+            showStatus("Could not load saved menu data. Starting fresh.", 'error', 5000);
+        }
+         // Always update display after attempting to load data
+        updateMenuDisplay();
+    }
+
+    function clearAllData() {
+        // Ask for confirmation first
+        const confirmClear = confirm("Are you sure you want to clear ALL saved menu items, print options, and logo size? This cannot be undone!");
+
+        if (confirmClear) {
+            try {
+                localStorage.removeItem(itemsStorageKey);
+                localStorage.removeItem(optionsStorageKey);
+                localStorage.removeItem(logoSizeStorageKey);
+
+                // Reset in-memory data and UI elements
+                menuItems = [];
+                logoDataURL = ""; // Clear the currently loaded logo image as well
+
+                // Reset form/options elements to defaults
+                document.getElementById('singleItemForm').reset();
+                document.getElementById('bulkItems').value = '';
+                document.getElementById('csvFileInput').value = '';
+                document.getElementById('logoFileInput').value = '';
+
+                // Reset select/checkbox elements to defaults (matching loadMenuState defaults)
+                document.getElementById('itemCategory').value = '';
+                document.getElementById('bulkCategory').value = ''; // Reset bulk category selector
+                document.getElementById('fontSizeSelect').value = '12';
+                document.getElementById('exportThemeSelect').value = 'classic';
+                document.getElementById('separatePagesCheckbox').checked = false;
+                document.getElementById('logoSizeSelect').value = '150'; // Reset logo size selector
+                 document.getElementById('itemThc').value = ''; // Reset single item THC
+
+                // Update the display to show the now empty state
+                updateMenuDisplay(); // This will internally save the empty state (empty array)
+
+                showStatus('All saved data has been cleared.', 'success');
+
+                console.log("All localStorage data cleared.");
+
+            } catch (e) {
+                console.error("Could not clear localStorage:", e);
+                showStatus('Error clearing saved data.', 'error', 5000);
+            }
+        } else {
+            // User cancelled the clear operation
+            showStatus('Clear data cancelled.', '', 3000); // No specific status color needed for cancel
+            console.log("Clear data cancelled by user.");
+        }
+    }
+
+
+    // --- Helper: Get Category Label with Emoji ---
+    function getCategoryLabel(group) {
+      const mapping = {
+        "prerolls": "🌬️",
+        "infusedprerolls": "🔥",
+        "bulkflower(soldbythegram)": "🌿",
+        "prepackagedflower": "🌸",
+        "edibles": "🍬",
+        "vape": "💨",
+        "concentrates": "💎",
+        "topicals": "🧴",
+        "cbd": "🧘",
+        "tincture": "💧",
+        "liquidedibles": "🍹",
+        "medical": "💊" // Added Medical emoji
+      };
+      // Normalize the group name for mapping lookup
+      const lowerNormalized = normalizeCategoryName(group);
+      let emoji = mapping[lowerNormalized] || "⭐"; // Use normalized name for emoji lookup
+      return `${emoji} ${group} ${emoji}`; // Display the original group name in the header (which should be the standard name after mapping)
+    }
+
+    // --- Duplicate Check ---
+    function isDuplicate(newItem) {
+      // Consider all relevant properties in duplicate check
+      return menuItems.some(existing =>
+        existing.name === newItem.name &&
+        existing.price === newItem.price &&
+        existing.category === newItem.category &&
+        existing.description === newItem.description &&
+        existing.bulkGroup === newItem.bulkGroup && // Bulk group is part of identity for CSV items
+        existing.thc === newItem.thc // Include THC in duplicate check
+      );
+    }
+
+    // --- Simple CSV Parser (Remains the same, row processing changes) ---
+    function simpleCSVParse(csvText) {
+      const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== ""); // Filter empty lines
+      const rows = [];
+      for (let line of lines) {
+        // This is a basic parser suitable for your quoted, comma-separated format.
+        // More complex CSV (e.g., with commas inside quotes) would require a more robust library.
+        let processedLine = line.trim();
+         // Simple way to remove outer quotes if present
+        if (processedLine.startsWith('"') && processedLine.endsWith('"')) {
+             processedLine = processedLine.substring(1, processedLine.length - 1);
+        }
+
+        const values = processedLine.split('","').map(val => val.trim()); // Split by "," and trim each value
+        rows.push(values);
+      }
+      return rows;
+    }
+
+    // --- Update Display Functions ---
+    function updateMenuDisplay() {
+      const menuItemsUl = document.getElementById('menuItems');
+      menuItemsUl.innerHTML = '';
+      menuItems.forEach((item, index) => {
+        const li = document.createElement('li');
+        li.textContent = `${item.name} - $${parseFloat(item.price).toFixed(2)}` +
+                         // Display category or bulk group if present
+                         ((item.bulkGroup || item.category) ? ` (${item.bulkGroup || item.category})` : '') +
+                         (item.thc && item.thc.trim() !== "" ? ` [THC ${item.thc}%]` : '') + // Added THC display, check for empty string
+                         (item.description && item.description.trim() !== "" ? `: ${item.description}` : ''); // Check for empty string
+        const editBtn = document.createElement('button');
+        editBtn.textContent = 'Edit';
+        editBtn.onclick = () => { openEditModal(index); };
+        li.appendChild(editBtn); // Add edit button first
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = 'Remove';
+        removeBtn.onclick = () => {
+          menuItems.splice(index, 1);
+          updateMenuDisplay(); // This will now trigger save
+           showStatus('Item removed.', 'success', 1500); // Shorter display time
+        };
+        li.appendChild(removeBtn); // Add remove button second
+        menuItemsUl.appendChild(li);
+      });
+
+      // Update on-screen preview.
+      const previewItemsDiv = document.getElementById('previewItems');
+      previewItemsDiv.innerHTML = "";
+      const logoImage = document.getElementById('logoImage');
+      const logoSize = document.getElementById('logoSizeSelect').value; // Use loaded size
+      if (logoDataURL) {
+        logoImage.src = logoDataURL;
+        logoImage.style.display = 'block';
+        // Apply sizes as px or other screen-friendly unit for preview, keep mm for print
+        logoImage.style.width = logoSize + "px";
+        logoImage.style.height = logoSize + "px";
+        logoImage.style.maxWidth = '100%'; /* Prevent overflow */
+        logoImage.style.height = 'auto'; /* Maintain aspect ratio */
+      } else {
+        logoImage.style.display = 'none';
+      }
+
+      // Group items by bulkGroup first, then category, else uncategorized
+      const groups = {};
+      menuItems.forEach(item => {
+        // Group by bulkGroup if available, otherwise use the assigned category
+        const key = (item.bulkGroup && item.bulkGroup.trim() !== "") ? item.bulkGroup
+                  : (item.category && item.category.trim() !== "") ? item.category
+                  : "Uncategorized";
+        if (!groups[key]) { groups[key] = []; }
+        groups[key].push(item);
+      });
+
+       // Sort group keys alphabetically, but put "Uncategorized" last
+       const sortedGroupKeys = Object.keys(groups).sort((a, b) => {
+           if (a === "Uncategorized") return 1;
+           if (b === "Uncategorized") return -1;
+           return a.localeCompare(b);
+       });
+
+
+       sortedGroupKeys.forEach(groupKey => {
+        const headerEl = document.createElement('h2');
+        // Use the group key (which is the mapped standard category or 'Uncategorized') for emoji lookup
+        headerEl.textContent = groupKey === "Uncategorized" ? "⭐ Uncategorized ⭐" : getCategoryLabel(groupKey);
+        previewItemsDiv.appendChild(headerEl);
+
+        // Sort items within each group (e.g., by name)
+        groups[groupKey].sort((a, b) => a.name.localeCompare(b.name));
+
+        groups[groupKey].forEach(item => {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'menu-item';
+
+          const nameEl = document.createElement('strong');
+          nameEl.textContent = item.name;
+          itemDiv.appendChild(nameEl);
+
+          const priceEl = document.createElement('span');
+          priceEl.textContent = ` - $${parseFloat(item.price).toFixed(2)}`;
+          itemDiv.appendChild(priceEl);
+
+          if (item.thc && item.thc.trim() !== "") { // Add THC span
+            const thcEl = document.createElement('span');
+            thcEl.className = 'thc';
+            thcEl.textContent = ` [THC ${item.thc}%]`;
+            itemDiv.appendChild(thcEl);
+          }
+
+          if (item.description && item.description.trim() !== "") {
+            const descEl = document.createElement('div');
+            descEl.textContent = item.description;
+            itemDiv.appendChild(descEl);
+          }
+
+          previewItemsDiv.appendChild(itemDiv);
+        });
+      });
+
+      saveMenuState(); // Save state whenever display is updated due to item changes
+    }
+
+    // --- Modal Editing Functions ---
+    function openEditModal(index) {
+      currentEditIndex = index;
+      const item = menuItems[index];
+      document.getElementById('editName').value = item.name;
+      document.getElementById('editPrice').value = item.price;
+      // Show the internal category/bulkGroup in the edit modal
+      document.getElementById('editCategory').value = item.category || "";
+      document.getElementById('editBulkGroup').value = item.bulkGroup || "";
+      document.getElementById('editThc').value = item.thc || ""; // Populate THC field
+      document.getElementById('editDescription').value = item.description || "";
+
+      document.getElementById('editModal').style.display = "block";
+    }
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = "none";
+      currentEditIndex = null;
+    }
+    function saveEdit() {
+      if (currentEditIndex === null) return;
+      const item = menuItems[currentEditIndex];
+      const oldName = item.name; // For status message
+
+      const newName = document.getElementById('editName').value.trim();
+      const newPrice = document.getElementById('editPrice').value.trim();
+      const newCategory = document.getElementById('editCategory').value.trim(); // User can manually edit internal category
+      const newThc = document.getElementById('editThc').value.trim();
+      const newDescription = document.getElementById('editDescription').value.trim();
+      const newBulkGroup = document.getElementById('editBulkGroup').value.trim();
+
+
+      // Basic validation for edited item
+      if (!newName || newPrice.trim() === "") {
+         // Don't close modal if validation fails, let user correct
+         showStatus(`Edit failed for "${oldName}": Item must have name and price.`, 'error', 4000);
+         return; // Don't save or update display if invalid
+      }
+
+      // Optional: Validate newCategory against validCategories list if desired, or allow any text
+      // For simplicity, we'll allow any text here but maybe show a warning if it's not a standard category
+      // const normalizedNewCategory = normalizeCategoryName(newCategory);
+      // if (newCategory !== "" && !normalizedValidCategories.includes(normalizedNewCategory)) {
+      //      showStatus(`Warning: Category "${newCategory}" is not one of the standard categories.`, 'warning', 5000);
+      // }
+
+
+      // Update item properties
+      item.name = newName;
+      item.price = newPrice;
+      item.category = newCategory; // Save the manually edited internal category
+      item.thc = newThc;
+      item.description = newDescription;
+      item.bulkGroup = newBulkGroup; // Save the manually edited bulk group
+
+
+      updateMenuDisplay(); // This will now trigger save
+      closeEditModal();
+      showStatus(`"${oldName}" edited.`, 'success');
+    }
+
+    // --- Process Bulk CSV Text with Duplicate Check and Category Filtering ---
+    function processBulkCSV(csvText) {
+      const bulkCategorySelect = document.getElementById('bulkCategory');
+      const bulkCategoryOverride = bulkCategorySelect.value.trim(); // This is the override category
+
+      let rows = simpleCSVParse(csvText);
+
+      if (rows.length < 2) { // Need at least a header row and one data row
+          showStatus("No data rows found in CSV.", 'warning', 3000);
+          console.warn("No data rows found in CSV.");
+          return;
+      }
+
+      // Identify header row and column indices
+      let headerRow = null;
+      let dataRows = [];
+      const requiredHeaders = ["product", "posttaxvalueperunit"]; // Lowercase for comparison
+      const optionalHeaders = ["thc", "category"];
+
+      // Scan lines to find the header row based on required headers
+      let headerFoundIndex = -1;
+      for(let i = 0; i < rows.length; i++) {
+          const potentialHeaders = rows[i].map(h => normalizeCategoryName(h)); // Normalize potential headers
+          const hasRequired = requiredHeaders.every(req => potentialHeaders.includes(req));
+           // Also check for at least one optional header to be more confident it's the header row
+           // Or, if category and thc are not present, check for 'type' header
+           const hasOptionalOrType = optionalHeaders.some(opt => potentialHeaders.includes(opt)) || potentialHeaders.includes("type");
+
+
+          if (hasRequired && hasOptionalOrType) {
+              headerRow = potentialHeaders; // Use normalized headers for index lookup
+              dataRows = rows.slice(i + 1); // Rest are data rows
+              headerFoundIndex = i;
+              break; // Stop looking for headers
+          }
+      }
+
+       if (!headerRow) {
+           showStatus("Could not find expected header row ('Product', 'PostTaxValuePerUnit', and 'Category' or 'THC') in CSV.", 'error', 7000);
+           console.error("Could not find expected header row in CSV:", rows[0]); // Log first row as potential header
+           return;
+       }
+
+
+      const nameIndex = headerRow.indexOf("product");
+      const priceIndex = headerRow.indexOf("posttaxvalueperunit");
+      const thcIndex = headerRow.indexOf("thc"); // Get THC index
+      const categoryIndex = headerRow.indexOf("category"); // Get CATEGORY index
+      const typeIndex = headerRow.indexOf("type"); // Get TYPE index (backup for category)
+
+
+      // (Redundant check, but defensive) Check if required headers were actually found
+      if (nameIndex === -1 || priceIndex === -1) {
+          showStatus("CSV must contain 'Product' and 'PostTaxValuePerUnit' headers.", 'error', 5000);
+          console.error("CSV missing essential headers after scan.");
+          return;
+      }
+
+       if (dataRows.length === 0) {
+            showStatus("CSV contained headers but no data rows found.", 'warning', 3000);
+            console.warn("CSV contained only headers, no data rows found.");
+            return;
+       }
+
+      let addedCount = 0;
+      let skippedMissingDataCount = 0;
+      let skippedInvalidCategoryCount = 0; // This will now include unmapped and explicitly ignored categories
+      let skippedDuplicateCount = 0;
+      let skippedUsableCannabisCount = 0; // Keep specific count for this common case
+
+
+      dataRows.forEach((row, rowIndex) => {
+        // Original row index in the file would be rowIndex + headerFoundIndex + 2
+
+         // Safely get values, handling rows with fewer columns than headers
+         const productName = (nameIndex !== -1 && row.length > nameIndex) ? row[nameIndex].trim() : "";
+         const productPrice = (priceIndex !== -1 && row.length > priceIndex) ? row[priceIndex].trim() : "";
+         // Prioritize Category column, then Type column if Category is empty/missing
+         let csvCategory = "";
+         if (categoryIndex !== -1 && row.length > categoryIndex) {
+             csvCategory = row[categoryIndex].trim();
+         } else if (typeIndex !== -1 && row.length > typeIndex) {
+              csvCategory = row[typeIndex].trim();
+              // console.log(`Row ${rowIndex + headerFoundIndex + 2}: Using Type column "${csvCategory}" as Category fallback for "${productName}".`);
+         }
+
+         const itemThc = (thcIndex !== -1 && row.length > thcIndex) ? row[thcIndex].trim() : ""; // Get THC value
+
+        // Skip rows with no product name or price (often footer rows or malformed data)
+        if (!productName || productPrice.trim() === "" || parseFloat(productPrice) <= 0) { // Also skip items with zero or negative price
+             if (productName || productPrice) { // Log only if there's some content but not enough data or price is zero
+                 console.warn(`Skipping row ${rowIndex + headerFoundIndex + 2} due to missing Product, Price, or zero price:`, row);
+             } // Don't log completely empty rows aggressively
+             skippedMissingDataCount++;
+             return; // Skip this row
+        }
+
+        let itemCategory = ""; // This field isn't strictly needed if using bulkGroup for display, but keep for consistency/edit modal
+        let itemBulkGroup = ""; // This will be the category used for grouping
+
+        if (bulkCategoryOverride !== "") {
+            // Case 1: Bulk Category Override is used
+            itemBulkGroup = bulkCategoryOverride; // Use override as bulk group
+            itemCategory = bulkCategoryOverride; // Also set internal category to override
+            console.log(`Row ${rowIndex + headerFoundIndex + 2}: Using override category "${bulkCategoryOverride}" for "${productName}"`);
+
+        } else {
+            // Case 2: No Bulk Category Override, rely on CSV Category/Type
+            if (csvCategory === "") {
+                 // CSV Category/Type is empty. Add as Uncategorized.
+                 itemBulkGroup = "Uncategorized"; // Group as Uncategorized
+                 itemCategory = ""; // Keep internal category empty if CSV was empty
+                 console.log(`Row ${rowIndex + headerFoundIndex + 2}: No CSV category or override for "${productName}". Adding as Uncategorized.`);
+            } else {
+                 const normalizedCsvCategory = normalizeCategoryName(csvCategory);
+
+                 // Explicitly ignore known unwanted categories regardless of mapping
+                 const unwantedNormalizedCategories = [
+                     normalizeCategoryName("Usable Cannabis"),
+                     normalizeCategoryName("Accessories"),
+                     normalizeCategoryName("Lounge Rental"),
+                     normalizeCategoryName("Cannabis Extract for Inhalation") // Appears as Category in some CSVs, but inconsistent. Better to skip.
+                 ];
+
+                 if (unwantedNormalizedCategories.includes(normalizedCsvCategory)) {
+                     console.warn(`Skipping item "${productName}" (Row ${rowIndex + headerFoundIndex + 2}) due to unwanted category: "${csvCategory}"`);
+                     if (normalizedCsvCategory === normalizeCategoryName("Usable Cannabis")) {
+                         skippedUsableCannabisCount++;
+                     } else {
+                         skippedInvalidCategoryCount++; // Count others as invalid
+                     }
+                     return; // Skip this row
+                 }
+
+                 // Attempt to map CSV category to a predefined valid category
+                 const mappedCategory = categoryMappings[normalizedCsvCategory];
+
+                 if (mappedCategory) {
+                     // Found a match or mapping! Use the original case/spelling from our mapping/validCategories list
+                     itemBulkGroup = mappedCategory; // Use the mapped category as the bulk group name
+                     itemCategory = mappedCategory; // Also set internal category to mapped value
+                     console.log(`Row ${rowIndex + headerFoundIndex + 2}: Mapped CSV category "${csvCategory}" to standard category "${mappedCategory}" for "${productName}"`);
+                 } else {
+                     // CSV Category does not match any predefined category or mapping, and is not explicitly skipped
+                     console.warn(`Skipping item "${productName}" (Row ${rowIndex + headerFoundIndex + 2}) due to unmapped CSV category: "${csvCategory}"`);
+                     skippedInvalidCategoryCount++; // Count unmapped categories as invalid
+                     return; // Skip this row
+                 }
+            }
+        }
+
+        // Description is not reliably in a fixed column in your example, so we won't parse it from bulk CSV for now.
+        const itemDescription = ""; // Not parsing description from bulk CSV based on current logic
+
+        const newItem = { name: productName, price: productPrice, category: itemCategory, description: itemDescription, bulkGroup: itemBulkGroup, thc: itemThc }; // Include all fields
+
+        if (!isDuplicate(newItem)) {
+          menuItems.push(newItem);
+          addedCount++;
+        } else {
+           console.log(`Skipping duplicate item "${productName}" (Row ${rowIndex + headerFoundIndex + 2}):`, newItem);
+           skippedDuplicateCount++;
+        }
+      });
+
+       updateMenuDisplay(); // This will now trigger save after bulk add
+
+       // Display summary message
+       let statusText = `Bulk Add Complete: Added ${addedCount} items.`;
+       if (skippedMissingDataCount > 0) statusText += ` Skipped ${skippedMissingDataCount} due to missing data/zero price.`;
+       if (skippedUsableCannabisCount > 0) statusText += ` Skipped ${skippedUsableCannabisCount} due to "Usable Cannabis" category.`;
+       if (skippedInvalidCategoryCount > 0) statusText += ` Skipped ${skippedInvalidCategoryCount} due to invalid/unmapped category.`;
+       if (skippedDuplicateCount > 0) statusText += ` Skipped ${skippedDuplicateCount} due to duplicate.`;
+
+       const statusType = (addedCount > 0) ? 'success' : ((skippedMissingDataCount + skippedInvalidCategoryCount + skippedDuplicateCount + skippedUsableCannabisCount) > 0 ? 'warning' : '');
+       showStatus(statusText, statusType, 7000); // Keep summary message a bit longer
+
+    }
+
+    // --- Update Status Message Helper ---
+    let statusTimeout;
+    function showStatus(message, type = 'success', duration = 3000) {
+        // Clear any existing timeout before setting a new message
+        clearTimeout(statusTimeout);
+        statusDiv.className = type; // 'success', 'warning', 'error' or '' for default
+        statusDiv.textContent = message;
+        // Clear message after duration
+        statusTimeout = setTimeout(() => { statusDiv.textContent = ''; statusDiv.className = ''; }, duration);
+    }
+
+
+    // --- Event Handlers ---
+    document.getElementById('singleItemForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = document.getElementById('itemName').value.trim();
+      const price = document.getElementById('itemPrice').value.trim();
+      const category = document.getElementById('itemCategory').value.trim();
+      const description = document.getElementById('itemDescription').value.trim();
+      const thc = document.getElementById('itemThc').value.trim(); // Get THC from single item form
+
+
+      if (!name || price.trim() === "" || parseFloat(price) <= 0) { // Add price validation
+        showStatus('Please provide both a name and a price greater than zero for the item.', 'warning');
+        return;
+      }
+      // Check if the manually entered category is a valid one from the list (optional for single add)
+      // If not a valid category, treat it as uncategorized unless a bulk group is manually assigned (not applicable here)
+      const normalizedManualCategory = normalizeCategoryName(category);
+      // Check against the list of *normalized* valid categories to handle minor input variations
+      const finalCategory = normalizedValidCategories.includes(normalizedManualCategory) ? category : "";
+      const finalBulkGroup = finalCategory || "Uncategorized"; // Single items group by category, or are uncategorized
+
+      const newItem = { name, price, category: finalCategory, description, bulkGroup: finalBulkGroup, thc }; // Assign validated category and bulk group
+
+      // Optionally, check duplicates here as well.
+      if (!isDuplicate(newItem)) {
+        menuItems.push(newItem);
+        showStatus(`"${name}" added.`, 'success');
+      } else {
+         showStatus(`"${name}" is a duplicate and was not added.`, 'warning');
+      }
+      updateMenuDisplay(); // This will now trigger save
+      this.reset();
+    });
+
+    document.getElementById('bulkAddButton').addEventListener('click', function() {
+      const bulkText = document.getElementById('bulkItems').value.trim();
+      if (!bulkText) {
+        showStatus('Please enter bulk items or upload a file.', 'warning');
+        return;
+      }
+      processBulkCSV(bulkText); // This internally calls updateMenuDisplay which saves and shows status
+      // Don't clear textarea immediately, user might want to modify and re-import
+      // document.getElementById('bulkItems').value = '';
+    });
+
+    document.getElementById('csvUploadButton').addEventListener('click', function() {
+      const fileInput = document.getElementById('csvFileInput');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        showStatus('Please select a CSV file to upload.', 'warning');
+        return;
+      }
+      const file = fileInput.files[0];
+       // Check file size (e.g., max 2MB for safety with larger CSVs) before reading
+      const maxFileSize = 2 * 1024 * 1024; // 2MB in bytes
+       if (file.size > maxFileSize) {
+            showStatus(`File size exceeds ${maxFileSize / 1024 / 1024}MB limit for CSV. Please choose a smaller file.`, 'warning', 5000);
+            alert(`File size exceeds ${maxFileSize / 1024 / 1024}MB limit. Please choose a smaller file.`);
+            fileInput.value = ''; // Clear the file input
+            return;
+       }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const csvText = e.target.result;
+        processBulkCSV(csvText); // This internally calls updateMenuDisplay which saves and shows status
+        fileInput.value = ''; // Clear the file input
+      };
+      reader.onerror = function() {
+          showStatus('Error reading file.', 'error', 5000);
+          alert('Error reading file.');
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById('logoUploadButton').addEventListener('click', function() {
+      const logoFileInput = document.getElementById('logoFileInput');
+      if (!logoFileInput.files || logoFileInput.files.length === 0) {
+        showStatus('Please select an image file for the logo.', 'warning');
+        return;
+      }
+      const file = logoFileInput.files[0];
+       // Check file size (e.g., max 1MB) before reading
+      const maxFileSize = 1024 * 1024; // 1MB in bytes
+       if (file.size > maxFileSize) {
+            showStatus(`File size exceeds ${maxFileSize / 1024 / 1024}MB limit for logo image. Please choose a smaller image.`, 'warning', 5000);
+            alert(`File size exceeds ${maxFileSize / 1024 / 1024}MB limit. Please choose a smaller image.`);
+            logoFileInput.value = ''; // Clear the file input
+            return;
+       }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        logoDataURL = e.target.result;
+        updateMenuDisplay(); // This will update preview but saveMenuState doesn't save logoDataURL - Logo is not saved across sessions yet
+        showStatus('Logo uploaded. Note: Logo is not saved in browser storage.', 'success');
+      };
+       reader.onerror = function() {
+          showStatus('Error reading logo file.', 'error', 5000);
+          alert('Error reading logo file.');
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Add event listeners to print options and logo size to save state
+    document.getElementById('fontSizeSelect').addEventListener('change', saveMenuState);
+    document.getElementById('exportThemeSelect').addEventListener('change', saveMenuState);
+    document.getElementById('separatePagesCheckbox').addEventListener('change', saveMenuState);
+    document.getElementById('logoSizeSelect').addEventListener('change', saveMenuState); // Save logo size on change
+
+    // Add event listener for the new clear data button
+    document.getElementById('clearDataButton').addEventListener('click', clearAllData);
+
+
+    // --- Final Output Generation ---
+    function openFinalOutput(autoPrint) {
+      // Use loaded options for output
+      const fontSize = document.getElementById('fontSizeSelect').value;
+      const exportTheme = document.getElementById('exportThemeSelect').value;
+      const separatePages = document.getElementById("separatePagesCheckbox").checked;
+
+      if (menuItems.length === 0) {
+           alert("Please add some menu items before printing or exporting.");
+           return;
+       }
+
+      // Group items by bulkGroup first, then category, else uncategorized
+      const groups = {};
+      menuItems.forEach(item => {
+        const key = (item.bulkGroup && item.bulkGroup.trim() !== "") ? item.bulkGroup
+                  : (item.category && item.category.trim() !== "") ? item.category
+                  : "Uncategorized";
+        if (!groups[key]) { groups[key] = []; }
+        groups[key].push(item);
+      });
+
+
+      const logoSize = document.getElementById('logoSizeSelect').value; // Use loaded size
+      let exportCSS = "";
+      // Keep existing theme CSS
+      switch(exportTheme) {
+        case "holiday":
+          exportCSS = `
+            body { background-color: #ffffff; font-family: Arial, sans-serif; color: #8B0000; }
+            h1 { color: #8B0000; text-align: center !important; }
+            h2 { color: #008000; text-align: center !important; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+            th, td { border: 1px solid #000; padding: 8px; text-align: left; vertical-align: top; }
+            th { background-color: #ffe6e6; }
+            /* Adjusted column widths */
+            th:nth-child(1), td:nth-child(1) { width: 55%; } /* Product/Description */
+            th:nth-child(2), td:nth-child(2) { text-align: right; white-space: nowrap; width: 20%; } /* Price */
+            th:nth-child(3), td:nth-child(3) { text-align: center; white-space: nowrap; width: 25%; } /* THC */
+             td small { font-weight: normal; color: #555; }
+          `;
+          break;
+        case "seasonal":
+          exportCSS = `
+            body { background-color: #ffffff; font-family: Georgia, serif; color: #5c3a21; }
+            h1 { color: #8B4513; text-align: center !important; }
+            h2 { color: #8B4513; text-align: center !important; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+            th, td { border: 1px solid #000; padding: 8px; text-align: left; vertical-align: top; }
+            th { background-color: #fff5e6; }
+            /* Adjusted column widths */
+            th:nth-child(1), td:nth-child(1) { width: 55%; } /* Product/Description */
+            th:nth-child(2), td:nth-child(2) { text-align: right; white-space: nowrap; width: 20%; } /* Price */
+            th:nth-child(3), td:nth-child(3) { text-align: center; white-space: nowrap; width: 25%; } /* THC */
+             td small { font-weight: normal; color: #5c3a21; }
+          `;
+          break;
+        case "modern":
+          exportCSS = `
+            body { background-color: #ffffff; font-family: 'Helvetica Neue', sans-serif; color: #333; }
+            h1 { color: #333; text-align: center !important; }
+            h2 { color: #007acc; text-align: center !important; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+            th, td { border: 1px solid #000; padding: 8px; text-align: left; vertical-align: top; }
+            th { background-color: #d0e7ff; }
+            /* Adjusted column widths */
+            th:nth-child(1), td:nth-child(1) { width: 55%; } /* Product/Description */
+            th:nth-child(2), td:nth-child(2) { text-align: right; white-space: nowrap; width: 20%; } /* Price */
+            th:nth-child(3), td:nth-child(3) { text-align: center; white-space: nowrap; width: 25%; } /* THC */
+             td small { font-weight: normal; color: #333; }
+          `;
+          break;
+        case "retro":
+          exportCSS = `
+            body { background-color: #ffffff; font-family: 'Courier New', monospace; color: #000; }
+            h1 { color: #b22222; text-align: center !important; }
+            h2 { color: #b22222; text-align: center !important; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+            th, td { border: 1px solid #000; padding: 8px; text-align: left; vertical-align: top; }
+            th { background-color: #f4a460; }
+             /* Adjusted column widths */
+            th:nth-child(1), td:nth-child(1) { width: 55%; } /* Product/Description */
+            th:nth-child(2), td:nth-child(2) { text-align: right; white-space: nowrap; width: 20%; } /* Price */
+            th:nth-child(3), td:nth-child(3) { text-align: center; white-space: nowrap; width: 25%; } /* THC */
+             td small { font-weight: normal; color: #000; }
+          `;
+          break;
+        case "pastel":
+          exportCSS = `
+            body { background-color: #ffffff; font-family: 'Comic Sans MS', cursive, sans-serif; color: #555; }
+            h1 { color: #ff69b4; text-align: center !important; }
+            h2 { color: #ffb6c1; text-align: center !important; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+            th, td { border: 1px solid #000; padding: 8px; text-align: left; vertical-align: top; }
+            th { background-color: #fce4ec; }
+             /* Adjusted column widths */
+            th:nth-child(1), td:nth-child(1) { width: 55%; } /* Product/Description */
+            th:nth-child(2), td:nth-child(2) { text-align: right; white-space: nowrap; width: 20%; } /* Price */
+            th:nth-child(3), td:nth-child(3) { text-align: center; white-space: nowrap; width: 25%; } /* THC */
+            td small { font-weight: normal; color: #555; }
+          `;
+          break;
+        case "bold":
+          exportCSS = `
+            body { background-color: #ffffff; font-family: Impact, sans-serif; color: #000; }
+            h1 { color: #000; text-align: center !important; }
+            h2 { color: #ff0000; text-align: center !important; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+            th, td { border: 1px solid #000; padding: 8px; text-align: left; vertical-align: top; }
+            th { background-color: #ffd700; }
+             /* Adjusted column widths */
+            th:nth-child(1), td:nth-child(1) { width: 55%; } /* Product/Description */
+            th:nth-child(2), td:nth-child(2) { text-align: right; white-space: nowrap; width: 20%; } /* Price */
+            th:nth-child(3), td:nth-child(3) { text-align: center; white-space: nowrap; width: 25%; } /* THC */
+            td small { font-weight: normal; color: #000; }
+          `;
+          break;
+        case "ocean":
+          exportCSS = `
+            body { background-color: #ffffff; font-family: Arial, sans-serif; color: #005f73; }
+            h1 { color: #0a9396; text-align: center !important; }
+            h2 { color: #94d2bd; text-align: center !important; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+            th, td { border: 1px solid #000; padding: 8px; text-align: left; vertical-align: top; }
+            th { background-color: #caf0f8; }
+             /* Adjusted column widths */
+            th:nth-child(1), td:nth-child(1) { width: 55%; } /* Product/Description */
+            th:nth-child(2), td:nth-child(2) { text-align: right; white-space: nowrap; width: 20%; } /* Price */
+            th:nth-child(3), td:nth-child(3) { text-align: center; white-space: nowrap; width: 25%; } /* THC */
+            td small { font-weight: normal; color: #005f73; }
+          `;
+          break;
+        case "sunset":
+          exportCSS = `
+            body { background-color: #ffffff; font-family: Arial, sans-serif; color: #4a4e69; }
+            h1 { color: #9a8c98; text-align: center !important; }
+            h2 { color: #c9ada7; text-align: center !important; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+            th, td { border: 1px solid #000; padding: 8px; text-align: left; vertical-align: top; }
+            th { background-color: #f2e9e4; }
+             /* Adjusted column widths */
+            th:nth-child(1), td:nth-child(1) { width: 55%; } /* Product/Description */
+            th:nth-child(2), td:nth-child(2) { text-align: right; white-space: nowrap; width: 20%; } /* Price */
+            th:nth-child(3), td:nth-child(3) { text-align: center; white-space: nowrap; width: 25%; } /* THC */
+            td small { font-weight: normal; color: #4a4e69; }
+          `;
+          break;
+        case "forest":
+          exportCSS = `
+            body { background-color: #ffffff; font-family: Arial, sans-serif; color: #2f3e46; }
+            h1 { color: #354f52; text-align: center !important; }
+            h2 { color: #52796f; text-align: center !important; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+            th, td { border: 1px solid #000; padding: 8px; text-align: left; vertical-align: top; }
+            th { background-color: #cad2c5; }
+            /* Adjusted column widths */
+            th:nth-child(1), td:nth-child(1) { width: 55%; } /* Product/Description */
+            th:nth-child(2), td:nth-child(2) { text-align: right; white-space: nowrap; width: 20%; } /* Price */
+            th:nth-child(3), td:nth-child(3) { text-align: center; white-space: nowrap; width: 25%; } /* THC */
+            td small { font-weight: normal; color: #2f3e46; }
+          `;
+          break;
+        case "classic":
+        default:
+          exportCSS = `
+            body { background-color: #ffffff; font-family: Arial, sans-serif; color: #333; }
+            h1 { color: #006400; text-align: center !important; }
+            h2 { color: #006400; text-align: center !important; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+            th, td { border: 1px solid #000; padding: 8px; text-align: left; vertical-align: top; }
+            th { background-color: #e0ffe0; }
+            /* Adjusted column widths */
+            th:nth-child(1), td:nth-child(1) { width: 55%; } /* Product/Description */
+            th:nth-child(2), td:nth-child(2) { text-align: right; white-space: nowrap; width: 20%; } /* Price */
+            th:nth-child(3), td:nth-child(3) { text-align: center; white-space: nowrap; width: 25%; } /* THC */
+            td small { font-weight: normal; color: #555; }
+          `;
+          break;
+      }
+
+      let html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>The Greenery Room Menu</title>
+        <style>
+          /* Define page size for print */
+          @page { size: letter; margin: 0.5in; }
+          body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            font-size: ${fontSize}pt;
+          }
+          ${exportCSS} /* Include theme specific styles */
+
+          /* General table/text styles */
+          table {
+            page-break-inside: auto;
+          }
+          tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+          }
+          thead {
+            display: table-header-group; /* Repeat headers on each page */
+          }
+          tfoot {
+             display: table-footer-group; /* Repeat footers on each page */
+          }
+
+          .logo {
+            display: block;
+            margin: 0 auto 10px;
+            width: ${logoSize}mm; /* Use mm for print size */
+            height: ${logoSize}mm; /* Use mm for print size */
+             object-fit: contain; /* Prevent distortion */
+          }
+          .print-btn-container {
+            text-align: center;
+            margin-bottom: 20px;
+          }
+          .print-btn {
+            padding: 8px 12px;
+            font-size: 1rem;
+            background: #008000;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+          }
+          .print-btn:hover {
+            background: #006400;
+          }
+          p.notice {
+            text-align: center;
+            font-style: italic;
+            margin-top: 5px;
+          }
+          h2 {
+            text-align: center;
+            font-weight: bold;
+            text-decoration: underline;
+            margin-top: 30px;
+             margin-bottom: 15px; /* Space before table */
+          }
+          @media print {
+              .print-btn-container { display: none; } /* Hide print button when printing */
+              body { margin: 0.5in; } /* Ensure print margin is consistent */
+              h2 { page-break-after: avoid; } /* Avoid page break immediately after heading */
+          }
+           ${separatePages ? '@media print { .category-group:not(:first-child) { page-break-before: always; } }' : ''}
+        </style>
+      </head>
+      <body>
+      `;
+      if (logoDataURL) {
+        html += `<img class="logo" src="${logoDataURL}" alt="Logo">`;
+      }
+      html += `<h1>The Greenery Room</h1>`;
+      html += `<p class="notice">All prices are pre-tax</p>`;
+      html += `<div class="print-btn-container"><button class="print-btn" onclick="window.print()">Print</button></div>`;
+
+      // Get group keys as an array and sort alphabetically for consistent output order
+      const groupKeys = Object.keys(groups).sort((a, b) => {
+           if (a === "Uncategorized") return 1;
+           if (b === "Uncategorized") return -1;
+           return a.localeCompare(b);
+       });
+
+
+      groupKeys.forEach((group, index) => {
+        const label = group === "Uncategorized" ? "⭐ Uncategorized ⭐" : getCategoryLabel(group);
+        // Apply page-break based on the separatePages option and if it's not the first group
+         let pageBreakStyle = separatePages && index > 0 ? "style='page-break-before: always;'" : "";
+
+        html += `<div class="category-group" ${pageBreakStyle}>`; // Wrap group in a div for page breaks
+        html += `<h2>${label}</h2>`; // Apply page-break to parent div
+
+        html += `<table>`;
+        html += `<thead><tr><th>Product</th><th>Price</th><th>THC</th></tr></thead><tbody>`; // Added THC header
+        // Sort items within each group for consistent table order
+        groups[group].sort((a, b) => a.name.localeCompare(b.name));
+        groups[group].forEach(item => {
+          html += `<tr>`;
+          // Added description below the name in the table cell if it exists
+          html += `<td>${item.name}${item.description && item.description.trim() !== "" ? '<br><small>' + item.description + '</small>' : ''}</td>`;
+          html += `<td>$${parseFloat(item.price).toFixed(2)}</td>`;
+          html += `<td>${item.thc && item.thc.trim() !== "" ? item.thc + '%' : ''}</td>`; // Added THC data cell, display empty string if no THC
+          html += `</tr>`;
+        });
+        html += `</tbody></table>`;
+        html += `</div>`; // Close category-group div
+      });
+
+      html += `</body></html>`;
+
+      const printWindow = window.open("", "_blank", "height=800,width=600"); // Open in a new tab
+       if (!printWindow) {
+           alert("Please allow pop-ups for this site to open the printable menu.");
+           return;
+       }
+      printWindow.document.write(html);
+      printWindow.document.close();
+      // Wait for content to load before focusing and printing
+      printWindow.onload = function() {
+          // Use a slight delay to ensure rendering is complete and styles are applied
+          setTimeout(() => {
+              printWindow.focus(); // Focus the new window
+              if (autoPrint) {
+                try {
+                    printWindow.print();
+                } catch(e) {
+                    console.error("Print failed:", e);
+                    alert("Print failed. Please check your browser's pop-up blocker and print settings.");
+                }
+             }
+          }, 200); // Delay chosen empirically, might need adjustment
+      };
+      // Add error handling for the new window itself
+      printWindow.addEventListener('error', (e) => {
+          console.error("Error loading print window content:", e);
+          // You might want to show a status message here in the main window
+      });
+
+
+    }
+
+     // --- Initialize Display on Load ---
+     // Get valid categories, load saved state, then update display
+     document.addEventListener('DOMContentLoaded', () => {
+         getValidCategories(); // Populate valid categories and mappings first
+         loadMenuState(); // Load saved data and update display
+     });
+
+  </script>
+</body>
+</html>

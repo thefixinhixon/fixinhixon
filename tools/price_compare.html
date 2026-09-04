@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Store Price Comparator</title>
+  <style>
+    body { font-family: sans-serif; margin: 30px; background: #fafbfc; color: #1a1a1a; }
+    h1 { font-size: 2em; margin-bottom: 0.2em; }
+    label { font-weight: bold; margin-top: 1em; display: block; }
+    input[type="file"] { margin: 8px 0; }
+    button { padding: 10px 20px; margin-top: 15px; font-size: 1em; border-radius: 7px; border: none; background: #1a943a; color: white; cursor: pointer; }
+    button:disabled { background: #aaa; }
+    table { border-collapse: collapse; width: 100%; margin-top: 25px; }
+    th, td { border: 1px solid #ccc; padding: 7px 12px; text-align: left; }
+    th { background: #e5fbe7; }
+    .hidden { display: none; }
+    #result-table { margin-bottom: 1em; }
+    .debug { font-size: 0.95em; color: #888; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Compare Store Prices</h1>
+  <p>Upload Alto, Midtown, and Carrizozo inventory CSVs. Shows only products present in all three stores, where at least one price differs.</p>
+  
+  <form id="file-form">
+    <label>Alto Inventory CSV:
+      <input type="file" id="alto-file" accept=".csv" required>
+    </label>
+    <label>Midtown Inventory CSV:
+      <input type="file" id="midtown-file" accept=".csv" required>
+    </label>
+    <label>Carrizozo Inventory CSV:
+      <input type="file" id="carrizozo-file" accept=".csv" required>
+    </label>
+    <button type="submit" id="compare-btn">Compare Prices</button>
+  </form>
+  
+  <div id="output"></div>
+  <button id="download-btn" class="hidden">Download Results as CSV</button>
+  <div id="debug" class="debug"></div>
+  
+  <script>
+    // Simple CSV parser, handles quoted fields and commas
+    function parseCSV(text) {
+      const rows = [];
+      const lines = text.replace(/\r\n/g, '\n').split('\n');
+      let inQuotes = false, field = '', row = [];
+      for (let line of lines) {
+        row = [];
+        inQuotes = false;
+        field = '';
+        for (let i = 0; i < line.length; i++) {
+          let c = line[i];
+          if (c === '"') {
+            if (inQuotes && line[i + 1] === '"') { field += '"'; i++; }
+            else inQuotes = !inQuotes;
+          } else if (c === ',' && !inQuotes) {
+            row.push(field);
+            field = '';
+          } else {
+            field += c;
+          }
+        }
+        row.push(field);
+        if (row.length > 1 || field !== '') rows.push(row);
+      }
+      return rows;
+    }
+
+    // Auto-detect columns; but with a strong preference for your field names
+    function detectColumns(headers) {
+      // Try for exact matches first
+      let prod = headers.find(h => h.trim().toLowerCase() === "product");
+      let val = headers.find(h => h.trim().toLowerCase() === "valueperunit");
+      // Otherwise, fall back to a flexible search
+      if (!prod) prod = headers.find(h => /product/i.test(h));
+      if (!val) val = headers.find(h => /value\s*per\s*unit/i.test(h));
+      return { product: prod || headers[0], value: val || headers[1] };
+    }
+
+    // Normalize product names for matching
+    function norm(str) {
+      return (str||'').toLowerCase().replace(/[\s"'.,\-\/\\]+/g, '');
+    }
+
+    // Read a file as text
+    function readCSV(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = e => reject('Failed to read file');
+        reader.readAsText(file);
+      });
+    }
+
+    document.getElementById('file-form').onsubmit = async function(e) {
+      e.preventDefault();
+      document.getElementById('output').innerHTML = '';
+      document.getElementById('debug').innerHTML = '';
+      document.getElementById('download-btn').classList.add('hidden');
+
+      const altoFile = document.getElementById('alto-file').files[0];
+      const midFile = document.getElementById('midtown-file').files[0];
+      const carFile = document.getElementById('carrizozo-file').files[0];
+      if (!altoFile || !midFile || !carFile) return;
+
+      let altoRaw, midRaw, carRaw;
+      try {
+        [altoRaw, midRaw, carRaw] = await Promise.all([
+          readCSV(altoFile),
+          readCSV(midFile),
+          readCSV(carFile)
+        ]);
+      } catch (err) {
+        document.getElementById('output').innerHTML = `<b style="color:red">Error: ${err}</b>`;
+        return;
+      }
+
+      function extractMap(csvRaw, storeName) {
+        const rows = parseCSV(csvRaw).filter(row => row.length && row.join('').trim() !== '');
+        const headers = rows[0].map(h => h.trim());
+        const cols = detectColumns(headers);
+        let debugCols = `<b>${storeName}:</b> Detected product column "<b>${cols.product}</b>", price column "<b>${cols.value}</b>"<br>`;
+        const out = {}, origNames = {};
+        for (let i = 1; i < rows.length; i++) {
+          const rowObj = {};
+          headers.forEach((h, j) => rowObj[h] = (rows[i][j] || '').trim());
+          let pname = rowObj[cols.product];
+          let priceStr = rowObj[cols.value];
+          if (!pname) continue;
+          let price = parseFloat((priceStr||'').replace(/[^0-9.]/g, ''));
+          if (isNaN(price)) continue;
+          let normalized = norm(pname);
+          out[normalized] = price;
+          origNames[normalized] = pname; // for display
+        }
+        return { map: out, origNames, debugCols };
+      }
+
+      const alto = extractMap(altoRaw, 'Alto');
+      const mid = extractMap(midRaw, 'Midtown');
+      const car = extractMap(carRaw, 'Carrizozo');
+      document.getElementById('debug').innerHTML = alto.debugCols + mid.debugCols + car.debugCols;
+
+      // Only products present in all 3
+      const productKeys = Object.keys(alto.map).filter(
+        k => k in mid.map && k in car.map
+      );
+      // Prepare results: show only those with a price difference
+      const results = [];
+      productKeys.forEach(k => {
+        const a = alto.map[k], m = mid.map[k], c = car.map[k];
+        if (!(a === m && m === c)) {
+          results.push({
+            key: k,
+            name: alto.origNames[k] || mid.origNames[k] || car.origNames[k] || k,
+            alto: a,
+            midtown: m,
+            carrizozo: c
+          });
+        }
+      });
+
+      if (!results.length) {
+        document.getElementById('output').innerHTML = "<b>No price differences found for products in all stores.</b>";
+        return;
+      }
+
+      let html = `<table id="result-table"><tr>
+        <th>Product Name</th><th>Alto Price</th><th>Midtown Price</th><th>Carrizozo Price</th></tr>`;
+      results.forEach(r => {
+        html += `<tr>
+          <td>${r.name}</td>
+          <td>$${r.alto.toFixed(2)}</td>
+          <td>$${r.midtown.toFixed(2)}</td>
+          <td>$${r.carrizozo.toFixed(2)}</td>
+        </tr>`;
+      });
+      html += '</table>';
+      document.getElementById('output').innerHTML = html;
+      document.getElementById('download-btn').classList.remove('hidden');
+
+      // CSV download
+      document.getElementById('download-btn').onclick = function() {
+        const csvRows = [
+          ['Product Name', 'Alto Price', 'Midtown Price', 'Carrizozo Price'],
+          ...results.map(r => [
+            `"${r.name.replace(/"/g, '""')}"`, r.alto, r.midtown, r.carrizozo
+          ])
+        ].map(r => r.join(','));
+        const blob = new Blob([csvRows.join('\r\n')], {type: 'text/csv'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'price-differences.csv';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        }, 100);
+      };
+    };
+  </script>
+</body>
+</html>
