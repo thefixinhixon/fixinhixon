@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NMS2S Daily Cycle Count Schedule</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+                font-size: 11px !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .print-container {
+                width: 100% !important;
+                max-width: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .day-card {
+                break-inside: avoid !important;
+                box-shadow: none !important;
+                border: 1px solid #cbd5e1 !important;
+                background-color: #ffffff !important;
+            }
+            .day-card-header {
+                color: #000 !important;
+                background-color: #f1f5f9 !important;
+                border-bottom: 1px solid #cbd5e1 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .grid-layout {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 12px !important;
+            }
+            .badge-today {
+                display: none !important;
+            }
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="h-full text-slate-800 antialiased bg-slate-50 flex flex-col">
+
+    <!-- Toast Notification Container -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl transition-all duration-300 transform translate-y-20 opacity-0 flex items-center space-x-3 pointer-events-none">
+        <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-check text-sm"></i>
+        </div>
+        <div>
+            <div id="toast-title" class="font-semibold text-sm text-slate-100">Copied!</div>
+            <div id="toast-msg" class="text-xs text-slate-400">Category copied to clipboard</div>
+        </div>
+    </div>
+
+    <!-- Navigation / Header -->
+    <header class="no-print bg-slate-900 text-white shadow-md border-b border-slate-800 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Title -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-900 font-bold shadow-lg shadow-emerald-500/20">
+                        <i class="fa-solid fa-boxes-stacked text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight tracking-wide text-white">NMS2S Daily Cycle Count</h1>
+                        <p class="text-xs text-slate-400 font-medium">Store Inventory Audit Management System</p>
+                    </div>
+                </div>
+
+                <!-- Global Actions & Search Bar -->
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <!-- Search Input -->
+                    <div class="relative hidden md:block w-56 lg:w-64">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="searchInput" placeholder="Search category..." 
+                            class="w-full pl-9 pr-8 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+                        <button id="clearSearch" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <!-- Direct Training Manual PDF Button -->
+                    <a href="https://www.rld.nm.gov/wp-content/uploads/2026/08/02_Retailer-TrainingManual-v2.0.pdf" target="_blank" rel="noopener noreferrer" 
+                       class="px-3 py-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-xs"
+                       title="Download Retailer Training Manual PDF">
+                        <i class="fa-solid fa-file-pdf text-red-400 text-xs"></i>
+                        <span class="hidden sm:inline">Training Manual (PDF)</span>
+                    </a>
+
+                    <!-- General Portal Link -->
+                    <a href="https://www.rld.nm.gov/cannabis/nms2s/" target="_blank" rel="noopener noreferrer" 
+                       class="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-all flex items-center space-x-1.5">
+                        <i class="fa-solid fa-globe text-xs"></i>
+                        <span class="hidden lg:inline">NMRLD Portal</span>
+                    </a>
+
+                    <!-- Print Button -->
+                    <button onclick="window.print()" class="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs transition-all shadow-md shadow-emerald-500/10 flex items-center space-x-1.5">
+                        <i class="fa-solid fa-print"></i>
+                        <span class="hidden sm:inline">Print</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Search Bar (Below Header) -->
+        <div class="md:hidden px-4 pb-3 pt-1 border-t border-slate-800">
+            <div class="relative w-full">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="searchInputMobile" placeholder="Search any system category..." 
+                    class="w-full pl-9 pr-8 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 print-container">
+        
+        <!-- Header Banner for Print Mode -->
+        <div class="hidden print-only mb-6 border-b-2 border-slate-800 pb-3">
+            <div class="flex justify-between items-end">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900 tracking-tight">NMS2S DAILY CYCLE COUNT SCHEDULE</h1>
+                    <p class="text-xs text-slate-600 font-medium">Standard Operating Inventory Audit Schedule & System Categories</p>
+                </div>
+                <div class="text-right text-xs text-slate-500">
+                    <p>Printed: <span id="printDate"></span></p>
+                    <p class="font-semibold text-slate-700">BioTrack Sync Required Daily</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls Bar: Day Selector & System Status -->
+        <section class="no-print mb-6">
+            <div class="bg-white p-2 sm:p-3 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col md:flex-row items-center justify-between gap-3">
+                
+                <!-- Filter Tabs: Days of Week -->
+                <div class="flex items-center space-x-1 sm:space-x-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 custom-scrollbar" id="dayTabs">
+                    <button onclick="filterDay('ALL')" id="tab-ALL" class="day-tab px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-200 bg-slate-900 text-white shadow-sm">
+                        All Days
+                    </button>
+                    <button onclick="filterDay('Monday')" id="tab-Monday" class="day-tab px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all duration-200">
+                        Monday
+                    </button>
+                    <button onclick="filterDay('Tuesday')" id="tab-Tuesday" class="day-tab px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all duration-200">
+                        Tuesday
+                    </button>
+                    <button onclick="filterDay('Wednesday')" id="tab-Wednesday" class="day-tab px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all duration-200">
+                        Wednesday
+                    </button>
+                    <button onclick="filterDay('Thursday')" id="tab-Thursday" class="day-tab px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all duration-200">
+                        Thursday
+                    </button>
+                    <button onclick="filterDay('Friday')" id="tab-Friday" class="day-tab px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all duration-200">
+                        Friday
+                    </button>
+                    <button onclick="filterDay('Saturday')" id="tab-Saturday" class="day-tab px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all duration-200">
+                        Saturday
+                    </button>
+                    <button onclick="filterDay('Sunday')" id="tab-Sunday" class="day-tab px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all duration-200">
+                        Sunday
+                    </button>
+                </div>
+
+                <!-- Live Indicator & Jump to Today -->
+                <div class="flex items-center space-x-2 w-full md:w-auto justify-end border-t md:border-t-0 pt-2 md:pt-0 border-slate-100">
+                    <button onclick="jumpToToday()" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-medium rounded-lg transition-colors flex items-center space-x-1.5 border border-emerald-200/80">
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span>View Today (<span id="todayDayName">...</span>)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SOP & REMINDER GUIDE SECTION -->
+        <section class="mb-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                
+                <!-- Section Header -->
+                <div class="p-4 sm:px-6 bg-slate-900 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg shrink-0">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold tracking-wide text-white">Cycle Count Procedure & Quick Reminder Steps</h2>
+                            <p class="text-xs text-slate-400">Follow these standard operating steps when conducting daily inventory audits</p>
+                        </div>
+                    </div>
+
+                    <!-- Direct Training Manual & Help Resource Links -->
+                    <div class="no-print flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto shrink-0">
+                        <a href="https://www.rld.nm.gov/wp-content/uploads/2026/08/02_Retailer-TrainingManual-v2.0.pdf" target="_blank" rel="noopener noreferrer" 
+                           class="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs px-3.5 py-2 rounded-xl font-semibold shadow-md transition-all flex items-center justify-center space-x-2 group border border-red-400/30">
+                            <i class="fa-solid fa-file-pdf text-red-200 group-hover:scale-110 transition-transform"></i>
+                            <span>Retailer Training Manual (PDF)</span>
+                            <i class="fa-solid fa-download text-[10px] text-red-200"></i>
+                        </a>
+
+                        <a href="https://www.rld.nm.gov/cannabis/nms2s/" target="_blank" rel="noopener noreferrer" 
+                           class="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs px-3 py-2 rounded-xl font-semibold transition-all flex items-center justify-center space-x-1.5 border border-slate-700">
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                            <span>NMRLD Portal</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Step-by-Step Step Grid -->
+                <div class="p-4 sm:p-6 bg-slate-50/50">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" id="sopStepGrid">
+                        <!-- SOP Reminder steps rendered here -->
+                    </div>
+
+                    <!-- Official Documentation Banner Note -->
+                    <div class="mt-4 pt-3 border-t border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-600 gap-2">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-circle-info text-emerald-600"></i>
+                            <span>Need guidance on state adjustment rules or compliance? Consult the official NMRLD Retailer Training Manual.</span>
+                        </div>
+                        <div class="flex items-center space-x-3 shrink-0">
+                            <a href="https://www.rld.nm.gov/wp-content/uploads/2026/08/02_Retailer-TrainingManual-v2.0.pdf" target="_blank" rel="noopener noreferrer" 
+                               class="font-bold text-red-600 hover:text-red-700 underline flex items-center space-x-1">
+                                <i class="fa-solid fa-file-pdf text-[11px]"></i>
+                                <span>Open Manual (v2.0 PDF)</span>
+                            </a>
+                            <span class="text-slate-300">|</span>
+                            <a href="https://www.rld.nm.gov/cannabis/nms2s/" target="_blank" rel="noopener noreferrer" 
+                               class="font-semibold text-emerald-700 hover:text-emerald-800 underline flex items-center space-x-1">
+                                <span>NMRLD Portal</span>
+                                <i class="fa-solid fa-angle-right text-[10px]"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Schedule Grid Cards -->
+        <section>
+            <div id="scheduleGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 grid-layout">
+                <!-- Day cards rendered dynamically via JS -->
+            </div>
+
+            <!-- Empty Search State -->
+            <div id="noResults" class="hidden text-center py-12 bg-white rounded-2xl border border-slate-200 my-4">
+                <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-magnifying-glass text-lg"></i>
+                </div>
+                <h3 class="font-bold text-slate-700 text-base">No System Categories Found</h3>
+                <p class="text-xs text-slate-500 mt-1">Try searching for a different item name or clear your search query.</p>
+                <button onclick="clearSearchFilter()" class="mt-4 px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800">Clear Search</button>
+            </div>
+        </section>
+
+        <!-- Footer / Print Notice -->
+        <footer class="mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-500 no-print">
+            <p class="font-medium">NMS2S Inventory Management &bull; Click any category text to copy to clipboard for fast system lookup.</p>
+        </footer>
+    </main>
+
+    <!-- JS Logic -->
+    <script>
+        // Data Structure for NMS2S Cycle Count Schedule
+        const SCHEDULE_DATA = [
+            {
+                day: "Monday",
+                primary: "Edibles / Drinks",
+                icon: "fa-cookie-bite",
+                theme: {
+                    headerBg: "bg-sky-600",
+                    headerText: "text-white"
+                },
+                categories: [
+                    "Liquid Audited Product Packaged",
+                    "Liquid Orally Consumed Product Packaged",
+                    "Solid Orally Consumed Product Packaged"
+                ]
+            },
+            {
+                day: "Tuesday",
+                primary: "PreRoll / Infused",
+                icon: "fa-joint",
+                theme: {
+                    headerBg: "bg-amber-600",
+                    headerText: "text-white"
+                },
+                categories: [
+                    "Cannabis Packaged",
+                    "Infused Cannabis Material (Concentrate CO2) Packaged",
+                    "Infused Cannabis Material (Non-Volatile Solvent) Packaged",
+                    "Infused Cannabis Material (Volatile Solvent) Packaged",
+                    "Infused Pre-Rolls (Concentrate CO2) Packaged",
+                    "Infused Pre-Rolls (Non-Volatile Solvent) Packaged",
+                    "Infused Pre-Rolls (Volatile Solvent) Packaged",
+                    "Pre-Rolls Packaged"
+                ]
+            },
+            {
+                day: "Wednesday",
+                primary: "Bulk Flower",
+                icon: "fa-cannabis",
+                theme: {
+                    headerBg: "bg-emerald-600",
+                    headerText: "text-white"
+                },
+                categories: [
+                    "Deli Style Cannabis"
+                ]
+            },
+            {
+                day: "Thursday",
+                primary: "Vapes",
+                icon: "fa-wind",
+                theme: {
+                    headerBg: "bg-purple-600",
+                    headerText: "text-white"
+                },
+                categories: [
+                    "(Other Inhalable) Vaporized Packaged",
+                    "Concentrate (CO2) Vaporizer Packaged",
+                    "Concentrate (Non-Volatile Solvent) Vaporizer Packaged",
+                    "Concentrate (Volatile Solvent) Vaporizer Packaged"
+                ]
+            },
+            {
+                day: "Friday",
+                primary: "Topicals / Tinctures",
+                icon: "fa-pump-soap",
+                theme: {
+                    headerBg: "bg-rose-600",
+                    headerText: "text-white"
+                },
+                categories: [
+                    "Cannabis Tincture Packaged",
+                    "Liquid Topical Packaged",
+                    "Solid Topical Packaged"
+                ]
+            },
+            {
+                day: "Saturday",
+                primary: "Concentrates",
+                icon: "fa-vial",
+                theme: {
+                    headerBg: "bg-teal-600",
+                    headerText: "text-white"
+                },
+                categories: [
+                    "Concentrate (CO2) Packaged",
+                    "Concentrate (Non-Volatile Solvent) Packaged",
+                    "Concentrate (Volatile Solvent) Packaged"
+                ]
+            },
+            {
+                day: "Sunday",
+                primary: "Accessories / CBD / NIC",
+                icon: "fa-store",
+                theme: {
+                    headerBg: "bg-slate-700",
+                    headerText: "text-white"
+                },
+                categories: [
+                    "Complete in BIOTRACK only"
+                ]
+            }
+        ];
+
+        // Standard Operating Procedure Step Reminders
+        const SOP_STEPS = [
+            { id: 1, title: "Location Verification", text: "Ensure you are in the correct store location on system." },
+            { id: 2, title: "Sales Floor Audit", text: "Find physical product on the Sales Floor." },
+            { id: 3, title: "Category Lookup", text: "Search Categories from NMS2S daily list." },
+            { id: 4, title: "Transfer Item", text: "Transfer to 'Default Inventory' room to make adjustments." },
+            { id: 5, title: "Room Navigation", text: "Go to Default Inventory room (back out of sales floor)." },
+            { id: 6, title: "Count Adjustment", text: "Adjust item to correct verified physical amount." },
+            { id: 7, title: "Return Transfer", text: "Move item back to 'sales floor' room." },
+            { id: 8, title: "System Sync", text: "Sync from BioTrack (Admin -> NMS2S Sync)." }
+        ];
+
+        // Global State
+        let currentDayName = "";
+        let selectedFilterDay = "ALL";
+
+        // Initialize Application
+        window.addEventListener('DOMContentLoaded', () => {
+            detectToday();
+            renderSOPReminders();
+            renderSchedule();
+            setupSearchListeners();
+            
+            // Set Print Date
+            const now = new Date();
+            document.getElementById('printDate').innerText = now.toLocaleDateString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+            });
+        });
+
+        // Detect Current Day of the Week
+        function detectToday() {
+            const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            const now = new Date();
+            currentDayName = days[now.getDay()];
+            document.getElementById('todayDayName').innerText = currentDayName;
+        }
+
+        function renderSOPReminders() {
+            const container = document.getElementById('sopStepGrid');
+            container.innerHTML = '';
+
+            SOP_STEPS.forEach(step => {
+                const stepEl = document.createElement('div');
+                stepEl.className = `p-3.5 rounded-xl border border-slate-200/80 bg-white hover:border-slate-300 transition-all duration-200 flex items-start space-x-3 shadow-2xs`;
+
+                stepEl.innerHTML = `
+                    <div class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 border border-emerald-200">
+                        ${step.id}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold text-xs text-slate-900 leading-snug">${step.title}</h4>
+                        <p class="text-xs text-slate-600 leading-relaxed mt-0.5">${step.text}</p>
+                    </div>
+                `;
+                container.appendChild(stepEl);
+            });
+        }
+
+        function renderSchedule(filterSearchQuery = '') {
+            const grid = document.getElementById('scheduleGrid');
+            grid.innerHTML = '';
+
+            let matchCount = 0;
+            const query = filterSearchQuery.toLowerCase().trim();
+
+            SCHEDULE_DATA.forEach(dayData => {
+                const isToday = dayData.day === currentDayName;
+                const isDayFilteredOut = selectedFilterDay !== 'ALL' && selectedFilterDay !== dayData.day;
+
+                // Filter categories if search active
+                let visibleCategories = dayData.categories;
+                if (query) {
+                    visibleCategories = dayData.categories.filter(cat => 
+                        cat.toLowerCase().includes(query) || 
+                        dayData.primary.toLowerCase().includes(query) ||
+                        dayData.day.toLowerCase().includes(query)
+                    );
+                }
+
+                if (isDayFilteredOut || (query && visibleCategories.length === 0)) {
+                    return; // Skip rendering this card
+                }
+
+                matchCount++;
+
+                const card = document.createElement('div');
+                
+                // Base classes
+                let cardClasses = `day-card bg-white rounded-2xl border transition-all duration-300 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md `;
+                
+                if (isToday && selectedFilterDay === 'ALL') {
+                    cardClasses += `ring-2 ring-emerald-500 border-emerald-400 relative scale-[1.01] z-10 `;
+                } else {
+                    cardClasses += `border-slate-200/90 `;
+                }
+
+                card.className = cardClasses;
+
+                // Category List HTML
+                let categoryListHtml = visibleCategories.map(cat => {
+                    const isSpecialNotice = cat.includes("BIOTRACK only");
+                    return `
+                        <div onclick="copyToClipboard('${cat.replace(/'/g, "\\'")}')" 
+                             class="group p-2.5 rounded-xl border border-slate-100 hover:border-slate-300 hover:bg-slate-50 transition-all duration-150 flex items-center justify-between cursor-pointer">
+                            <span class="text-xs font-medium text-slate-700 group-hover:text-slate-900 leading-snug">
+                                ${highlightQuery(cat, query)}
+                            </span>
+                            ${isSpecialNotice ? 
+                                `<span class="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded ml-2 whitespace-nowrap">Special</span>` :
+                                `<i class="fa-regular fa-copy text-slate-300 group-hover:text-slate-500 text-xs ml-2 opacity-0 group-hover:opacity-100 transition-opacity"></i>`
+                            }
+                        </div>
+                    `;
+                }).join('');
+
+                card.innerHTML = `
+                    <div>
+                        <!-- Header -->
+                        <div class="day-card-header p-4 ${dayData.theme.headerBg} ${dayData.theme.headerText} flex items-center justify-between">
+                            <div class="flex items-center space-x-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-sm">
+                                    <i class="fa-solid ${dayData.icon}"></i>
+                                </div>
+                                <div>
+                                    <div class="flex items-center space-x-2">
+                                        <h3 class="font-bold text-base tracking-wide">${dayData.day}</h3>
+                                        ${isToday ? `<span class="badge-today text-[10px] uppercase font-black bg-white text-slate-900 px-2 py-0.5 rounded-full shadow-sm tracking-wider">TODAY</span>` : ''}
+                                    </div>
+                                    <p class="text-xs opacity-90 font-medium">${dayData.primary}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Content List -->
+                        <div class="p-4 space-y-2">
+                            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                System Categories (${visibleCategories.length})
+                            </div>
+                            ${categoryListHtml}
+                        </div>
+                    </div>
+
+                    <!-- Card Footer Info -->
+                    <div class="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+                        <span>Status: <strong class="${isToday ? 'text-emerald-600' : 'text-slate-600'}">${isToday ? 'Active Audit Day' : 'Scheduled'}</strong></span>
+                        <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+
+            // Show No Results if needed
+            const noResults = document.getElementById('noResults');
+            if (matchCount === 0) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+            }
+        }
+
+        // Highlight matching query text
+        function highlightQuery(text, query) {
+            if (!query) return text;
+            const regex = new RegExp(`(${query})`, 'gi');
+            return text.replace(regex, `<mark class="bg-amber-200 text-slate-900 px-0.5 rounded">$1</mark>`);
+        }
+
+        // Filter by Day Tab
+        function filterDay(day) {
+            selectedFilterDay = day;
+
+            // Update Tab styles
+            document.querySelectorAll('.day-tab').forEach(btn => {
+                btn.className = "day-tab px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all duration-200";
+            });
+
+            const activeTab = document.getElementById(`tab-${day}`);
+            if (activeTab) {
+                activeTab.className = "day-tab px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-slate-900 text-white shadow-sm transition-all duration-200";
+            }
+
+            renderSchedule(getCurrentSearchQuery());
+        }
+
+        function jumpToToday() {
+            filterDay(currentDayName);
+        }
+
+        function setupSearchListeners() {
+            const searchInput = document.getElementById('searchInput');
+            const searchInputMobile = document.getElementById('searchInputMobile');
+            const clearBtn = document.getElementById('clearSearch');
+
+            function handleSearch(e) {
+                const val = e.target.value;
+                if (searchInput) searchInput.value = val;
+                if (searchInputMobile) searchInputMobile.value = val;
+
+                if (val.trim().length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
+
+                renderSchedule(val);
+            }
+
+            if (searchInput) searchInput.addEventListener('input', handleSearch);
+            if (searchInputMobile) searchInputMobile.addEventListener('input', handleSearch);
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', clearSearchFilter);
+            }
+        }
+
+        function getCurrentSearchQuery() {
+            const desktopVal = document.getElementById('searchInput')?.value || '';
+            const mobileVal = document.getElementById('searchInputMobile')?.value || '';
+            return desktopVal || mobileVal;
+        }
+
+        function clearSearchFilter() {
+            const searchInput = document.getElementById('searchInput');
+            const searchInputMobile = document.getElementById('searchInputMobile');
+            const clearBtn = document.getElementById('clearSearch');
+
+            if (searchInput) searchInput.value = '';
+            if (searchInputMobile) searchInputMobile.value = '';
+            if (clearBtn) clearBtn.classList.add('hidden');
+
+            renderSchedule('');
+        }
+
+        function copyToClipboard(text) {
+            if (text.includes("BIOTRACK only")) {
+                showToast("Notice", "Accessories/CBD/NIC are audited in BioTrack directly.");
+                return;
+            }
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text);
+            } else {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                textArea.style.top = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                } catch (err) {
+                    console.error('Fallback copy failed', err);
+                }
+                document.body.removeChild(textArea);
+            }
+
+            showToast("Copied!", `"${text}" copied to clipboard.`);
+        }
+
+        // Toast Notification System
+        let toastTimeout;
+        function showToast(title, message) {
+            const toast = document.getElementById('toast');
+            const toastTitle = document.getElementById('toast-title');
+            const toastMsg = document.getElementById('toast-msg');
+
+            toastTitle.innerText = title;
+            toastMsg.innerText = message;
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2600);
+        }
+    </script>
+</body>
+</html>
