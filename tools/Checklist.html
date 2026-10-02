@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispensary Product Help Desk</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-green: #10b981;
+            --accent-green-hover: #059669;
+            --accent-red: #ef4444;
+            --accent-gold: #f59e0b;
+            --accent-blue: #3b82f6;
+            --input-bg: #0f172a;
+            --input-border: #475569;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.5;
+            padding: 16px;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--card-border);
+        }
+
+        h1 {
+            font-size: 1.7rem;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-header {
+            font-size: 1rem;
+            font-weight: bold;
+            color: var(--accent-green);
+            margin-bottom: 14px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .form-grid.single {
+            grid-template-columns: 1fr;
+        }
+
+        @media (max-width: 600px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .form-group input, 
+        .form-group select, 
+        .form-group textarea {
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-primary);
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus, 
+        .form-group select:focus, 
+        .form-group textarea:focus {
+            border-color: var(--accent-green);
+            outline: none;
+        }
+
+        .upc-input {
+            font-family: "Courier New", Courier, monospace;
+            letter-spacing: 1px;
+            font-weight: bold;
+            font-size: 1.05rem !important;
+        }
+
+        .variance-badge {
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .variance-badge.short {
+            background-color: rgba(239, 68, 68, 0.15);
+            border-color: var(--accent-red);
+            color: #fca5a5;
+        }
+
+        .variance-badge.over {
+            background-color: rgba(245, 158, 11, 0.15);
+            border-color: var(--accent-gold);
+            color: #fde68a;
+        }
+
+        .variance-badge.match {
+            background-color: rgba(16, 185, 129, 0.15);
+            border-color: var(--accent-green);
+            color: #6ee7b7;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background-color: var(--accent-green);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover {
+            background-color: var(--accent-green-hover);
+        }
+
+        .status-msg {
+            margin-top: 14px;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .status-msg.success {
+            display: block;
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+            border: 1px solid var(--accent-green);
+        }
+
+        .status-msg.error {
+            display: block;
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid var(--accent-red);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Product Help Desk</h1>
+        <p class="subtitle">Report POS Errors, Scan Issues, & Count Discrepancies</p>
+    </header>
+
+    <form id="helpDeskForm">
+        
+        <!-- Reporter Info -->
+        <div class="form-card">
+            <div class="section-header">
+                <span>1. Budtender Information</span>
+            </div>
+            <div class="form-grid">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="empName">Your Name / ID *</label>
+                    <input type="text" id="empName" required placeholder="e.g., Alex M.">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="reportDate">Date & Time</label>
+                    <input type="text" id="reportDate" readonly style="opacity: 0.7; cursor: not-allowed;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Identification -->
+        <div class="form-card">
+            <div class="section-header">
+                <span>2. Product Identification</span>
+            </div>
+            <div class="form-group">
+                <label for="upcCode">UPC / Barcode Number *</label>
+                <input type="text" id="upcCode" class="upc-input" required placeholder="Scan barcode or type digits..." autofocus>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="productName">Product Name & Category *</label>
+                <input type="text" id="productName" required placeholder="e.g., Blue Dream 3.5g Flower - Brand X">
+            </div>
+        </div>
+
+        <!-- Issue & Inventory Details -->
+        <div class="form-card">
+            <div class="section-header">
+                <span>3. Issue & Quantity Discrepancy</span>
+            </div>
+
+            <div class="form-group">
+                <label for="issueType">Primary Issue Category *</label>
+                <select id="issueType" required>
+                    <option value="">Select Primary Issue</option>
+                    <option value="Barcode Will Not Scan">Barcode Will Not Scan / Unrecognized</option>
+                    <option value="Product Not in POS System">Product Missing in POS System</option>
+                    <option value="Incorrect Price in POS">Incorrect Price / Promotion Error</option>
+                    <option value="Inventory Count Discrepancy">Inventory Count Mismatch</option>
+                    <option value="Package Tag / Metrc Issue">Package Tag / Batch ID Mismatch</option>
+                    <option value="Damaged / Defective Product">Damaged / Defective Item</option>
+                    <option value="Other Issue">Other System Error</option>
+                </select>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="posQty">System On-Hand Qty (POS) *</label>
+                    <input type="number" id="posQty" min="0" required placeholder="0">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="physicalQty">Expected Physical Qty (Vault + Floor) *</label>
+                    <input type="number" id="physicalQty" min="0" required placeholder="0">
+                </div>
+            </div>
+
+            <!-- Auto Calculated Variance -->
+            <div id="varianceBadge" class="variance-badge" style="margin-bottom: 14px;">
+                Enter quantities above to calculate variance
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="issueDetails">What Happened? / Additional Notes *</label>
+                <textarea id="issueDetails" rows="3" required placeholder="Describe what occurred (e.g., POS says item out of stock but we have 4 on shelf; scan pops up wrong item name, etc.)"></textarea>
+            </div>
+        </div>
+
+        <button type="submit" class="submit-btn">Submit Product Help Request</button>
+        <div id="statusMsg" class="status-msg"></div>
+
+    </form>
+
+    <script>
+        const WEB3FORMS_ACCESS_KEY = "17a941be-f0af-43cd-8f52-0af4a34fb7a4";
+
+        // Auto-update Date & Time stamp
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('reportDate').value = now.toLocaleString([], {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        updateDateTime();
+
+        // Auto-restore saved Budtender Name
+        const empNameInput = document.getElementById('empName');
+        const savedName = localStorage.getItem('dispensary_budtender_name');
+        if (savedName) {
+            empNameInput.value = savedName;
+        }
+        empNameInput.addEventListener('input', () => {
+            localStorage.setItem('dispensary_budtender_name', empNameInput.value.trim());
+        });
+
+        // Variance Calculation Logic
+        const posQtyInput = document.getElementById('posQty');
+        const physicalQtyInput = document.getElementById('physicalQty');
+        const varianceBadge = document.getElementById('varianceBadge');
+
+        function calculateVariance() {
+            const posVal = posQtyInput.value;
+            const physVal = physicalQtyInput.value;
+
+            if (posVal === '' || physVal === '') {
+                varianceBadge.className = 'variance-badge';
+                varianceBadge.textContent = 'Enter quantities above to calculate variance';
+                return;
+            }
+
+            const pos = parseInt(posVal, 10);
+            const phys = parseInt(physVal, 10);
+            const diff = phys - pos;
+
+            if (diff < 0) {
+                varianceBadge.className = 'variance-badge short';
+                varianceBadge.textContent = `Variance: ${diff} Units (Physical is SHORT by ${Math.abs(diff)})`;
+            } else if (diff > 0) {
+                varianceBadge.className = 'variance-badge over';
+                varianceBadge.textContent = `Variance: +${diff} Units (Physical has OVERAGE of ${diff})`;
+            } else {
+                varianceBadge.className = 'variance-badge match';
+                varianceBadge.textContent = `Variance: 0 Units (System matches Physical count)`;
+            }
+        }
+
+        posQtyInput.addEventListener('input', calculateVariance);
+        physicalQtyInput.addEventListener('input', calculateVariance);
+
+        // Form Submission via Web3Forms
+        const form = document.getElementById('helpDeskForm');
+        const statusMsg = document.getElementById('statusMsg');
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const empName = empNameInput.value.trim();
+            const dateStr = document.getElementById('reportDate').value;
+            const upc = document.getElementById('upcCode').value.trim();
+            const productName = document.getElementById('productName').value.trim();
+            const issueType = document.getElementById('issueType').value;
+            const posQty = posQtyInput.value;
+            const physicalQty = physicalQtyInput.value;
+            const diff = parseInt(physicalQty, 10) - parseInt(posQty, 10);
+            const issueDetails = document.getElementById('issueDetails').value.trim();
+
+            const messagePayload = `
+PRODUCT HELP DESK REPORT
+=================================
+Submitted By : ${empName}
+Date / Time  : ${dateStr}
+
+PRODUCT INFORMATION:
+---------------------------------
+Product Name : ${productName}
+UPC / Barcode: ${upc}
+
+INVENTORY DISCREPANCY:
+---------------------------------
+System On-Hand (POS)  : ${posQty}
+Expected Physical Qty : ${physicalQty}
+Calculated Variance   : ${diff > 0 ? '+' + diff : diff} units
+
+ISSUE DETAILS:
+---------------------------------
+Category : ${issueType}
+Details  : ${issueDetails}
+            `;
+
+            statusMsg.className = "status-msg";
+            statusMsg.textContent = "Submitting product report to management...";
+            statusMsg.style.display = "block";
+
+            try {
+                const response = await fetch('https://api.web3forms.com/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        access_key: WEB3FORMS_ACCESS_KEY,
+                        subject: `Product Alert: ${productName} (${upc}) - ${empName}`,
+                        from_name: `Budtender ${empName}`,
+                        message: messagePayload
+                    })
+                });
+
+                const resData = await response.json();
+                if (resData.success) {
+                    statusMsg.className = "status-msg success";
+                    statusMsg.textContent = "Report submitted successfully! Management has been notified via email.";
+                    
+                    // Reset product fields for quick subsequent submissions
+                    document.getElementById('upcCode').value = '';
+                    document.getElementById('productName').value = '';
+                    document.getElementById('issueType').value = '';
+                    posQtyInput.value = '';
+                    physicalQtyInput.value = '';
+                    document.getElementById('issueDetails').value = '';
+                    calculateVariance();
+                    document.getElementById('upcCode').focus();
+                } else {
+                    throw new Error(resData.message || "Failed to send report.");
+                }
+            } catch (err) {
+                statusMsg.className = "status-msg error";
+                statusMsg.textContent = "Error submitting report: " + err.message;
+            }
+        });
+    </script>
+</body>
+</html>
