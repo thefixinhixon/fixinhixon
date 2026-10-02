@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fixin Hixon Tool Suite</title>
+  <title>Fixin Hixon & The Greenery Room Tool Portal</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Tailwind Configuration -->
@@ -69,36 +69,36 @@
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col transition-colors duration-300 light:bg-slate-50 light:text-slate-800">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col transition-colors duration-300">
 
   <!-- Header -->
-  <header class="sticky top-0 z-50 glass-card border-b border-slate-800 light:border-slate-200">
+  <header class="sticky top-0 z-50 glass-card border-b border-slate-800">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
       
       <!-- Logo & Title -->
       <div class="flex items-center gap-3">
-        <div class="p-2.5 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 text-emerald-400">
+        <div class="p-2.5 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 text-emerald-400 shadow-lg shadow-emerald-500/10">
           <i data-lucide="wrench" class="w-6 h-6"></i>
         </div>
         <div>
           <h1 class="text-xl font-bold bg-gradient-to-r from-emerald-400 via-teal-300 to-sky-400 bg-clip-text text-transparent">
-            Fixin Hixon
+            Fixin Hixon Suite
           </h1>
-          <p class="text-xs text-slate-400 font-medium">Utility & Tool Suite Directory</p>
+          <p class="text-xs text-slate-400 font-medium">Retail Operations & Utility Portal</p>
         </div>
       </div>
 
       <!-- Quick Actions -->
       <div class="flex items-center gap-3">
         <!-- Favorites Filter Quick Toggle -->
-        <button id="favQuickFilterBtn" onclick="toggleFavoritesFilter()" class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 border border-slate-700/50 transition-all">
+        <button id="favQuickFilterBtn" onclick="toggleFavoritesFilter()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 border border-slate-700/50 transition-all">
           <i data-lucide="star" class="w-4 h-4 text-amber-400"></i>
           <span class="hidden sm:inline">Favorites</span>
           <span id="favCountBadge" class="bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded-full text-[10px] font-bold">0</span>
         </button>
 
         <!-- View Toggle (Grid / List) -->
-        <div class="flex bg-slate-900/80 p-1 rounded-xl border border-slate-800 light:bg-slate-200 light:border-slate-300">
+        <div class="flex bg-slate-900/80 p-1 rounded-xl border border-slate-800">
           <button id="gridViewBtn" onclick="setViewMode('grid')" class="p-2 rounded-lg text-slate-400 hover:text-white transition-all bg-slate-800 text-white shadow-sm" title="Grid View">
             <i data-lucide="grid" class="w-4 h-4"></i>
           </button>
@@ -121,13 +121,13 @@
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
         </span>
-        15 Active Tools Available
+        16 Tools Available
       </div>
-      <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white light:text-slate-900">
-        Everything You Need in One Place
+      <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+        Everything You Need in One Portal
       </h2>
       <p class="text-slate-400 text-sm sm:text-base leading-relaxed">
-        Access all calculators, label generators, menu makers, cycle count schedules, and retail utilities instantly. Search or filter by category below.
+        Access all calculators, label generators, menu makers, operational checklists, and retail utilities instantly.
       </p>
     </section>
 
@@ -144,7 +144,7 @@
             type="text" 
             id="searchInput" 
             oninput="handleSearch()"
-            placeholder="Search tools by name, tag, or description..." 
+            placeholder="Search tools, URL, or keywords..." 
             class="w-full pl-10 pr-10 py-3 bg-slate-900/90 border border-slate-800 rounded-2xl text-sm placeholder-slate-500 text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all shadow-inner"
           />
           <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300">
@@ -179,7 +179,7 @@
           <i data-lucide="search-x" class="w-8 h-8"></i>
         </div>
         <div class="space-y-1">
-          <h3 class="text-base font-semibold text-slate-200">No tools found</h3>
+          <h3 class="text-base font-semibold text-slate-200">No matching tools found</h3>
           <p class="text-xs text-slate-400">Try adjusting your search terms or category filters</p>
         </div>
         <button onclick="resetFilters()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium transition-all">
@@ -193,23 +193,32 @@
   <!-- Footer -->
   <footer class="border-t border-slate-800/80 mt-16 py-8 text-center text-xs text-slate-500">
     <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p>© Fixin Hixon Utilities Directory. Direct link portal.</p>
+      <p>© Fixin Hixon & The Greenery Room Tools Directory.</p>
       <div class="flex items-center gap-4">
-        <a href="https://fixinhixon.com" target="_blank" rel="noopener noreferrer" class="hover:text-slate-300 transition-colors">Main Site</a>
+        <a href="https://fixinhixon.com" target="_blank" rel="noopener noreferrer" class="hover:text-slate-300 transition-colors">Fixin Hixon</a>
         <span>•</span>
-        <span class="text-slate-600">Updated Toolset</span>
+        <a href="https://www.thegreeneryroomnm.com" target="_blank" rel="noopener noreferrer" class="hover:text-slate-300 transition-colors">The Greenery Room</a>
       </div>
     </div>
   </footer>
 
   <script>
-    // Master Tool Data Definition
+    // Master Tool Data Definition (16 Total Tools)
     const tools = [
+      {
+        id: 'checklist',
+        title: 'Daily Tasks Checklist',
+        url: 'https://www.thegreeneryroomnm.com/tools/Checklist.html',
+        category: 'Inventory & Ops',
+        icon: 'check-square',
+        badge: 'Ops / Checklist',
+        description: 'Interactive checklist for daily dispensary opening, closing, operational tasks, and routine procedures.'
+      },
       {
         id: 'cash_counter',
         title: 'Cash Counter',
         url: 'https://fixinhixon.com/tools/cash_counter.html',
-        category: 'Calculators & Finance',
+        category: 'Pricing & Finance',
         icon: 'calculator',
         badge: 'Finance',
         description: 'Streamline till balancing and denomination tallies for quick cash reconciliation.'
@@ -227,16 +236,16 @@
         id: 'concentrates_guide',
         title: 'Concentrates Guide',
         url: 'https://fixinhixon.com/tools/concentrates_guide.html',
-        category: 'Guides & Catalog',
+        category: 'Guides & Reference',
         icon: 'book-open',
         badge: 'Reference',
         description: 'Comprehensive reference and instructional guide for concentrate product types and metrics.'
       },
       {
         id: 'flowercalc',
-        title: 'Flower Calculator',
+        title: 'Flower Price Calculator',
         url: 'https://fixinhixon.com/tools/flowercalc.html',
-        category: 'Calculators & Finance',
+        category: 'Pricing & Finance',
         icon: 'scale',
         badge: 'Calculator',
         description: 'Calculates weight splits, conversions, and pricing breakdowns accurately.'
@@ -245,7 +254,7 @@
         id: 'inventory_count_schedule',
         title: 'Inventory Count Schedule',
         url: 'https://fixinhixon.com/tools/nms2s_cycle_count_schedule.html',
-        category: 'Menus & Inventory',
+        category: 'Inventory & Ops',
         icon: 'calendar-check',
         badge: 'Audit',
         description: 'Schedule and manage NMS2S cycle counts, inventory audits, and routine stock verification.'
@@ -254,7 +263,7 @@
         id: 'inventory-label-builder',
         title: 'Inventory Label Builder',
         url: 'https://fixinhixon.com/tools/inventory-label-builder.html',
-        category: 'Labels & Printing',
+        category: 'Labeling & Print',
         icon: 'tag',
         badge: 'Labels',
         description: 'Generate standardized inventory tags and batch barcodes for warehouse cataloging.'
@@ -263,7 +272,7 @@
         id: 'inventory_splitter',
         title: 'Inventory Splitter',
         url: 'https://fixinhixon.com/tools/inventory_splitter.html',
-        category: 'Menus & Inventory',
+        category: 'Inventory & Ops',
         icon: 'scissors',
         badge: 'Inventory',
         description: 'Split large inventory lots and batches evenly into custom weights and unit sizes.'
@@ -272,25 +281,25 @@
         id: 'labelbuilder',
         title: 'Label Builder',
         url: 'https://fixinhixon.com/tools/labelbuilder.html',
-        category: 'Labels & Printing',
+        category: 'Labeling & Print',
         icon: 'printer',
         badge: 'Labels',
         description: 'Custom compliant label creator with formatted text, compliance logos, and print layouts.'
       },
       {
         id: 'labelgen2',
-        title: 'Label Gen 2',
+        title: 'Label Generator v2',
         url: 'https://fixinhixon.com/tools/labelgen2.html',
-        category: 'Labels & Printing',
+        category: 'Labeling & Print',
         icon: 'file-badge',
         badge: 'v2.0',
         description: 'Second generation automated label generator with enhanced template options.'
       },
       {
         id: 'labelgen3',
-        title: 'Label Gen 3',
+        title: 'Label Generator v3',
         url: 'https://fixinhixon.com/tools/labelgen3.html',
-        category: 'Labels & Printing',
+        category: 'Labeling & Print',
         icon: 'sparkles',
         badge: 'v3.0',
         description: 'Latest advanced label generation suite with batch processing and dynamic fields.'
@@ -299,7 +308,7 @@
         id: 'markup_checker',
         title: 'Markup Checker',
         url: 'https://fixinhixon.com/tools/markup_checker.html',
-        category: 'Calculators & Finance',
+        category: 'Pricing & Finance',
         icon: 'trending-up',
         badge: 'Pricing',
         description: 'Evaluate profit margins, wholesale markups, and retail pricing strategies instantly.'
@@ -308,7 +317,7 @@
         id: 'menumaker',
         title: 'Menu Maker',
         url: 'https://fixinhixon.com/tools/menumaker.html',
-        category: 'Menus & Inventory',
+        category: 'Inventory & Ops',
         icon: 'layout-grid',
         badge: 'Menus',
         description: 'Build formatted digital and printable product menus quickly.'
@@ -317,7 +326,7 @@
         id: 'newmenumaker',
         title: 'New Menu Maker',
         url: 'https://fixinhixon.com/tools/newmenumaker.html',
-        category: 'Menus & Inventory',
+        category: 'Inventory & Ops',
         icon: 'newspaper',
         badge: 'New',
         description: 'Next-gen menu builder featuring modernized layouts, category headers, and export settings.'
@@ -335,7 +344,7 @@
         id: 'price_compare',
         title: 'Price Compare',
         url: 'https://fixinhixon.com/tools/price_compare.html',
-        category: 'Calculators & Finance',
+        category: 'Pricing & Finance',
         icon: 'bar-chart-3',
         badge: 'Analysis',
         description: 'Compare multi-vendor price points, unit costs, and profit volume margins side by side.'
@@ -367,10 +376,9 @@
       lucide.createIcons();
     }
 
-    // Categories list dynamically calculated
     function getCategories() {
-      const cats = ['All', ...new Set(tools.map(t => t.category))];
-      return cats;
+      const predefinedCategories = ['All', 'Inventory & Ops', 'Labeling & Print', 'Pricing & Finance', 'Guides & Reference', 'Utilities'];
+      return predefinedCategories;
     }
 
     function renderCategoryFilters() {
@@ -478,20 +486,16 @@
       renderTools();
     }
 
-    // Filter Logic
     function getFilteredTools() {
       return tools.filter(tool => {
-        // Search term matching
         const matchesSearch = 
           tool.title.toLowerCase().includes(currentSearchTerm) ||
           tool.description.toLowerCase().includes(currentSearchTerm) ||
           tool.category.toLowerCase().includes(currentSearchTerm) ||
-          tool.badge.toLowerCase().includes(currentSearchTerm);
+          tool.badge.toLowerCase().includes(currentSearchTerm) ||
+          tool.url.toLowerCase().includes(currentSearchTerm);
 
-        // Category filter
         const matchesCategory = (currentCategory === 'All') || (tool.category === currentCategory);
-
-        // Favorites filter
         const matchesFavorite = !onlyFavorites || favorites.includes(tool.id);
 
         return matchesSearch && matchesCategory && matchesFavorite;
@@ -501,7 +505,6 @@
     function renderTools() {
       const filtered = getFilteredTools();
 
-      // Active filter indicators
       const hasFilterActive = currentCategory !== 'All' || currentSearchTerm !== '' || onlyFavorites;
       if (hasFilterActive) {
         activeFilterBadge.classList.remove('hidden');
