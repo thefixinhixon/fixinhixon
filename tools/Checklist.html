@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dispensary Product Help Desk</title>
+    <title>Dispensary Daily Duty Log & Checklist</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -15,7 +15,6 @@
             --accent-green-hover: #059669;
             --accent-red: #ef4444;
             --accent-gold: #f59e0b;
-            --accent-blue: #3b82f6;
             --input-bg: #0f172a;
             --input-border: #475569;
         }
@@ -32,7 +31,7 @@
             color: var(--text-primary);
             line-height: 1.5;
             padding: 16px;
-            max-width: 700px;
+            max-width: 900px;
             margin: 0 auto;
         }
 
@@ -54,25 +53,307 @@
             font-size: 0.9rem;
         }
 
-        .form-card {
+        /* Quick Stamp & Filter Bar */
+        .control-panel {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .stamp-tool {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stamp-tool label {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: var(--text-secondary);
+        }
+
+        .stamp-tool input {
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-primary);
+            padding: 8px 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            width: 80px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        /* Filter Tabs */
+        .filter-tabs {
+            display: flex;
+            gap: 4px;
+            background-color: var(--input-bg);
+            padding: 4px;
+            border-radius: 6px;
+            border: 1px solid var(--card-border);
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background-color: var(--card-bg);
+            color: var(--accent-green);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        /* Policy Card (Collapsible) */
+        details.policy-card {
+            background-color: #1e1b4b;
+            border: 1px solid #4338ca;
+            border-left: 5px solid var(--accent-gold);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        details.policy-card summary {
+            font-weight: bold;
+            color: var(--accent-gold);
+            font-size: 0.95rem;
+        }
+
+        .policy-content {
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #c7d2fe;
+        }
+
+        .policy-content ul {
+            margin-left: 20px;
+            margin-top: 6px;
+            margin-bottom: 8px;
+        }
+
+        .warning-text {
+            color: #fca5a5;
+            font-style: italic;
+        }
+
+        /* Sticky Progress Bar */
+        .sticky-progress {
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            margin-bottom: 20px;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 10px;
+            background-color: var(--input-bg);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background-color: var(--accent-green);
+            transition: width 0.3s ease;
+        }
+
+        /* Phase Section */
+        .phase-section {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .phase-section.hidden {
+            display: none;
+        }
+
+        .phase-header {
+            background-color: #0f172a;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .phase-title {
+            font-size: 1rem;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        /* Task List */
+        .task-list {
+            list-style: none;
+        }
+
+        .task-item {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--card-border);
+            display: grid;
+            grid-template-columns: 1fr 140px;
+            gap: 12px;
+            align-items: center;
+            transition: background 0.2s ease;
+        }
+
+        .task-item:last-child {
+            border-bottom: none;
+        }
+
+        .task-item.completed {
+            background-color: rgba(16, 185, 129, 0.08);
+        }
+
+        .task-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .task-title-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .task-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .badge-non-negotiable {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid var(--accent-red);
+            font-size: 0.65rem;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .badge-anytime {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+            border: 1px solid #3b82f6;
+            font-size: 0.65rem;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .task-details {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .task-details ul {
+            margin-left: 16px;
+            margin-top: 4px;
+        }
+
+        /* Action Group: Stamp Button + Initials Field */
+        .task-action-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stamp-btn {
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .stamp-btn:hover {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .initials-input {
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-primary);
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            text-align: center;
+            text-transform: uppercase;
+            width: 70px;
+            font-weight: bold;
+        }
+
+        .task-item.completed .initials-input {
+            border-color: var(--accent-green);
+            background-color: rgba(16, 185, 129, 0.15);
+            color: #6ee7b7;
+        }
+
+        /* Sign Off Section */
+        .signoff-section {
             background-color: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 8px;
             padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            margin-bottom: 30px;
         }
 
-        .section-header {
+        .signoff-section h3 {
             font-size: 1rem;
-            font-weight: bold;
-            color: var(--accent-green);
-            margin-bottom: 14px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid var(--card-border);
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            margin-bottom: 12px;
+            color: var(--text-primary);
         }
 
         .form-grid {
@@ -82,87 +363,74 @@
             margin-bottom: 14px;
         }
 
-        .form-grid.single {
-            grid-template-columns: 1fr;
-        }
-
         @media (max-width: 600px) {
             .form-grid {
                 grid-template-columns: 1fr;
+            }
+            .task-item {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            .task-action-group {
+                justify-content: flex-end;
             }
         }
 
         .form-group {
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            margin-bottom: 14px;
+            gap: 4px;
         }
 
         .form-group label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--text-secondary);
             font-weight: 600;
         }
 
-        .form-group input, 
-        .form-group select, 
-        .form-group textarea {
+        .form-group input, .form-group select {
             background: var(--input-bg);
             border: 1px solid var(--input-border);
             color: var(--text-primary);
-            padding: 10px 12px;
-            border-radius: 6px;
-            font-size: 0.95rem;
-            transition: border-color 0.2s ease;
-        }
-
-        .form-group input:focus, 
-        .form-group select:focus, 
-        .form-group textarea:focus {
-            border-color: var(--accent-green);
-            outline: none;
-        }
-
-        .upc-input {
-            font-family: "Courier New", Courier, monospace;
-            letter-spacing: 1px;
-            font-weight: bold;
-            font-size: 1.05rem !important;
-        }
-
-        .variance-badge {
-            background-color: var(--input-bg);
-            border: 1px solid var(--input-border);
-            padding: 10px;
-            border-radius: 6px;
-            text-align: center;
+            padding: 8px 10px;
+            border-radius: 4px;
             font-size: 0.85rem;
-            font-weight: bold;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+        }
+
+        /* Signature Canvas */
+        .signature-container {
+            border: 1px solid var(--input-border);
+            border-radius: 4px;
+            background: #ffffff;
+            position: relative;
             margin-top: 4px;
         }
 
-        .variance-badge.short {
-            background-color: rgba(239, 68, 68, 0.15);
-            border-color: var(--accent-red);
-            color: #fca5a5;
+        canvas {
+            width: 100%;
+            height: 100px;
+            display: block;
+            cursor: crosshair;
         }
 
-        .variance-badge.over {
-            background-color: rgba(245, 158, 11, 0.15);
-            border-color: var(--accent-gold);
-            color: #fde68a;
+        .canvas-clear-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: #e2e8f0;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            padding: 2px 6px;
+            font-size: 0.7rem;
+            border-radius: 3px;
+            cursor: pointer;
         }
 
-        .variance-badge.match {
-            background-color: rgba(16, 185, 129, 0.15);
-            border-color: var(--accent-green);
-            color: #6ee7b7;
+        .ack-text {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 10px;
+            margin-bottom: 14px;
         }
 
         .submit-btn {
@@ -170,13 +438,12 @@
             background-color: var(--accent-green);
             color: white;
             border: none;
-            padding: 14px;
-            font-size: 1rem;
+            padding: 12px;
+            font-size: 0.95rem;
             font-weight: bold;
             border-radius: 6px;
             cursor: pointer;
             transition: background 0.2s ease;
-            margin-top: 10px;
         }
 
         .submit-btn:hover {
@@ -184,11 +451,11 @@
         }
 
         .status-msg {
-            margin-top: 14px;
-            padding: 12px;
-            border-radius: 6px;
+            margin-top: 12px;
+            padding: 10px;
+            border-radius: 4px;
             text-align: center;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             display: none;
         }
 
@@ -210,193 +477,481 @@
 <body>
 
     <header>
-        <h1>Product Help Desk</h1>
-        <p class="subtitle">Report POS Errors, Scan Issues, & Count Discrepancies</p>
+        <h1>Budtender Operations & Daily Duty Log</h1>
+        <p class="subtitle">Dispensary Shift Checklist & Operational Compliance</p>
     </header>
 
-    <form id="helpDeskForm">
-        
-        <!-- Reporter Info -->
-        <div class="form-card">
-            <div class="section-header">
-                <span>1. Budtender Information</span>
+    <!-- Collapsible Policy Header -->
+    <details class="policy-card">
+        <summary>Store Policy & Accountability Statement (Click to expand)</summary>
+        <div class="policy-content">
+            <p>Operational accuracy, security, and cleanliness are non-negotiable standards at this store. Every employee on duty is individually and collectively responsible for completing the daily task checklist for their shift.</p>
+            <ul>
+                <li><strong>Inventory Audit:</strong> Spot checks and count reconciliations must be executed daily without exception.</li>
+                <li><strong>Vault Back-Stock Check:</strong> Audit vault back-stock every shift and bring floor-ready stock to the sales floor immediately.</li>
+                <li><strong>Store Cleanliness:</strong> A dirty store, smeared display glass, cluttered budtender station, or unsanitary restroom is completely unacceptable.</li>
+            </ul>
+            <p class="warning-text">* Failure to complete assigned shift tasks or record initials will result in formal disciplinary action up to and including termination.</p>
+        </div>
+    </details>
+
+    <!-- Controls Panel: Quick Stamp + Shift Filter -->
+    <div class="control-panel">
+        <div class="control-row">
+            <div class="stamp-tool">
+                <label for="activeInitials">Your Initials:</label>
+                <input type="text" id="activeInitials" maxlength="4" placeholder="JD">
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">(Type once to enable 1-Tap Stamping)</span>
             </div>
+            
+            <div class="filter-tabs">
+                <button type="button" class="tab-btn active" data-filter="all">All Shifts</button>
+                <button type="button" class="tab-btn" data-filter="open">Open</button>
+                <button type="button" class="tab-btn" data-filter="midday">Mid-Day</button>
+                <button type="button" class="tab-btn" data-filter="anytime">Anytime</button>
+                <button type="button" class="tab-btn" data-filter="closing">Closing</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sticky Progress Tracker -->
+    <div class="sticky-progress">
+        <div class="progress-info">
+            <span>Shift Completion Status</span>
+            <span id="progressText">0 / 11 Tasks Completed (0%)</span>
+        </div>
+        <div class="progress-track">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+
+    <form id="checklistForm">
+
+        <!-- Phase 1: OPEN SHIFT -->
+        <div class="phase-section" data-phase="open">
+            <div class="phase-header">
+                <span class="phase-title">Phase 1: OPEN SHIFT TASKS (30–45 Mins Before Doors Open)</span>
+            </div>
+            <ul class="task-list">
+                <li class="task-item">
+                    <div class="task-content">
+                        <div class="task-title-row"><span class="task-label">Safe & Register Setup</span></div>
+                        <div class="task-details">Count and verify register tills; log starting float in POS.</div>
+                    </div>
+                    <div class="task-action-group">
+                        <button type="button" class="stamp-btn">Stamp</button>
+                        <input type="text" class="initials-input" placeholder="Initials" maxlength="4" data-task="Open: Safe & Register Setup">
+                    </div>
+                </li>
+                <li class="task-item">
+                    <div class="task-content">
+                        <div class="task-title-row"><span class="task-label">Opening Sanitation</span></div>
+                        <div class="task-details">Wipe down front entry glass, check-in counter, and sales floor display cases.</div>
+                    </div>
+                    <div class="task-action-group">
+                        <button type="button" class="stamp-btn">Stamp</button>
+                        <input type="text" class="initials-input" placeholder="Initials" maxlength="4" data-task="Open: Opening Sanitation">
+                    </div>
+                </li>
+                <li class="task-item">
+                    <div class="task-content">
+                        <div class="task-title-row"><span class="task-label">ID / Check-In Station Prep</span></div>
+                        <div class="task-details">Ensure ID scanners are powered on, guest log sheets are stocked, and entry area is clear.</div>
+                    </div>
+                    <div class="task-action-group">
+                        <button type="button" class="stamp-btn">Stamp</button>
+                        <input type="text" class="initials-input" placeholder="Initials" maxlength="4" data-task="Open: ID/Check-In Station Prep">
+                    </div>
+                </li>
+                <li class="task-item">
+                    <div class="task-content">
+                        <div class="task-title-row"><span class="task-label">POS & Station Check</span></div>
+                        <div class="task-details">Verify each budtender terminal has receipt paper, exit bags, inventory labels, etc.</div>
+                    </div>
+                    <div class="task-action-group">
+                        <button type="button" class="stamp-btn">Stamp</button>
+                        <input type="text" class="initials-input" placeholder="Initials" maxlength="4" data-task="Open: POS & Station Check">
+                    </div>
+                </li>
+                <li class="task-item">
+                    <div class="task-content">
+                        <div class="task-title-row"><span class="task-label">Opening Floor Visual Audit</span></div>
+                        <div class="task-details">Ensure display cases are well-lit, price tags face forward, and all displayed products have prices.</div>
+                    </div>
+                    <div class="task-action-group">
+                        <button type="button" class="stamp-btn">Stamp</button>
+                        <input type="text" class="initials-input" placeholder="Initials" maxlength="4" data-task="Open: Floor Visual Audit">
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Phase 2: MID-DAY SHIFT -->
+        <div class="phase-section" data-phase="midday">
+            <div class="phase-header">
+                <span class="phase-title">Phase 2: MID-DAY SHIFT TASKS</span>
+            </div>
+            <ul class="task-list">
+                <li class="task-item">
+                    <div class="task-content">
+                        <div class="task-title-row"><span class="task-label">Slack Category Cycle Count</span></div>
+                        <div class="task-details">Complete cycle count for category assigned in Slack for the current day.</div>
+                    </div>
+                    <div class="task-action-group">
+                        <button type="button" class="stamp-btn">Stamp</button>
+                        <input type="text" class="initials-input" placeholder="Initials" maxlength="4" data-task="Mid-Day: Cycle Count Category (Slack)">
+                    </div>
+                </li>
+                <li class="task-item">
+                    <div class="task-content">
+                        <div class="task-title-row"><span class="task-label">Delivery Intake Prep</span></div>
+                        <div class="task-details">Ensure intake desk/vault receiving area is clear of debris for vendor deliveries.</div>
+                    </div>
+                    <div class="task-action-group">
+                        <button type="button" class="stamp-btn">Stamp</button>
+                        <input type="text" class="initials-input" placeholder="Initials" maxlength="4" data-task="Mid-Day: Delivery Intake Prep">
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Phase 3: ANYTIME TASKS -->
+        <div class="phase-section" data-phase="anytime">
+            <div class="phase-header">
+                <span class="phase-title">Phase 3: ANYTIME / ACTIVE FLOOR DUTIES</span>
+            </div>
+            <ul class="task-list">
+                <li class="task-item">
+                    <div class="task-content">
+                        <div class="task-title-row">
+                            <span class="task-label">Vault Back-Stock & Floor Restock</span>
+                            <span class="badge-non-negotiable">NON-NEGOTIABLE</span>
+                            <span class="badge-anytime">ANYTIME</span>
+                        </div>
+                        <div class="task-details">
+                            <ul>
+                                <li>Audit stock levels in main vault; identify low floor stock.</li>
+                                <li>Transfer available back-stock from vault to floor display/drawers and log all transfers in POS.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="task-action-group">
+                        <button type="button" class="stamp-btn">Stamp</button>
+                        <input type="text" class="initials-input" placeholder="Initials" maxlength="4" data-task="Anytime: Vault Back-Stock & Floor Restock">
+                    </div>
+                </li>
+                <li class="task-item">
+                    <div class="task-content">
+                        <div class="task-title-row">
+                            <span class="task-label">Continuous Cleanliness Sweeps</span>
+                            <span class="badge-non-negotiable">NON-NEGOTIABLE</span>
+                            <span class="badge-anytime">ANYTIME</span>
+                        </div>
+                        <div class="task-details">
+                            <ul>
+                                <li>Wipe display glass free of fingerprints after every rush.</li>
+                                <li>Empty sales floor trash and recycling bins before reaching 3/4 full.</li>
+                                <li>Sweep sales floor and check-in lobby; keep counter areas free of personal clutter.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="task-action-group">
+                        <button type="button" class="stamp-btn">Stamp</button>
+                        <input type="text" class="initials-input" placeholder="Initials" maxlength="4" data-task="Anytime: Continuous Cleanliness Sweeps">
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Phase 4: CLOSING SHIFT -->
+        <div class="phase-section" data-phase="closing">
+            <div class="phase-header">
+                <span class="phase-title">Phase 4: CLOSING SHIFT & LOCKUP (Post-Store Hours)</span>
+            </div>
+            <ul class="task-list">
+                <li class="task-item">
+                    <div class="task-content">
+                        <div class="task-title-row"><span class="task-label">Sales Floor Restock & Cash Drops</span></div>
+                        <div class="task-details">Replenish floor drawers from vault. Count tills down, make safe drops, and print shift summary. Restock cash drawers from vault.</div>
+                    </div>
+                    <div class="task-action-group">
+                        <button type="button" class="stamp-btn">Stamp</button>
+                        <input type="text" class="initials-input" placeholder="Initials" maxlength="4" data-task="Closing: Restock & Cash Reconciliation">
+                    </div>
+                </li>
+                <li class="task-item">
+                    <div class="task-content">
+                        <div class="task-title-row">
+                            <span class="task-label">Restroom Deep Clean & Restock</span>
+                            <span class="badge-non-negotiable">NON-NEGOTIABLE</span>
+                        </div>
+                        <div class="task-details">
+                            <ul>
+                                <li>Scrub toilet, sink, counter & mirror; sanitize handles/switches.</li>
+                                <li>Restock soap, paper towels, and toilet paper; mop floor and empty trash.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="task-action-group">
+                        <button type="button" class="stamp-btn">Stamp</button>
+                        <input type="text" class="initials-input" placeholder="Initials" maxlength="4" data-task="Closing: Restroom Deep Clean">
+                    </div>
+                </li>
+                <li class="task-item">
+                    <div class="task-content">
+                        <div class="task-title-row"><span class="task-label">Floor Deep Clean & Vault Securement</span></div>
+                        <div class="task-details">Disinfect POS terminals, mop sales floor, remove all trash, secure vault, and arm alarm.</div>
+                    </div>
+                    <div class="task-action-group">
+                        <button type="button" class="stamp-btn">Stamp</button>
+                        <input type="text" class="initials-input" placeholder="Initials" maxlength="4" data-task="Closing: Deep Clean & Lockup">
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Acknowledgement & Sign Off -->
+        <div class="signoff-section">
+            <h3>Acknowledgement & Shift Sign-Off</h3>
+            
             <div class="form-grid">
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="empName">Your Name / ID *</label>
-                    <input type="text" id="empName" required placeholder="e.g., Alex M.">
+                <div class="form-group">
+                    <label for="empName">Employee Full Name *</label>
+                    <input type="text" id="empName" required placeholder="John Doe">
                 </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="reportDate">Date & Time</label>
-                    <input type="text" id="reportDate" readonly style="opacity: 0.7; cursor: not-allowed;">
+                <div class="form-group">
+                    <label for="shiftType">Shift Completed *</label>
+                    <select id="shiftType" required>
+                        <option value="">Select Shift</option>
+                        <option value="Open Shift">Open Shift</option>
+                        <option value="Mid-Day Shift">Mid-Day Shift</option>
+                        <option value="Closing Shift">Closing Shift</option>
+                        <option value="Full Day Shift">Full Day Shift</option>
+                    </select>
                 </div>
-            </div>
-        </div>
-
-        <!-- Product Identification -->
-        <div class="form-card">
-            <div class="section-header">
-                <span>2. Product Identification</span>
-            </div>
-            <div class="form-group">
-                <label for="upcCode">UPC / Barcode Number *</label>
-                <input type="text" id="upcCode" class="upc-input" required placeholder="Scan barcode or type digits..." autofocus>
-            </div>
-            <div class="form-group" style="margin-bottom: 0;">
-                <label for="productName">Product Name & Category *</label>
-                <input type="text" id="productName" required placeholder="e.g., Blue Dream 3.5g Flower - Brand X">
-            </div>
-        </div>
-
-        <!-- Issue & Inventory Details -->
-        <div class="form-card">
-            <div class="section-header">
-                <span>3. Issue & Quantity Discrepancy</span>
-            </div>
-
-            <div class="form-group">
-                <label for="issueType">Primary Issue Category *</label>
-                <select id="issueType" required>
-                    <option value="">Select Primary Issue</option>
-                    <option value="Barcode Will Not Scan">Barcode Will Not Scan / Unrecognized</option>
-                    <option value="Product Not in POS System">Product Missing in POS System</option>
-                    <option value="Incorrect Price in POS">Incorrect Price / Promotion Error</option>
-                    <option value="Inventory Count Discrepancy">Inventory Count Mismatch</option>
-                    <option value="Package Tag / Metrc Issue">Package Tag / Batch ID Mismatch</option>
-                    <option value="Damaged / Defective Product">Damaged / Defective Item</option>
-                    <option value="Other Issue">Other System Error</option>
-                </select>
             </div>
 
             <div class="form-grid">
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="posQty">System On-Hand Qty (POS) *</label>
-                    <input type="number" id="posQty" min="0" required placeholder="0">
+                <div class="form-group">
+                    <label for="submitDate">Date *</label>
+                    <input type="date" id="submitDate" required>
                 </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="physicalQty">Expected Physical Qty (Vault + Floor) *</label>
-                    <input type="number" id="physicalQty" min="0" required placeholder="0">
+                <div class="form-group">
+                    <label>Digital Signature *</label>
+                    <div class="signature-container">
+                        <button type="button" class="canvas-clear-btn" id="clearSig">Clear</button>
+                        <canvas id="sigCanvas"></canvas>
+                    </div>
                 </div>
             </div>
 
-            <!-- Auto Calculated Variance -->
-            <div id="varianceBadge" class="variance-badge" style="margin-bottom: 14px;">
-                Enter quantities above to calculate variance
-            </div>
+            <p class="ack-text">
+                By typing my name and signing above, I acknowledge that I have completed and verified all tasks initialized above according to store policy.
+            </p>
 
-            <div class="form-group" style="margin-bottom: 0;">
-                <label for="issueDetails">What Happened? / Additional Notes *</label>
-                <textarea id="issueDetails" rows="3" required placeholder="Describe what occurred (e.g., POS says item out of stock but we have 4 on shelf; scan pops up wrong item name, etc.)"></textarea>
-            </div>
+            <button type="submit" class="submit-btn">Submit Completed Shift Log</button>
+            <div id="statusMsg" class="status-msg"></div>
         </div>
-
-        <button type="submit" class="submit-btn">Submit Product Help Request</button>
-        <div id="statusMsg" class="status-msg"></div>
 
     </form>
 
     <script>
         const WEB3FORMS_ACCESS_KEY = "17a941be-f0af-43cd-8f52-0af4a34fb7a4";
 
-        // Auto-update Date & Time stamp
-        function updateDateTime() {
-            const now = new Date();
-            document.getElementById('reportDate').value = now.toLocaleString([], {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-        updateDateTime();
-
-        // Auto-restore saved Budtender Name
-        const empNameInput = document.getElementById('empName');
-        const savedName = localStorage.getItem('dispensary_budtender_name');
-        if (savedName) {
-            empNameInput.value = savedName;
-        }
-        empNameInput.addEventListener('input', () => {
-            localStorage.setItem('dispensary_budtender_name', empNameInput.value.trim());
-        });
-
-        // Variance Calculation Logic
-        const posQtyInput = document.getElementById('posQty');
-        const physicalQtyInput = document.getElementById('physicalQty');
-        const varianceBadge = document.getElementById('varianceBadge');
-
-        function calculateVariance() {
-            const posVal = posQtyInput.value;
-            const physVal = physicalQtyInput.value;
-
-            if (posVal === '' || physVal === '') {
-                varianceBadge.className = 'variance-badge';
-                varianceBadge.textContent = 'Enter quantities above to calculate variance';
-                return;
-            }
-
-            const pos = parseInt(posVal, 10);
-            const phys = parseInt(physVal, 10);
-            const diff = phys - pos;
-
-            if (diff < 0) {
-                varianceBadge.className = 'variance-badge short';
-                varianceBadge.textContent = `Variance: ${diff} Units (Physical is SHORT by ${Math.abs(diff)})`;
-            } else if (diff > 0) {
-                varianceBadge.className = 'variance-badge over';
-                varianceBadge.textContent = `Variance: +${diff} Units (Physical has OVERAGE of ${diff})`;
-            } else {
-                varianceBadge.className = 'variance-badge match';
-                varianceBadge.textContent = `Variance: 0 Units (System matches Physical count)`;
-            }
-        }
-
-        posQtyInput.addEventListener('input', calculateVariance);
-        physicalQtyInput.addEventListener('input', calculateVariance);
-
-        // Form Submission via Web3Forms
-        const form = document.getElementById('helpDeskForm');
+        // DOM Elements
+        const activeInitialsInput = document.getElementById('activeInitials');
+        const taskInitialsInputs = document.querySelectorAll('.initials-input');
+        const stampBtns = document.querySelectorAll('.stamp-btn');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const submitDateInput = document.getElementById('submitDate');
+        const form = document.getElementById('checklistForm');
         const statusMsg = document.getElementById('statusMsg');
 
+        submitDateInput.valueAsDate = new Date();
+
+        // 1. Shift Filter Tab Logic (Displays specific shift + Anytime duties)
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const phaseSections = document.querySelectorAll('.phase-section');
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const filter = btn.getAttribute('data-filter');
+                phaseSections.forEach(section => {
+                    const phase = section.getAttribute('data-phase');
+                    if (filter === 'all') {
+                        section.classList.remove('hidden');
+                    } else if (filter === 'anytime') {
+                        section.classList.toggle('hidden', phase !== 'anytime');
+                    } else {
+                        section.classList.toggle('hidden', phase !== filter && phase !== 'anytime');
+                    }
+                });
+            });
+        });
+
+        // 2. Initials = Completion Tracker & Auto-Save
+        function updateProgress() {
+            const total = taskInitialsInputs.length;
+            let completedCount = 0;
+            const savedState = {};
+
+            taskInitialsInputs.forEach(input => {
+                const item = input.closest('.task-item');
+                const val = input.value.trim().toUpperCase();
+                const taskKey = input.getAttribute('data-task');
+
+                if (val !== '') {
+                    completedCount++;
+                    item.classList.add('completed');
+                } else {
+                    item.classList.remove('completed');
+                }
+
+                savedState[taskKey] = val;
+            });
+
+            const percent = Math.round((completedCount / total) * 100);
+            progressFill.style.width = percent + '%';
+            progressText.textContent = `${completedCount} / ${total} Tasks Completed (${percent}%)`;
+
+            localStorage.setItem('dispensary_checklist_state', JSON.stringify(savedState));
+        }
+
+        taskInitialsInputs.forEach(input => {
+            input.addEventListener('input', updateProgress);
+        });
+
+        // 3. One-Tap Stamp Button Logic
+        stampBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const actionGroup = e.target.closest('.task-action-group');
+                const input = actionGroup.querySelector('.initials-input');
+                const defaultInitials = activeInitialsInput.value.trim().toUpperCase();
+
+                if (input.value.trim() !== '') {
+                    input.value = '';
+                } else if (defaultInitials !== '') {
+                    input.value = defaultInitials;
+                } else {
+                    activeInitialsInput.focus();
+                    alert("Type your initials into the 'Your Initials' bar at the top first!");
+                    return;
+                }
+                updateProgress();
+            });
+        });
+
+        // 4. Restore Saved Progress from LocalStorage
+        function loadSavedState() {
+            const saved = localStorage.getItem('dispensary_checklist_state');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    taskInitialsInputs.forEach(input => {
+                        const taskKey = input.getAttribute('data-task');
+                        if (data[taskKey]) {
+                            input.value = data[taskKey];
+                        }
+                    });
+                    updateProgress();
+                } catch(e) {}
+            }
+        }
+        loadSavedState();
+
+        // 5. Signature Canvas Setup
+        const canvas = document.getElementById('sigCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let sigDrawn = false;
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#0f172a';
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            sigDrawn = true;
+            const pos = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pos = getPos(e);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+        }
+
+        function stopDrawing() { isDrawing = false; }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('touchstart', startDrawing);
+        canvas.addEventListener('touchmove', draw);
+        canvas.addEventListener('touchend', stopDrawing);
+
+        document.getElementById('clearSig').addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            sigDrawn = false;
+        });
+
+        // 6. Form Submission Logic
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            const empName = empNameInput.value.trim();
-            const dateStr = document.getElementById('reportDate').value;
-            const upc = document.getElementById('upcCode').value.trim();
-            const productName = document.getElementById('productName').value.trim();
-            const issueType = document.getElementById('issueType').value;
-            const posQty = posQtyInput.value;
-            const physicalQty = physicalQtyInput.value;
-            const diff = parseInt(physicalQty, 10) - parseInt(posQty, 10);
-            const issueDetails = document.getElementById('issueDetails').value.trim();
+            if (!sigDrawn) {
+                alert("Please sign in the digital signature box before submitting.");
+                return;
+            }
+
+            const taskSummary = [];
+            taskInitialsInputs.forEach(input => {
+                const taskName = input.getAttribute('data-task');
+                const initials = input.value.trim().toUpperCase();
+                const status = initials ? `[DONE - ${initials}]` : `[PENDING]`;
+                taskSummary.push(`${status} ${taskName}`);
+            });
+
+            const empName = document.getElementById('empName').value;
+            const shiftType = document.getElementById('shiftType').value;
+            const date = document.getElementById('submitDate').value;
 
             const messagePayload = `
-PRODUCT HELP DESK REPORT
-=================================
-Submitted By : ${empName}
-Date / Time  : ${dateStr}
+DISPENSARY SHIFT LOG COMPLETED
+==============================
+Employee: ${empName}
+Shift: ${shiftType}
+Date: ${date}
 
-PRODUCT INFORMATION:
----------------------------------
-Product Name : ${productName}
-UPC / Barcode: ${upc}
-
-INVENTORY DISCREPANCY:
----------------------------------
-System On-Hand (POS)  : ${posQty}
-Expected Physical Qty : ${physicalQty}
-Calculated Variance   : ${diff > 0 ? '+' + diff : diff} units
-
-ISSUE DETAILS:
----------------------------------
-Category : ${issueType}
-Details  : ${issueDetails}
+TASK COMPLETION DETAILS:
+------------------------------
+${taskSummary.join('\n')}
             `;
 
             statusMsg.className = "status-msg";
-            statusMsg.textContent = "Submitting product report to management...";
+            statusMsg.textContent = "Submitting log and sending email notification...";
             statusMsg.style.display = "block";
 
             try {
@@ -405,8 +960,8 @@ Details  : ${issueDetails}
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({
                         access_key: WEB3FORMS_ACCESS_KEY,
-                        subject: `Product Alert: ${productName} (${upc}) - ${empName}`,
-                        from_name: `Budtender ${empName}`,
+                        subject: `Shift Log: ${empName} (${shiftType} - ${date})`,
+                        from_name: `${empName} via Store Log`,
                         message: messagePayload
                     })
                 });
@@ -414,23 +969,14 @@ Details  : ${issueDetails}
                 const resData = await response.json();
                 if (resData.success) {
                     statusMsg.className = "status-msg success";
-                    statusMsg.textContent = "Report submitted successfully! Management has been notified via email.";
-                    
-                    // Reset product fields for quick subsequent submissions
-                    document.getElementById('upcCode').value = '';
-                    document.getElementById('productName').value = '';
-                    document.getElementById('issueType').value = '';
-                    posQtyInput.value = '';
-                    physicalQtyInput.value = '';
-                    document.getElementById('issueDetails').value = '';
-                    calculateVariance();
-                    document.getElementById('upcCode').focus();
+                    statusMsg.textContent = "Shift log submitted successfully! Notification email sent.";
+                    localStorage.removeItem('dispensary_checklist_state');
                 } else {
-                    throw new Error(resData.message || "Failed to send report.");
+                    throw new Error(resData.message || "Failed to submit.");
                 }
             } catch (err) {
                 statusMsg.className = "status-msg error";
-                statusMsg.textContent = "Error submitting report: " + err.message;
+                statusMsg.textContent = "Error sending email: " + err.message;
             }
         });
     </script>
