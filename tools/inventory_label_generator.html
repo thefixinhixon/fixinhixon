@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Label Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Base styling for the live preview on screen */
+        #label-preview {
+            width: 2.25in;
+            height: 1.25in;
+            background: white;
+            color: black;
+            font-family: Arial, sans-serif;
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 0.05in;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .label-text-xs { font-size: 5pt; line-height: 1.1; }
+        .label-text-sm { font-size: 6pt; line-height: 1.1; font-weight: bold; }
+        .label-text-md { font-size: 8pt; line-height: 1.1; font-weight: bold; }
+        .label-text-lg { font-size: 9pt; line-height: 1.1; font-weight: bold; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        
+        .row-flex { display: flex; justify-content: space-between; align-items: center; }
+
+        /* Autocomplete dropdown styles */
+        .autocomplete-items {
+            position: absolute;
+            border: 1px solid #d4d4d4;
+            border-bottom: none;
+            border-top: none;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: white;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        .autocomplete-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #d4d4d4;
+        }
+        .autocomplete-item:hover { background-color: #e9e9e9; }
+        .autocomplete-active { background-color: #3b82f6 !important; color: white; }
+
+        /* Print Specific CSS */
+        @media print {
+            /* Hide the main UI container */
+            #app-container {
+                display: none !important;
+            }
+
+            /* Remove body margins/padding that cause misalignment */
+            body, html {
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 2.25in !important;
+                height: 1.25in !important;
+                background-color: white !important;
+            }
+
+            /* Extract label-preview to fill the page exactly */
+            #print-container {
+                display: block !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                margin: 0;
+                padding: 0;
+            }
+
+            #label-preview {
+                border: none !important;
+                box-shadow: none !important;
+                width: 2.25in !important;
+                height: 1.25in !important;
+                page-break-after: always;
+            }
+
+            /* Set precise thermal printer dimensions */
+            @page {
+                size: 2.25in 1.25in;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800 flex items-center justify-center p-4">
+
+    <!-- WRAPPER FOR PRINTING -->
+    <div id="print-container">
+        <!-- THE ACTUAL LABEL -->
+        <div id="label-preview">
+            <div class="text-center label-text-xs font-bold border-b border-black pb-[1px] mb-[1px]">Green Minded Holdings</div>
+            
+            <div class="label-text-lg" id="lbl-strain">Strain Name</div>
+            
+            <div class="row-flex">
+                <div class="label-text-md">THC: <span id="lbl-thc">0.00</span>%</div>
+                <div class="label-text-md">WT: <span id="lbl-weight">0.00</span>g</div>
+            </div>
+
+            <div class="label-text-xs mt-[1px]">
+                <div><span class="font-bold">Lic:</span> <span id="lbl-license">MANU-2022-0044-PRM-0001</span></div>
+                <div><span class="font-bold">Pkg ID:</span> <span id="lbl-barcode">N/A</span></div>
+            </div>
+            
+            <div class="row-flex label-text-xs mt-[1px]">
+                <div><span class="font-bold">Mfg:</span> <span id="lbl-mfg-date">MM/DD/YY</span></div>
+                <div><span class="font-bold">Exp:</span> <span id="lbl-exp-date">MM/DD/YY</span></div>
+            </div>
+
+            <div class="text-center label-text-xs mt-[2px]">
+                No Pesticides Detected. No Known Allergens.
+                <br><span id="lbl-compliance"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APPLICATION UI -->
+    <div id="app-container" class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-lg shadow-xl">
+        
+        <!-- Left Column: Form -->
+        <div class="space-y-4">
+            <h2 class="text-2xl font-bold text-green-700 border-b pb-2">Label Generator</h2>
+            
+            <!-- Upload CSV Option -->
+            <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                <label class="block text-sm font-medium text-blue-800 mb-1">Update Inventory Data (Optional)</label>
+                <input type="file" id="csv-upload" accept=".csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+                <p class="text-xs text-gray-500 mt-1">Upload 'current-inventory-licensee-*.csv' to sync strains, THC, and Expiration Dates.</p>
+                <div id="upload-status" class="text-xs font-bold text-green-600 mt-1 hidden">File loaded successfully! (<span id="upload-count">0</span> strains)</div>
+            </div>
+
+            <!-- License Dropdown -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Manufacturing License</label>
+                <select id="input-license" class="w-full border border-gray-300 rounded p-2 focus:ring-2 focus:ring-green-500 outline-none bg-gray-50">
+                    <option value="MANU-2022-0044-PRM-0001">Ruidoso: MANU-2022-0044-PRM-0001</option>
+                    <option value="MANU-2022-0044-PRM-0002">Alto: MANU-2022-0044-PRM-0002</option>
+                    <option value="MANU-2022-0044-PRM-0003">Carrizozo: MANU-2022-0044-PRM-0003</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Note: Search results below will be filtered by the location selected above.</p>
+            </div>
+
+            <!-- Autocomplete Strain Input -->
+            <div class="relative">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Product Name (Strain)</label>
+                <input type="text" id="input-strain" autocomplete="off" placeholder="Start typing strain or product name..." class="w-full border border-gray-300 rounded p-2 focus:ring-2 focus:ring-green-500 outline-none">
+                <div id="autocomplete-list" class="autocomplete-items hidden"></div>
+            </div>
+
+            <!-- THC & Weight -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">THC %</label>
+                    <input type="number" step="0.01" id="input-thc" placeholder="e.g. 25.5" class="w-full border border-gray-300 rounded p-2 focus:ring-2 focus:ring-green-500 outline-none bg-gray-50">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Total Weight (g)</label>
+                    <input type="number" step="0.01" id="input-weight" placeholder="e.g. 3.5" class="w-full border border-gray-300 rounded p-2 focus:ring-2 focus:ring-green-500 outline-none">
+                </div>
+            </div>
+
+            <!-- Hidden inputs to track other metadata populated from CSV -->
+            <input type="hidden" id="input-barcode" value="N/A">
+            <input type="hidden" id="input-compliance" value="">
+            <input type="hidden" id="input-expdate" value="">
+
+            <button onclick="window.print()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded mt-4 transition-colors">
+                Print Label
+            </button>
+        </div>
+
+        <!-- Right Column: Preview display for UI -->
+        <div class="flex flex-col items-center justify-center bg-gray-50 rounded border-2 border-dashed border-gray-300 p-6">
+            <h3 class="text-lg font-medium text-gray-500 mb-4">Live Label Preview (2.25" x 1.25")</h3>
+            <!-- We clone the actual label here for visual representation, while keeping the real one at the top level for printing -->
+            <div id="ui-preview-container" class="shadow-lg transform scale-125 origin-center">
+                <!-- Javascript will inject a clone here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA STATE ---
+        let inventoryDB = [];
+        let currentFocus = -1;
+
+        // --- DOM ELEMENTS ---
+        const els = {
+            licenseIn: document.getElementById('input-license'),
+            strainIn: document.getElementById('input-strain'),
+            thcIn: document.getElementById('input-thc'),
+            weightIn: document.getElementById('input-weight'),
+            barcodeIn: document.getElementById('input-barcode'),
+            complianceIn: document.getElementById('input-compliance'),
+            expDateIn: document.getElementById('input-expdate'),
+            
+            lblLicense: document.getElementById('lbl-license'),
+            lblStrain: document.getElementById('lbl-strain'),
+            lblThc: document.getElementById('lbl-thc'),
+            lblWeight: document.getElementById('lbl-weight'),
+            lblBarcode: document.getElementById('lbl-barcode'),
+            lblCompliance: document.getElementById('lbl-compliance'),
+            lblMfg: document.getElementById('lbl-mfg-date'),
+            lblExp: document.getElementById('lbl-exp-date'),
+
+            csvUpload: document.getElementById('csv-upload'),
+            uploadStatus: document.getElementById('upload-status'),
+            uploadCount: document.getElementById('upload-count'),
+            autocompleteList: document.getElementById('autocomplete-list'),
+            
+            realPreview: document.getElementById('label-preview'),
+            uiPreviewContainer: document.getElementById('ui-preview-container')
+        };
+
+        // --- INITIALIZATION & DATES ---
+        function setDates() {
+            const now = new Date();
+            
+            // Format Mfg Date (Current date & time) - MM/DD/YY HH:MM AM/PM
+            const mfgOpts = { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute:'2-digit' };
+            els.lblMfg.innerText = now.toLocaleDateString('en-US', mfgOpts);
+
+            // Handle Expiration Date
+            const customExp = els.expDateIn.value;
+            if (customExp && customExp.trim() !== "") {
+                if (customExp.includes('-')) {
+                    // S2S CSV format: YYYY-MM-DD
+                    const parts = customExp.split('-');
+                    if (parts.length === 3) {
+                        const y = parts[0].length === 4 ? parts[0].slice(-2) : parts[0];
+                        const m = parts[1].padStart(2, '0');
+                        const d = parts[2].padStart(2, '0');
+                        els.lblExp.innerText = `${m}/${d}/${y}`;
+                    } else {
+                        fallbackExpDate(now);
+                    }
+                } else {
+                    const parsed = new Date(customExp);
+                    if (!isNaN(parsed.getTime())) {
+                        els.lblExp.innerText = parsed.toLocaleDateString('en-US', { year: '2-digit', month: '2-digit', day: '2-digit' });
+                    } else {
+                        fallbackExpDate(now);
+                    }
+                }
+            } else {
+                fallbackExpDate(now);
+            }
+        }
+
+        function fallbackExpDate(mfgDate) {
+            const expDate = new Date(mfgDate);
+            expDate.setDate(expDate.getDate() + 365);
+            els.lblExp.innerText = expDate.toLocaleDateString('en-US', { year: '2-digit', month: '2-digit', day: '2-digit' });
+        }
+
+        function updatePreviewUI() {
+            els.uiPreviewContainer.innerHTML = '';
+            const clone = els.realPreview.cloneNode(true);
+            clone.id = 'ui-label-clone';
+            els.uiPreviewContainer.appendChild(clone);
+        }
+
+        function updateLabels() {
+            els.lblLicense.innerText = els.licenseIn.value;
+            els.lblStrain.innerText = els.strainIn.value || "Strain Name";
+            els.lblThc.innerText = els.thcIn.value ? parseFloat(els.thcIn.value).toFixed(2) : "0.00";
+            els.lblWeight.innerText = els.weightIn.value ? parseFloat(els.weightIn.value).toFixed(2) : "0.00";
+            
+            els.lblBarcode.innerText = els.barcodeIn.value || "N/A";
+            els.lblCompliance.innerText = els.complianceIn.value || "";
+
+            setDates();
+            updatePreviewUI();
+        }
+
+        // Attach listeners to update live preview
+        els.licenseIn.addEventListener('change', () => {
+            els.strainIn.value = '';
+            els.expDateIn.value = '';
+            els.barcodeIn.value = 'N/A';
+            els.complianceIn.value = '';
+            updateLabels();
+        });
+        els.strainIn.addEventListener('input', () => {
+            els.expDateIn.value = ''; // clear custom date if modified manually
+            updateLabels();
+        });
+        els.thcIn.addEventListener('input', updateLabels);
+        els.weightIn.addEventListener('input', updateLabels);
+
+        // --- CSV PARSING ---
+        els.csvUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const csvText = event.target.result;
+                parseSeed2SaleCSV(csvText);
+            };
+            reader.readAsText(file);
+        });
+
+        function parseSeed2SaleCSV(csvText) {
+            const lines = csvText.split('\n');
+            if (lines.length < 2) return;
+
+            const headers = lines[0].replace(/\r/g, '').split(',');
+            
+            const idx = {
+                productTypeName: headers.indexOf('productTypeName'),
+                productName: headers.indexOf('productName'),
+                strainName: headers.indexOf('strainName'),
+                thc: headers.indexOf('totalThcPercent'),
+                location: headers.indexOf('locationDisplay'),
+                barcode: headers.indexOf('barCode'),
+                testing: headers.indexOf('testing'),
+                expirationDate: headers.indexOf('expirationDate')
+            };
+
+            if (idx.productTypeName === -1 || idx.location === -1 || idx.thc === -1) {
+                alert("Invalid CSV format. Please upload the 'current-inventory-licensee' Seed2Sale export.");
+                return;
+            }
+
+            const validCategories = ['Deli Style Cannabis', 'Cannabis Packaged', 'Pre-Rolls Packaged'];
+            inventoryDB = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+
+                const rowRegex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
+                const row = lines[i].replace(/\r/g, '').split(rowRegex).map(val => val.replace(/^"|"$/g, '').trim());
+
+                if (row.length < headers.length) continue;
+
+                const category = row[idx.productTypeName];
+                if (validCategories.includes(category)) {
+                    
+                    const locationRaw = row[idx.location] || "";
+                    let targetLicense = "";
+                    if (locationRaw.includes('Ruidoso')) targetLicense = "MANU-2022-0044-PRM-0001";
+                    else if (locationRaw.includes('Alto')) targetLicense = "MANU-2022-0044-PRM-0002";
+                    else if (locationRaw.includes('Carrizozo')) targetLicense = "MANU-2022-0044-PRM-0003";
+
+                    inventoryDB.push({
+                        strain: row[idx.strainName] || "Unknown",
+                        product: row[idx.productName] || "",
+                        thc: row[idx.thc] || "",
+                        license: targetLicense,
+                        barcode: row[idx.barcode] || "N/A",
+                        compliance: row[idx.testing] === 'Pass' ? "Passes all state compliance requirements" : "",
+                        expDate: idx.expirationDate !== -1 ? (row[idx.expirationDate] || "") : ""
+                    });
+                }
+            }
+
+            els.uploadCount.innerText = inventoryDB.length;
+            els.uploadStatus.classList.remove('hidden');
+        }
+
+        // --- AUTOCOMPLETE LOGIC ---
+        els.strainIn.addEventListener("input", function(e) {
+            let val = this.value;
+            closeAllLists();
+            if (!val) { return false; }
+            currentFocus = -1;
+
+            const selectedLicense = els.licenseIn.value;
+
+            els.autocompleteList.innerHTML = '';
+            els.autocompleteList.classList.remove('hidden');
+
+            let matchCount = 0;
+            const searchVal = val.toLowerCase();
+
+            for (let i = 0; i < inventoryDB.length; i++) {
+                const item = inventoryDB[i];
+
+                if (item.license !== selectedLicense) {
+                    continue; 
+                }
+
+                const searchableText = `${item.strain} ${item.product}`.toLowerCase();
+                
+                if (searchableText.includes(searchVal)) {
+                    matchCount++;
+                    const div = document.createElement("DIV");
+                    div.className = "autocomplete-item text-sm";
+                    
+                    div.innerHTML = `<span class="font-bold text-green-700">${item.strain}</span> <span class="text-gray-500 text-xs">(${item.product})</span>`;
+                    div.innerHTML += `<br><span class="text-xs text-gray-400">THC: ${item.thc}% | Exp: ${item.expDate || 'Default (1 Year)'}</span>`;
+                    
+                    div.addEventListener("click", function() {
+                        els.strainIn.value = item.strain;
+                        els.thcIn.value = item.thc;
+                        els.barcodeIn.value = item.barcode;
+                        els.complianceIn.value = item.compliance;
+                        els.expDateIn.value = item.expDate; // Store S2S expiration date
+                        
+                        updateLabels();
+                        closeAllLists();
+                    });
+                    
+                    els.autocompleteList.appendChild(div);
+
+                    if (matchCount > 15) break;
+                }
+            }
+
+            if (matchCount === 0) {
+                const div = document.createElement("DIV");
+                div.className = "p-2 text-sm text-gray-500 italic";
+                div.innerText = "No matching inventory found for this location.";
+                els.autocompleteList.appendChild(div);
+            }
+        });
+
+        // Keyboard navigation
+        els.strainIn.addEventListener("keydown", function(e) {
+            let x = document.getElementById("autocomplete-list");
+            if (x) x = x.getElementsByClassName("autocomplete-item");
+            if (e.keyCode == 40) {
+                currentFocus++;
+                addActive(x);
+            } else if (e.keyCode == 38) {
+                currentFocus--;
+                addActive(x);
+            } else if (e.keyCode == 13) {
+                e.preventDefault();
+                if (currentFocus > -1) {
+                    if (x) x[currentFocus].click();
+                }
+            }
+        });
+
+        function addActive(x) {
+            if (!x) return false;
+            removeActive(x);
+            if (currentFocus >= x.length) currentFocus = 0;
+            if (currentFocus < 0) currentFocus = (x.length - 1);
+            x[currentFocus].classList.add("autocomplete-active");
+        }
+
+        function removeActive(x) {
+            for (let i = 0; i < x.length; i++) {
+                x[i].classList.remove("autocomplete-active");
+            }
+        }
+
+        function closeAllLists(elmnt) {
+            if (elmnt != els.strainIn) {
+                els.autocompleteList.innerHTML = '';
+                els.autocompleteList.classList.add('hidden');
+            }
+        }
+
+        document.addEventListener("click", function (e) {
+            closeAllLists(e.target);
+        });
+
+        // Initial setup
+        setDates();
+        updatePreviewUI();
+        
+        window.addEventListener('beforeprint', () => {
+             setDates();
+        });
+
+    </script>
+</body>
+</html>
