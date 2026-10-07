@@ -141,6 +141,7 @@
                 <input type="file" id="csv-upload" accept=".csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
                 <p class="text-xs text-gray-500 mt-1">Upload 'current-inventory-licensee-*.csv' to sync strains, THC, and Expiration Dates.</p>
                 <div id="upload-status" class="text-xs font-bold text-green-600 mt-1 hidden">File loaded successfully! (<span id="upload-count">0</span> strains)</div>
+                <div id="autoload-status" class="text-xs text-gray-500 mt-1">Checking server for current-inventory-licensee.csv…</div>
             </div>
 
             <!-- License Dropdown -->
@@ -476,6 +477,26 @@
         // Initial setup
         setDates();
         updatePreviewUI();
+
+        // --- AUTO-LOAD INVENTORY FROM SAME FOLDER (tools/current-inventory-licensee.csv) ---
+        (function autoLoadInventory() {
+            const statusEl = document.getElementById('autoload-status');
+            if (!statusEl) return;
+            if (!/^https?:$/.test(window.location.protocol)) {
+                statusEl.innerText = 'Open this page from fixinhixon.com to auto-load inventory, or upload a CSV manually.';
+                return;
+            }
+            fetch('current-inventory-licensee.csv', { cache: 'no-store' })
+                .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+                .then(function(text) {
+                    if (!text || text.indexOf('productTypeName') === -1) throw new Error('Unexpected CSV format');
+                    parseSeed2SaleCSV(text);
+                    statusEl.innerText = 'Inventory auto-loaded from server. You can still upload a newer CSV manually.';
+                })
+                .catch(function(err) {
+                    statusEl.innerText = 'No inventory file found on server yet — upload a CSV manually.';
+                });
+        })();
         
         window.addEventListener('beforeprint', () => {
              setDates();
