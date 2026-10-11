@@ -121,7 +121,7 @@
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
         </span>
-        17 Tools Available
+        19 Tools Available
       </div>
       <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
         Everything You Need in One Portal
@@ -203,7 +203,7 @@
   </footer>
 
   <script>
-    // Master Tool Data Definition (17 Total Tools)
+    // Master Tool Data Definition (19 Total Tools)
     const tools = [
       {
         id: 'checklist',
@@ -222,6 +222,15 @@
         icon: 'calculator',
         badge: 'Finance',
         description: 'Streamline till balancing and denomination tallies for quick cash reconciliation.'
+      },
+      {
+        id: 'coa_vault',
+        title: 'COA Vault',
+        url: 'https://coa-vault-internal.pages.dev/',
+        category: 'Inventory & Ops',
+        icon: 'file-check',
+        badge: 'Compliance',
+        description: 'Shared catalog of lab Certificates of Analysis — search by product or batch and produce a valid COA on demand. New entries are human-verified before they go live.'
       },
       {
         id: 'colorpicker',
@@ -357,6 +366,15 @@
         icon: 'bar-chart-3',
         badge: 'Analysis',
         description: 'Compare multi-vendor price points, unit costs, and profit volume margins side by side.'
+      },
+      {
+        id: 'weed_bingo',
+        title: 'Weed Bingo',
+        url: 'https://weed-bingo-30341.web.app',
+        category: 'Events & Entertainment',
+        icon: 'party-popper',
+        badge: 'Live Event',
+        description: 'Thursday-night bingo for the Midtown lounge: digital phone cards with manual daub, a host console with sound board, big-screen TV display, and real card verification by GR number.'
       }
     ];
 
@@ -386,7 +404,7 @@
     }
 
     function getCategories() {
-      const predefinedCategories = ['All', 'Inventory & Ops', 'Labeling & Print', 'Pricing & Finance', 'Guides & Reference', 'Utilities'];
+      const predefinedCategories = ['All', 'Inventory & Ops', 'Labeling & Print', 'Pricing & Finance', 'Guides & Reference', 'Utilities', 'Events & Entertainment'];
       return predefinedCategories;
     }
 
