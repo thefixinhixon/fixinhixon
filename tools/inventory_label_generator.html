@@ -157,9 +157,10 @@
 
             <!-- Autocomplete Strain Input -->
             <div class="relative">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Product Name (Strain)</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Product Name (Strain) — Deli Flower Only</label>
                 <input type="text" id="input-strain" autocomplete="off" placeholder="Start typing strain or product name..." class="w-full border border-gray-300 rounded p-2 focus:ring-2 focus:ring-green-500 outline-none">
                 <div id="autocomplete-list" class="autocomplete-items hidden"></div>
+                <div id="selected-pkg" class="text-xs font-bold text-gray-700 mt-1 hidden">Pkg ID: <span id="selected-pkg-id"></span></div>
             </div>
 
             <!-- THC & Weight -->
@@ -173,6 +174,8 @@
                     <input type="number" step="0.01" id="input-weight" placeholder="e.g. 3.5" class="w-full border border-gray-300 rounded p-2 focus:ring-2 focus:ring-green-500 outline-none">
                 </div>
             </div>
+            <div id="thc-warning" class="hidden text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded p-2">No THC on file for this package — enter the THC % from the COA before printing. Do not print a label with THC 0.00%.</div>
+            <div id="pkg-warning" class="hidden text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded p-2">No Package ID selected — pick the product from the search list (do not just type the name) so the label carries the traced Package ID.</div>
 
             <!-- Hidden inputs to track other metadata populated from CSV -->
             <input type="hidden" id="input-barcode" value="N/A">
@@ -197,6 +200,7 @@
     <script>
         // --- DATA STATE ---
         let inventoryDB = [];
+        let lastSyncDate = '';
         let currentFocus = -1;
 
         // --- DOM ELEMENTS ---
@@ -222,6 +226,10 @@
             uploadStatus: document.getElementById('upload-status'),
             uploadCount: document.getElementById('upload-count'),
             autocompleteList: document.getElementById('autocomplete-list'),
+            selectedPkg: document.getElementById('selected-pkg'),
+            selectedPkgId: document.getElementById('selected-pkg-id'),
+            thcWarning: document.getElementById('thc-warning'),
+            pkgWarning: document.getElementById('pkg-warning'),
             
             realPreview: document.getElementById('label-preview'),
             uiPreviewContainer: document.getElementById('ui-preview-container')
@@ -288,6 +296,15 @@
             updatePreviewUI();
         }
 
+        function refreshWarnings() {
+            const hasPkg = els.barcodeIn.value && els.barcodeIn.value !== 'N/A';
+            els.selectedPkg.classList.toggle('hidden', !hasPkg);
+            if (hasPkg) els.selectedPkgId.innerText = els.barcodeIn.value;
+            els.pkgWarning.classList.toggle('hidden', !(els.strainIn.value && !hasPkg));
+            const thcMissing = hasPkg && (!els.thcIn.value || parseFloat(els.thcIn.value) === 0);
+            els.thcWarning.classList.toggle('hidden', !thcMissing);
+        }
+
         // Attach listeners to update live preview
         els.licenseIn.addEventListener('change', () => {
             els.strainIn.value = '';
@@ -295,12 +312,14 @@
             els.barcodeIn.value = 'N/A';
             els.complianceIn.value = '';
             updateLabels();
+            refreshWarnings();
         });
         els.strainIn.addEventListener('input', () => {
             els.expDateIn.value = ''; // clear custom date if modified manually
             updateLabels();
+            refreshWarnings();
         });
-        els.thcIn.addEventListener('input', updateLabels);
+        els.thcIn.addEventListener('input', () => { updateLabels(); refreshWarnings(); });
         els.weightIn.addEventListener('input', updateLabels);
 
         // --- CSV PARSING ---
@@ -330,7 +349,9 @@
                 location: headers.indexOf('locationDisplay'),
                 barcode: headers.indexOf('barCode'),
                 testing: headers.indexOf('testing'),
-                expirationDate: headers.indexOf('expirationDate')
+                expirationDate: headers.indexOf('expirationDate'),
+                quantityOnHand: headers.indexOf('quantityOnHand'),
+                syncDate: headers.indexOf('syncDate')
             };
 
             if (idx.productTypeName === -1 || idx.location === -1 || idx.thc === -1) {
@@ -338,8 +359,13 @@
                 return;
             }
 
-            const validCategories = ['Deli Style Cannabis', 'Cannabis Packaged', 'Pre-Rolls Packaged'];
+            // Deli flower ONLY (Jason, 2026-10-19): weighed flower that staff label
+            // themselves. Pre-rolls, infused pre-rolls and packaged (pre-weighed)
+            // flower arrive already labeled and must never appear in this search.
+            const validCategories = ['Deli Style Cannabis'];
+            const blockedPattern = /pre[-\s]?rolls?|preroll|infused|packaged/i;
             inventoryDB = [];
+            lastSyncDate = '';
 
             for (let i = 1; i < lines.length; i++) {
                 if (!lines[i].trim()) continue;
@@ -350,8 +376,10 @@
                 if (row.length < headers.length) continue;
 
                 const category = row[idx.productTypeName];
-                if (validCategories.includes(category)) {
-                    
+                const productNameRaw = row[idx.productName] || "";
+                if (idx.syncDate !== -1 && row[idx.syncDate]) lastSyncDate = row[idx.syncDate];
+                if (validCategories.includes(category) && !blockedPattern.test(productNameRaw) && !blockedPattern.test(category)) {
+
                     const locationRaw = row[idx.location] || "";
                     let targetLicense = "";
                     if (locationRaw.includes('Ruidoso')) targetLicense = "MANU-2022-0044-PRM-0001";
@@ -360,12 +388,13 @@
 
                     inventoryDB.push({
                         strain: row[idx.strainName] || "Unknown",
-                        product: row[idx.productName] || "",
+                        product: productNameRaw,
                         thc: row[idx.thc] || "",
                         license: targetLicense,
                         barcode: row[idx.barcode] || "N/A",
                         compliance: row[idx.testing] === 'Pass' ? "Passes all state compliance requirements" : "",
-                        expDate: idx.expirationDate !== -1 ? (row[idx.expirationDate] || "") : ""
+                        expDate: idx.expirationDate !== -1 ? (row[idx.expirationDate] || "") : "",
+                        quantityOnHand: idx.quantityOnHand !== -1 ? (row[idx.quantityOnHand] || "") : ""
                     });
                 }
             }
@@ -404,16 +433,18 @@
                     div.className = "autocomplete-item text-sm";
                     
                     div.innerHTML = `<span class="font-bold text-green-700">${item.strain}</span> <span class="text-gray-500 text-xs">(${item.product})</span>`;
-                    div.innerHTML += `<br><span class="text-xs text-gray-400">THC: ${item.thc}% | Exp: ${item.expDate || 'Default (1 Year)'}</span>`;
-                    
+                    div.innerHTML += `<br><span class="text-xs text-gray-400">THC: ${item.thc ? item.thc + '%' : '— (enter from COA)'} | Exp: ${item.expDate || 'Default (1 Year)'}${item.quantityOnHand ? ' | On hand: ' + item.quantityOnHand + 'g' : ''}</span>`;
+                    div.innerHTML += `<br><span class="text-xs font-bold text-gray-600">Pkg ID: ${item.barcode}</span>`;
+
                     div.addEventListener("click", function() {
                         els.strainIn.value = item.strain;
                         els.thcIn.value = item.thc;
                         els.barcodeIn.value = item.barcode;
                         els.complianceIn.value = item.compliance;
-                        els.expDateIn.value = item.expDate; // Store S2S expiration date
-                        
+                        els.expDateIn.value = item.expDate; // Store expiration date
+
                         updateLabels();
+                        refreshWarnings();
                         closeAllLists();
                     });
                     
@@ -491,7 +522,7 @@
                 .then(function(text) {
                     if (!text || text.indexOf('productTypeName') === -1) throw new Error('Unexpected CSV format');
                     parseSeed2SaleCSV(text);
-                    statusEl.innerText = 'Inventory auto-loaded from server. You can still upload a newer CSV manually.';
+                    statusEl.innerText = 'Deli inventory auto-loaded from BioTrack stock' + (lastSyncDate ? ' — updated ' + lastSyncDate : '') + ' (' + inventoryDB.length + ' lots). THC is matched by Package ID. You can still upload a newer CSV manually.';
                 })
                 .catch(function(err) {
                     statusEl.innerText = 'No inventory file found on server yet — upload a CSV manually.';
